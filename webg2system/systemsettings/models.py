@@ -51,7 +51,7 @@ class Item(models.Model):
         return self.name
 
 class Package(Item):
-    codeClass = models.CharField(max_length=10, verbose_name='Code class')
+    codeClass = models.CharField(max_length=50, verbose_name='Code class')
     version = models.CharField(max_length=10)
     inputs = models.ManyToManyField(Item, through='PackageInput',
                                     related_name='inputs')
@@ -101,6 +101,8 @@ class PackageOutput(models.Model):
     package = models.ForeignKey(Package, related_name='packageOutput_%(app_label)s_%(class)s_related')
     outputItem = models.ForeignKey(Item)
     specificAreas = models.ManyToManyField('Area', null=True, blank=True)
+    specificTimeslots = models.ManyToManyField('TimeslotDisplacer', null=True, 
+                                               blank=True, verbose_name='timeslots')
 
 class Source(models.Model):
     name = models.CharField(max_length=100)
@@ -140,3 +142,17 @@ class Area(models.Model):
     
     def __unicode__(self):
         return self.name
+
+class TimeslotDisplacer(models.Model):
+    UNIT_CHOICES = (('day', 'day'), ('hour', 'hour'), ('minute', 'minute'))
+    unit = models.CharField(max_length=10, choices=UNIT_CHOICES)
+    startValue = models.IntegerField(verbose_name='Start value', 
+                                     help_text='The starting value for the '\
+                                     'displaced timeslots.')
+    endValue = models.IntegerField(verbose_name='End value', 
+                                     help_text='The ending value for the '\
+                                     'displaced timeslots. It is not '\
+                                     'included in the calculation.')
+
+    def __unicode__(self):
+        return '%s <= %s < %s' % (self.startValue, self.unit, self.endValue)

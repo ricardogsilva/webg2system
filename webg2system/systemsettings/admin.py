@@ -54,6 +54,7 @@ class SourceAdmin(admin.ModelAdmin):
     list_display = ('name', 'areas', 'specific_names')
 
 #admin.site.register(ExceptHour)
+admin.site.register(TimeslotDisplacer)
 admin.site.register(Host, HostAdmin)
 admin.site.register(Package, PackageAdmin)
 admin.site.register(File, FileAdmin)
