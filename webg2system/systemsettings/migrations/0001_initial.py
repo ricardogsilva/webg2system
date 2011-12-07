@@ -8,33 +8,8 @@ class Migration(SchemaMigration):
 
     def forwards(self, orm):
         
-        # Adding model 'SourceSetting'
-        db.create_table('systemsettings_sourcesetting', (
-            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('name', self.gf('django.db.models.fields.CharField')(max_length=100)),
-        ))
-        db.send_create_signal('systemsettings', ['SourceSetting'])
-
-        # Adding model 'SpecificSource'
-        db.create_table('systemsettings_specificsource', (
-            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('name', self.gf('django.db.models.fields.CharField')(max_length=100)),
-            ('startDate', self.gf('django.db.models.fields.DateTimeField')()),
-            ('endDate', self.gf('django.db.models.fields.DateTimeField')()),
-            ('sourceSetting', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['systemsettings.SourceSetting'])),
-        ))
-        db.send_create_signal('systemsettings', ['SpecificSource'])
-
-        # Adding model 'Area'
-        db.create_table('systemsettings_area', (
-            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('name', self.gf('django.db.models.fields.CharField')(max_length=100)),
-            ('sourceSetting', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['systemsettings.SourceSetting'])),
-        ))
-        db.send_create_signal('systemsettings', ['Area'])
-
-        # Adding model 'HostSetting'
-        db.create_table('systemsettings_hostsetting', (
+        # Adding model 'Host'
+        db.create_table('systemsettings_host', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('name', self.gf('django.db.models.fields.CharField')(max_length=100)),
             ('basePath', self.gf('django.db.models.fields.CharField')(max_length=255)),
@@ -42,107 +17,63 @@ class Migration(SchemaMigration):
             ('username', self.gf('django.db.models.fields.CharField')(max_length=50)),
             ('password', self.gf('django.db.models.fields.CharField')(max_length=50)),
         ))
-        db.send_create_signal('systemsettings', ['HostSetting'])
+        db.send_create_signal('systemsettings', ['Host'])
 
-        # Adding model 'ItemSetting'
-        db.create_table('systemsettings_itemsetting', (
-            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('name', self.gf('django.db.models.fields.CharField')(max_length=100)),
-        ))
-        db.send_create_signal('systemsettings', ['ItemSetting'])
-
-        # Adding model 'SearchPattern'
-        db.create_table('systemsettings_searchpattern', (
+        # Adding model 'MarkedString'
+        db.create_table('systemsettings_markedstring', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('name', self.gf('django.db.models.fields.CharField')(max_length=50, blank=True)),
             ('string', self.gf('django.db.models.fields.CharField')(max_length=255)),
             ('marks', self.gf('django.db.models.fields.CharField')(max_length=255, blank=True)),
         ))
-        db.send_create_signal('systemsettings', ['SearchPattern'])
+        db.send_create_signal('systemsettings', ['MarkedString'])
 
-        # Adding model 'SourceExtraInfo'
-        db.create_table('systemsettings_sourceextrainfo', (
-            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('name', self.gf('django.db.models.fields.CharField')(max_length=50, blank=True)),
-            ('string', self.gf('django.db.models.fields.CharField')(max_length=255)),
-            ('marks', self.gf('django.db.models.fields.CharField')(max_length=255, blank=True)),
-            ('sourceSetting', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['systemsettings.SourceSetting'])),
+        # Adding model 'FilePath'
+        db.create_table('systemsettings_filepath', (
+            ('markedstring_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['systemsettings.MarkedString'], unique=True, primary_key=True)),
+            ('theFile', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['systemsettings.File'])),
         ))
-        db.send_create_signal('systemsettings', ['SourceExtraInfo'])
+        db.send_create_signal('systemsettings', ['FilePath'])
 
-        # Adding model 'PackageSetting'
-        db.create_table('systemsettings_packagesetting', (
-            ('itemsetting_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['systemsettings.ItemSetting'], unique=True, primary_key=True)),
+        # Adding model 'FilePattern'
+        db.create_table('systemsettings_filepattern', (
+            ('markedstring_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['systemsettings.MarkedString'], unique=True, primary_key=True)),
+            ('theFile', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['systemsettings.File'])),
         ))
-        db.send_create_signal('systemsettings', ['PackageSetting'])
+        db.send_create_signal('systemsettings', ['FilePattern'])
 
-        # Adding model 'PackageWorkingDir'
-        db.create_table('systemsettings_packageworkingdir', (
-            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('name', self.gf('django.db.models.fields.CharField')(max_length=50, blank=True)),
-            ('string', self.gf('django.db.models.fields.CharField')(max_length=255)),
-            ('marks', self.gf('django.db.models.fields.CharField')(max_length=255, blank=True)),
-            ('packageSetting', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['systemsettings.PackageSetting'], unique=True)),
+        # Adding model 'PackagePath'
+        db.create_table('systemsettings_packagepath', (
+            ('markedstring_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['systemsettings.MarkedString'], unique=True, primary_key=True)),
+            ('package', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['systemsettings.Package'])),
         ))
-        db.send_create_signal('systemsettings', ['PackageWorkingDir'])
+        db.send_create_signal('systemsettings', ['PackagePath'])
 
-        # Adding model 'PackageOutputDir'
-        db.create_table('systemsettings_packageoutputdir', (
-            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('name', self.gf('django.db.models.fields.CharField')(max_length=50, blank=True)),
-            ('string', self.gf('django.db.models.fields.CharField')(max_length=255)),
-            ('marks', self.gf('django.db.models.fields.CharField')(max_length=255, blank=True)),
-            ('packageSetting', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['systemsettings.PackageSetting'], null=True, blank=True)),
-        ))
-        db.send_create_signal('systemsettings', ['PackageOutputDir'])
-
-        # Adding model 'PackageInputDir'
-        db.create_table('systemsettings_packageinputdir', (
-            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('name', self.gf('django.db.models.fields.CharField')(max_length=50, blank=True)),
-            ('string', self.gf('django.db.models.fields.CharField')(max_length=255)),
-            ('marks', self.gf('django.db.models.fields.CharField')(max_length=255, blank=True)),
-            ('packageSetting', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['systemsettings.PackageSetting'], null=True, blank=True)),
-        ))
-        db.send_create_signal('systemsettings', ['PackageInputDir'])
-
-        # Adding model 'PackageInternalDir'
-        db.create_table('systemsettings_packageinternaldir', (
-            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('name', self.gf('django.db.models.fields.CharField')(max_length=50, blank=True)),
-            ('string', self.gf('django.db.models.fields.CharField')(max_length=255)),
-            ('marks', self.gf('django.db.models.fields.CharField')(max_length=255, blank=True)),
-            ('packageSetting', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['systemsettings.PackageSetting'], null=True, blank=True)),
-        ))
-        db.send_create_signal('systemsettings', ['PackageInternalDir'])
-
-        # Adding model 'FileSearchPath'
-        db.create_table('systemsettings_filesearchpath', (
-            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('name', self.gf('django.db.models.fields.CharField')(max_length=50, blank=True)),
-            ('string', self.gf('django.db.models.fields.CharField')(max_length=255)),
-            ('marks', self.gf('django.db.models.fields.CharField')(max_length=255, blank=True)),
-            ('fileSetting', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['systemsettings.FileSetting'])),
-        ))
-        db.send_create_signal('systemsettings', ['FileSearchPath'])
-
-        # Adding model 'FileSearchPattern'
-        db.create_table('systemsettings_filesearchpattern', (
-            ('searchpattern_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['systemsettings.SearchPattern'], unique=True, primary_key=True)),
-            ('fileSetting', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['systemsettings.FileSetting'])),
-        ))
-        db.send_create_signal('systemsettings', ['FileSearchPattern'])
-
-        # Adding model 'Hour'
-        db.create_table('systemsettings_hour', (
+        # Adding model 'ExceptHour'
+        db.create_table('systemsettings_excepthour', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('hour', self.gf('django.db.models.fields.IntegerField')()),
         ))
-        db.send_create_signal('systemsettings', ['Hour'])
+        db.send_create_signal('systemsettings', ['ExceptHour'])
 
-        # Adding model 'FileSetting'
-        db.create_table('systemsettings_filesetting', (
-            ('itemsetting_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['systemsettings.ItemSetting'], unique=True, primary_key=True)),
+        # Adding model 'Item'
+        db.create_table('systemsettings_item', (
+            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
+            ('name', self.gf('django.db.models.fields.CharField')(max_length=100)),
+        ))
+        db.send_create_signal('systemsettings', ['Item'])
+
+        # Adding model 'Package'
+        db.create_table('systemsettings_package', (
+            ('item_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['systemsettings.Item'], unique=True, primary_key=True)),
+            ('codeClass', self.gf('django.db.models.fields.CharField')(max_length=10)),
+            ('version', self.gf('django.db.models.fields.CharField')(max_length=10)),
+        ))
+        db.send_create_signal('systemsettings', ['Package'])
+
+        # Adding model 'File'
+        db.create_table('systemsettings_file', (
+            ('item_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['systemsettings.Item'], unique=True, primary_key=True)),
             ('numFiles', self.gf('django.db.models.fields.IntegerField')()),
             ('fileType', self.gf('django.db.models.fields.CharField')(max_length=10)),
             ('frequency', self.gf('django.db.models.fields.CharField')(max_length=10)),
@@ -151,47 +82,130 @@ class Migration(SchemaMigration):
             ('toDisseminate', self.gf('django.db.models.fields.BooleanField')(default=False)),
             ('toCopy', self.gf('django.db.models.fields.BooleanField')(default=False)),
         ))
-        db.send_create_signal('systemsettings', ['FileSetting'])
+        db.send_create_signal('systemsettings', ['File'])
 
-        # Adding M2M table for field exceptHours on 'FileSetting'
-        db.create_table('systemsettings_filesetting_exceptHours', (
+        # Adding M2M table for field exceptHours on 'File'
+        db.create_table('systemsettings_file_exceptHours', (
             ('id', models.AutoField(verbose_name='ID', primary_key=True, auto_created=True)),
-            ('filesetting', models.ForeignKey(orm['systemsettings.filesetting'], null=False)),
-            ('hour', models.ForeignKey(orm['systemsettings.hour'], null=False))
+            ('file', models.ForeignKey(orm['systemsettings.file'], null=False)),
+            ('excepthour', models.ForeignKey(orm['systemsettings.excepthour'], null=False))
         ))
-        db.create_unique('systemsettings_filesetting_exceptHours', ['filesetting_id', 'hour_id'])
+        db.create_unique('systemsettings_file_exceptHours', ['file_id', 'excepthour_id'])
 
-        # Adding model 'PackageRelatedItemSetting'
-        db.create_table('systemsettings_packagerelateditemsetting', (
+        # Adding model 'PackageInput'
+        db.create_table('systemsettings_packageinput', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('packageSetting', self.gf('django.db.models.fields.related.ForeignKey')(related_name='packageSetting_systemsettings_packagerelateditemsetting_related', to=orm['systemsettings.PackageSetting'])),
-            ('relatedItemSetting', self.gf('django.db.models.fields.related.ForeignKey')(related_name='relatedItemSetting_systemsettings_packagerelateditemsetting_related', to=orm['systemsettings.ItemSetting'])),
-            ('relatedItemRole', self.gf('django.db.models.fields.CharField')(max_length=8)),
+            ('package', self.gf('django.db.models.fields.related.ForeignKey')(related_name='packageInput_systemsettings_packageinput_related', to=orm['systemsettings.Package'])),
+            ('inputItem', self.gf('django.db.models.fields.related.ForeignKey')(related_name='inputItem_systemsettings_packageinput_related', to=orm['systemsettings.Item'])),
         ))
-        db.send_create_signal('systemsettings', ['PackageRelatedItemSetting'])
+        db.send_create_signal('systemsettings', ['PackageInput'])
 
-        # Adding M2M table for field specificAreas on 'PackageRelatedItemSetting'
-        db.create_table('systemsettings_packagerelateditemsetting_specificAreas', (
+        # Adding M2M table for field specificAreas on 'PackageInput'
+        db.create_table('systemsettings_packageinput_specificAreas', (
             ('id', models.AutoField(verbose_name='ID', primary_key=True, auto_created=True)),
-            ('packagerelateditemsetting', models.ForeignKey(orm['systemsettings.packagerelateditemsetting'], null=False)),
+            ('packageinput', models.ForeignKey(orm['systemsettings.packageinput'], null=False)),
             ('area', models.ForeignKey(orm['systemsettings.area'], null=False))
         ))
-        db.create_unique('systemsettings_packagerelateditemsetting_specificAreas', ['packagerelateditemsetting_id', 'area_id'])
+        db.create_unique('systemsettings_packageinput_specificAreas', ['packageinput_id', 'area_id'])
 
-        # Adding model 'TimeslotDisplacer'
-        db.create_table('systemsettings_timeslotdisplacer', (
+        # Adding model 'PackageOutput'
+        db.create_table('systemsettings_packageoutput', (
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('unit', self.gf('django.db.models.fields.CharField')(max_length=10)),
-            ('value', self.gf('django.db.models.fields.IntegerField')()),
-            ('packageRelatedItem', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['systemsettings.PackageRelatedItemSetting'])),
+            ('package', self.gf('django.db.models.fields.related.ForeignKey')(related_name='packageOutput_systemsettings_packageoutput_related', to=orm['systemsettings.Package'])),
+            ('outputItem', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['systemsettings.Item'])),
         ))
-        db.send_create_signal('systemsettings', ['TimeslotDisplacer'])
+        db.send_create_signal('systemsettings', ['PackageOutput'])
+
+        # Adding M2M table for field specificAreas on 'PackageOutput'
+        db.create_table('systemsettings_packageoutput_specificAreas', (
+            ('id', models.AutoField(verbose_name='ID', primary_key=True, auto_created=True)),
+            ('packageoutput', models.ForeignKey(orm['systemsettings.packageoutput'], null=False)),
+            ('area', models.ForeignKey(orm['systemsettings.area'], null=False))
+        ))
+        db.create_unique('systemsettings_packageoutput_specificAreas', ['packageoutput_id', 'area_id'])
+
+        # Adding model 'Source'
+        db.create_table('systemsettings_source', (
+            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
+            ('name', self.gf('django.db.models.fields.CharField')(max_length=100)),
+        ))
+        db.send_create_signal('systemsettings', ['Source'])
+
+        # Adding model 'SourceExtraInfo'
+        db.create_table('systemsettings_sourceextrainfo', (
+            ('markedstring_ptr', self.gf('django.db.models.fields.related.OneToOneField')(to=orm['systemsettings.MarkedString'], unique=True, primary_key=True)),
+            ('source', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['systemsettings.Source'])),
+        ))
+        db.send_create_signal('systemsettings', ['SourceExtraInfo'])
+
+        # Adding model 'SpecificSource'
+        db.create_table('systemsettings_specificsource', (
+            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
+            ('name', self.gf('django.db.models.fields.CharField')(max_length=100)),
+            ('startDate', self.gf('django.db.models.fields.DateTimeField')()),
+            ('endDate', self.gf('django.db.models.fields.DateTimeField')()),
+            ('source', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['systemsettings.Source'])),
+        ))
+        db.send_create_signal('systemsettings', ['SpecificSource'])
+
+        # Adding model 'Area'
+        db.create_table('systemsettings_area', (
+            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
+            ('name', self.gf('django.db.models.fields.CharField')(max_length=100)),
+            ('source', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['systemsettings.Source'])),
+        ))
+        db.send_create_signal('systemsettings', ['Area'])
 
 
     def backwards(self, orm):
         
-        # Deleting model 'SourceSetting'
-        db.delete_table('systemsettings_sourcesetting')
+        # Deleting model 'Host'
+        db.delete_table('systemsettings_host')
+
+        # Deleting model 'MarkedString'
+        db.delete_table('systemsettings_markedstring')
+
+        # Deleting model 'FilePath'
+        db.delete_table('systemsettings_filepath')
+
+        # Deleting model 'FilePattern'
+        db.delete_table('systemsettings_filepattern')
+
+        # Deleting model 'PackagePath'
+        db.delete_table('systemsettings_packagepath')
+
+        # Deleting model 'ExceptHour'
+        db.delete_table('systemsettings_excepthour')
+
+        # Deleting model 'Item'
+        db.delete_table('systemsettings_item')
+
+        # Deleting model 'Package'
+        db.delete_table('systemsettings_package')
+
+        # Deleting model 'File'
+        db.delete_table('systemsettings_file')
+
+        # Removing M2M table for field exceptHours on 'File'
+        db.delete_table('systemsettings_file_exceptHours')
+
+        # Deleting model 'PackageInput'
+        db.delete_table('systemsettings_packageinput')
+
+        # Removing M2M table for field specificAreas on 'PackageInput'
+        db.delete_table('systemsettings_packageinput_specificAreas')
+
+        # Deleting model 'PackageOutput'
+        db.delete_table('systemsettings_packageoutput')
+
+        # Removing M2M table for field specificAreas on 'PackageOutput'
+        db.delete_table('systemsettings_packageoutput_specificAreas')
+
+        # Deleting model 'Source'
+        db.delete_table('systemsettings_source')
+
+        # Deleting model 'SourceExtraInfo'
+        db.delete_table('systemsettings_sourceextrainfo')
 
         # Deleting model 'SpecificSource'
         db.delete_table('systemsettings_specificsource')
@@ -199,92 +213,43 @@ class Migration(SchemaMigration):
         # Deleting model 'Area'
         db.delete_table('systemsettings_area')
 
-        # Deleting model 'HostSetting'
-        db.delete_table('systemsettings_hostsetting')
-
-        # Deleting model 'ItemSetting'
-        db.delete_table('systemsettings_itemsetting')
-
-        # Deleting model 'SearchPattern'
-        db.delete_table('systemsettings_searchpattern')
-
-        # Deleting model 'SourceExtraInfo'
-        db.delete_table('systemsettings_sourceextrainfo')
-
-        # Deleting model 'PackageSetting'
-        db.delete_table('systemsettings_packagesetting')
-
-        # Deleting model 'PackageWorkingDir'
-        db.delete_table('systemsettings_packageworkingdir')
-
-        # Deleting model 'PackageOutputDir'
-        db.delete_table('systemsettings_packageoutputdir')
-
-        # Deleting model 'PackageInputDir'
-        db.delete_table('systemsettings_packageinputdir')
-
-        # Deleting model 'PackageInternalDir'
-        db.delete_table('systemsettings_packageinternaldir')
-
-        # Deleting model 'FileSearchPath'
-        db.delete_table('systemsettings_filesearchpath')
-
-        # Deleting model 'FileSearchPattern'
-        db.delete_table('systemsettings_filesearchpattern')
-
-        # Deleting model 'Hour'
-        db.delete_table('systemsettings_hour')
-
-        # Deleting model 'FileSetting'
-        db.delete_table('systemsettings_filesetting')
-
-        # Removing M2M table for field exceptHours on 'FileSetting'
-        db.delete_table('systemsettings_filesetting_exceptHours')
-
-        # Deleting model 'PackageRelatedItemSetting'
-        db.delete_table('systemsettings_packagerelateditemsetting')
-
-        # Removing M2M table for field specificAreas on 'PackageRelatedItemSetting'
-        db.delete_table('systemsettings_packagerelateditemsetting_specificAreas')
-
-        # Deleting model 'TimeslotDisplacer'
-        db.delete_table('systemsettings_timeslotdisplacer')
-
 
     models = {
         'systemsettings.area': {
             'Meta': {'object_name': 'Area'},
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'name': ('django.db.models.fields.CharField', [], {'max_length': '100'}),
-            'sourceSetting': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['systemsettings.SourceSetting']"})
+            'source': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['systemsettings.Source']"})
         },
-        'systemsettings.filesearchpath': {
-            'Meta': {'object_name': 'FileSearchPath'},
-            'fileSetting': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['systemsettings.FileSetting']"}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'marks': ('django.db.models.fields.CharField', [], {'max_length': '255', 'blank': 'True'}),
-            'name': ('django.db.models.fields.CharField', [], {'max_length': '50', 'blank': 'True'}),
-            'string': ('django.db.models.fields.CharField', [], {'max_length': '255'})
+        'systemsettings.excepthour': {
+            'Meta': {'object_name': 'ExceptHour'},
+            'hour': ('django.db.models.fields.IntegerField', [], {}),
+            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'})
         },
-        'systemsettings.filesearchpattern': {
-            'Meta': {'object_name': 'FileSearchPattern', '_ormbases': ['systemsettings.SearchPattern']},
-            'fileSetting': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['systemsettings.FileSetting']"}),
-            'searchpattern_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['systemsettings.SearchPattern']", 'unique': 'True', 'primary_key': 'True'})
-        },
-        'systemsettings.filesetting': {
-            'Meta': {'object_name': 'FileSetting', '_ormbases': ['systemsettings.ItemSetting']},
-            'exceptHours': ('django.db.models.fields.related.ManyToManyField', [], {'symmetrical': 'False', 'to': "orm['systemsettings.Hour']", 'null': 'True', 'blank': 'True'}),
+        'systemsettings.file': {
+            'Meta': {'object_name': 'File', '_ormbases': ['systemsettings.Item']},
+            'exceptHours': ('django.db.models.fields.related.ManyToManyField', [], {'to': "orm['systemsettings.ExceptHour']", 'symmetrical': 'False'}),
             'fileType': ('django.db.models.fields.CharField', [], {'max_length': '10'}),
             'frequency': ('django.db.models.fields.CharField', [], {'max_length': '10'}),
-            'itemsetting_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['systemsettings.ItemSetting']", 'unique': 'True', 'primary_key': 'True'}),
+            'item_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['systemsettings.Item']", 'unique': 'True', 'primary_key': 'True'}),
             'numFiles': ('django.db.models.fields.IntegerField', [], {}),
             'toArchive': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'toCompress': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'toCopy': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'toDisseminate': ('django.db.models.fields.BooleanField', [], {'default': 'False'})
         },
-        'systemsettings.hostsetting': {
-            'Meta': {'object_name': 'HostSetting'},
+        'systemsettings.filepath': {
+            'Meta': {'object_name': 'FilePath', '_ormbases': ['systemsettings.MarkedString']},
+            'markedstring_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['systemsettings.MarkedString']", 'unique': 'True', 'primary_key': 'True'}),
+            'theFile': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['systemsettings.File']"})
+        },
+        'systemsettings.filepattern': {
+            'Meta': {'object_name': 'FilePattern', '_ormbases': ['systemsettings.MarkedString']},
+            'markedstring_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['systemsettings.MarkedString']", 'unique': 'True', 'primary_key': 'True'}),
+            'theFile': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['systemsettings.File']"})
+        },
+        'systemsettings.host': {
+            'Meta': {'object_name': 'Host'},
             'basePath': ('django.db.models.fields.CharField', [], {'max_length': '255'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'ip': ('django.db.models.fields.IPAddressField', [], {'max_length': '15'}),
@@ -292,95 +257,61 @@ class Migration(SchemaMigration):
             'password': ('django.db.models.fields.CharField', [], {'max_length': '50'}),
             'username': ('django.db.models.fields.CharField', [], {'max_length': '50'})
         },
-        'systemsettings.hour': {
-            'Meta': {'object_name': 'Hour'},
-            'hour': ('django.db.models.fields.IntegerField', [], {}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'})
-        },
-        'systemsettings.itemsetting': {
-            'Meta': {'object_name': 'ItemSetting'},
+        'systemsettings.item': {
+            'Meta': {'object_name': 'Item'},
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'name': ('django.db.models.fields.CharField', [], {'max_length': '100'})
         },
-        'systemsettings.packageinputdir': {
-            'Meta': {'object_name': 'PackageInputDir'},
+        'systemsettings.markedstring': {
+            'Meta': {'object_name': 'MarkedString'},
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'marks': ('django.db.models.fields.CharField', [], {'max_length': '255', 'blank': 'True'}),
             'name': ('django.db.models.fields.CharField', [], {'max_length': '50', 'blank': 'True'}),
-            'packageSetting': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['systemsettings.PackageSetting']", 'null': 'True', 'blank': 'True'}),
             'string': ('django.db.models.fields.CharField', [], {'max_length': '255'})
         },
-        'systemsettings.packageinternaldir': {
-            'Meta': {'object_name': 'PackageInternalDir'},
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'marks': ('django.db.models.fields.CharField', [], {'max_length': '255', 'blank': 'True'}),
-            'name': ('django.db.models.fields.CharField', [], {'max_length': '50', 'blank': 'True'}),
-            'packageSetting': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['systemsettings.PackageSetting']", 'null': 'True', 'blank': 'True'}),
-            'string': ('django.db.models.fields.CharField', [], {'max_length': '255'})
+        'systemsettings.package': {
+            'Meta': {'object_name': 'Package', '_ormbases': ['systemsettings.Item']},
+            'codeClass': ('django.db.models.fields.CharField', [], {'max_length': '10'}),
+            'inputs': ('django.db.models.fields.related.ManyToManyField', [], {'related_name': "'inputs'", 'symmetrical': 'False', 'through': "orm['systemsettings.PackageInput']", 'to': "orm['systemsettings.Item']"}),
+            'item_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['systemsettings.Item']", 'unique': 'True', 'primary_key': 'True'}),
+            'version': ('django.db.models.fields.CharField', [], {'max_length': '10'})
         },
-        'systemsettings.packageoutputdir': {
-            'Meta': {'object_name': 'PackageOutputDir'},
+        'systemsettings.packageinput': {
+            'Meta': {'object_name': 'PackageInput'},
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'marks': ('django.db.models.fields.CharField', [], {'max_length': '255', 'blank': 'True'}),
-            'name': ('django.db.models.fields.CharField', [], {'max_length': '50', 'blank': 'True'}),
-            'packageSetting': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['systemsettings.PackageSetting']", 'null': 'True', 'blank': 'True'}),
-            'string': ('django.db.models.fields.CharField', [], {'max_length': '255'})
-        },
-        'systemsettings.packagerelateditemsetting': {
-            'Meta': {'object_name': 'PackageRelatedItemSetting'},
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'packageSetting': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'packageSetting_systemsettings_packagerelateditemsetting_related'", 'to': "orm['systemsettings.PackageSetting']"}),
-            'relatedItemRole': ('django.db.models.fields.CharField', [], {'max_length': '8'}),
-            'relatedItemSetting': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'relatedItemSetting_systemsettings_packagerelateditemsetting_related'", 'to': "orm['systemsettings.ItemSetting']"}),
+            'inputItem': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'inputItem_systemsettings_packageinput_related'", 'to': "orm['systemsettings.Item']"}),
+            'package': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'packageInput_systemsettings_packageinput_related'", 'to': "orm['systemsettings.Package']"}),
             'specificAreas': ('django.db.models.fields.related.ManyToManyField', [], {'symmetrical': 'False', 'to': "orm['systemsettings.Area']", 'null': 'True', 'blank': 'True'})
         },
-        'systemsettings.packagesetting': {
-            'Meta': {'object_name': 'PackageSetting', '_ormbases': ['systemsettings.ItemSetting']},
-            'itemsetting_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['systemsettings.ItemSetting']", 'unique': 'True', 'primary_key': 'True'}),
-            'relatedItems': ('django.db.models.fields.related.ManyToManyField', [], {'related_name': "'relatedItems_systemsettings_packagesetting_related'", 'symmetrical': 'False', 'through': "orm['systemsettings.PackageRelatedItemSetting']", 'to': "orm['systemsettings.ItemSetting']"})
-        },
-        'systemsettings.packageworkingdir': {
-            'Meta': {'object_name': 'PackageWorkingDir'},
+        'systemsettings.packageoutput': {
+            'Meta': {'object_name': 'PackageOutput'},
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'marks': ('django.db.models.fields.CharField', [], {'max_length': '255', 'blank': 'True'}),
-            'name': ('django.db.models.fields.CharField', [], {'max_length': '50', 'blank': 'True'}),
-            'packageSetting': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['systemsettings.PackageSetting']", 'unique': 'True'}),
-            'string': ('django.db.models.fields.CharField', [], {'max_length': '255'})
+            'outputItem': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['systemsettings.Item']"}),
+            'package': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'packageOutput_systemsettings_packageoutput_related'", 'to': "orm['systemsettings.Package']"}),
+            'specificAreas': ('django.db.models.fields.related.ManyToManyField', [], {'symmetrical': 'False', 'to': "orm['systemsettings.Area']", 'null': 'True', 'blank': 'True'})
         },
-        'systemsettings.searchpattern': {
-            'Meta': {'object_name': 'SearchPattern'},
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'marks': ('django.db.models.fields.CharField', [], {'max_length': '255', 'blank': 'True'}),
-            'name': ('django.db.models.fields.CharField', [], {'max_length': '50', 'blank': 'True'}),
-            'string': ('django.db.models.fields.CharField', [], {'max_length': '255'})
+        'systemsettings.packagepath': {
+            'Meta': {'object_name': 'PackagePath', '_ormbases': ['systemsettings.MarkedString']},
+            'markedstring_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['systemsettings.MarkedString']", 'unique': 'True', 'primary_key': 'True'}),
+            'package': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['systemsettings.Package']"})
         },
-        'systemsettings.sourceextrainfo': {
-            'Meta': {'object_name': 'SourceExtraInfo'},
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'marks': ('django.db.models.fields.CharField', [], {'max_length': '255', 'blank': 'True'}),
-            'name': ('django.db.models.fields.CharField', [], {'max_length': '50', 'blank': 'True'}),
-            'sourceSetting': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['systemsettings.SourceSetting']"}),
-            'string': ('django.db.models.fields.CharField', [], {'max_length': '255'})
-        },
-        'systemsettings.sourcesetting': {
-            'Meta': {'object_name': 'SourceSetting'},
+        'systemsettings.source': {
+            'Meta': {'object_name': 'Source'},
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'name': ('django.db.models.fields.CharField', [], {'max_length': '100'})
+        },
+        'systemsettings.sourceextrainfo': {
+            'Meta': {'object_name': 'SourceExtraInfo', '_ormbases': ['systemsettings.MarkedString']},
+            'markedstring_ptr': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['systemsettings.MarkedString']", 'unique': 'True', 'primary_key': 'True'}),
+            'source': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['systemsettings.Source']"})
         },
         'systemsettings.specificsource': {
             'Meta': {'object_name': 'SpecificSource'},
             'endDate': ('django.db.models.fields.DateTimeField', [], {}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'name': ('django.db.models.fields.CharField', [], {'max_length': '100'}),
-            'sourceSetting': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['systemsettings.SourceSetting']"}),
+            'source': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['systemsettings.Source']"}),
             'startDate': ('django.db.models.fields.DateTimeField', [], {})
-        },
-        'systemsettings.timeslotdisplacer': {
-            'Meta': {'object_name': 'TimeslotDisplacer'},
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'packageRelatedItem': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['systemsettings.PackageRelatedItemSetting']"}),
-            'unit': ('django.db.models.fields.CharField', [], {'max_length': '10'}),
-            'value': ('django.db.models.fields.IntegerField', [], {})
         }
     }
 
