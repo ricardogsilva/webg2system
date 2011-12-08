@@ -2,8 +2,6 @@ from django.db import models
 
 # TODO
 #   - add a help_text attribute to all the fields that need one.
-#   - bring back the TimeslotDisplacer class and add a foreign key to 
-#   the inputs and outputs to it.
 #   - integrate with python-piston and expose a REST API for creating
 #   packages.
 
@@ -51,7 +49,7 @@ class Item(models.Model):
         return self.name
 
 class Package(Item):
-    codeClass = models.CharField(max_length=50, verbose_name='Code class')
+    codeClass = models.ForeignKey('CodeClass')
     version = models.CharField(max_length=10)
     inputs = models.ManyToManyField(Item, through='PackageInput',
                                     related_name='inputs')
@@ -60,8 +58,9 @@ class Package(Item):
         return ', '.join([str(i) for i in self.inputs.all()])
     get_inputs.short_description = 'Inputs'
 
+    #FIXME
     def get_outputs(self):
-        return ', '.join([str(i) for i in self.outputs.all()])
+        return ', '.join([str(i) for i in self.packageOutput_systemsettings_packageoutput_related.all()])
     get_outputs.short_description = 'Outputs'
 
 class File(Item):
@@ -95,11 +94,15 @@ class PackageInput(models.Model):
             'package that is to be related to this one.',
             related_name='inputItem_%(app_label)s_%(class)s_related',
             verbose_name='input item')
+    optional = models.BooleanField(default=False)
     specificAreas = models.ManyToManyField('Area', null=True, blank=True)
+    specificTimeslots = models.ManyToManyField('TimeslotDisplacer', null=True, 
+                                               blank=True, verbose_name='timeslots')
 
 class PackageOutput(models.Model):
     package = models.ForeignKey(Package, related_name='packageOutput_%(app_label)s_%(class)s_related')
     outputItem = models.ForeignKey(Item)
+    optional = models.BooleanField(default=False)
     specificAreas = models.ManyToManyField('Area', null=True, blank=True)
     specificTimeslots = models.ManyToManyField('TimeslotDisplacer', null=True, 
                                                blank=True, verbose_name='timeslots')
@@ -156,3 +159,10 @@ class TimeslotDisplacer(models.Model):
 
     def __unicode__(self):
         return '%s <= %s < %s' % (self.startValue, self.unit, self.endValue)
+
+class CodeClass(models.Model):
+    className = models.CharField(max_length=100, verbose_name='Class')
+    description = models.TextField(null=True, blank=True)
+
+    def __unicode__(self):
+        return self.className

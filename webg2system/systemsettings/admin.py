@@ -55,6 +55,7 @@ class SourceAdmin(admin.ModelAdmin):
 
 #admin.site.register(ExceptHour)
 admin.site.register(TimeslotDisplacer)
+admin.site.register(CodeClass)
 admin.site.register(Host, HostAdmin)
 admin.site.register(Package, PackageAdmin)
 admin.site.register(File, FileAdmin)
