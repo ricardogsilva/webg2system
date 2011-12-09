@@ -158,7 +158,7 @@ class TimeslotDisplacer(models.Model):
                                      'included in the calculation.')
 
     def __unicode__(self):
-        return '%s <= %s < %s' % (self.startValue, self.unit, self.endValue)
+        return '%s <= %s <= %s' % (self.startValue, self.unit, self.endValue)
 
 class CodeClass(models.Model):
     className = models.CharField(max_length=100, verbose_name='Class')

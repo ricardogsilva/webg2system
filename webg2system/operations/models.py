@@ -1,13 +1,14 @@
 from django.db import models
-from systemsettings.models import Package, Source, Host
+from systemsettings.models import Package, Area, Host
 
-import core
+from core import g2packages
 
 class RunningPackage(models.Model):
     STATUS_CHOICES = (('running', 'running'),('stopped', 'stopped'))
     timeslot = models.DateTimeField()
     settings = models.ForeignKey(Package)
-    source = models.ForeignKey(Source)
+    area = models.ForeignKey(Area, verbose_name='Default Area', help_text='The name '\
+                             '(or regular expression) for the area.')
     host = models.ForeignKey(Host)
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, 
                               default='stopped')
@@ -25,9 +26,9 @@ class RunningPackage(models.Model):
         return self.settings.package.name
     show_settings.short_description = 'Package'
 
-    def show_source(self):
-        return self.source.name
-    show_source.short_description = 'Source'
+    def show_area(self):
+        return self.area.name
+    show_area.short_description = 'Default area'
 
     def show_host(self):
         return self.host.name
@@ -39,8 +40,8 @@ class RunningPackage(models.Model):
         the run() and create_package() methods.
         '''
 
-        packClass = eval('core.%s' % self.settings.codeClass.className)
-        pack = packClass(self.settings, self.timeslot, self.source, self.host)
+        packClass = eval('g2packages.%s' % self.settings.codeClass.className)
+        pack = packClass(self.settings, self.timeslot, self.area, self.host)
         return pack
 
     def create_package(self):
