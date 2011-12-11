@@ -14,4 +14,7 @@ urlpatterns = patterns('',
 
     # Uncomment the next line to enable the admin:
     url(r'^admin/', include(admin.site.urls)),
+    url(r'^operations/', include('operations.urls')),
+    # piston-powered api
+    url(r'^api/', include('api.urls')),
 )

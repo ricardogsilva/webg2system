@@ -26,17 +26,21 @@ class FilePatternInline(admin.StackedInline):
 
 class PackagePathInline(admin.StackedInline):
     model = PackagePath
-    extra = 1
+    extra = 0
 
 class PackageInputInline(admin.StackedInline):
     model = PackageInput
     fk_name = 'package'
-    extra = 1
+    extra = 0
 
 class PackageOutputInline(admin.StackedInline):
     model = PackageOutput
     fk_name = 'package'
-    extra = 1
+    extra = 0
+
+class PackageExtraInfoInline(admin.StackedInline):
+    model = PackageExtraInfo
+    extra = 0
 
 class FileAdmin(admin.ModelAdmin):
     inlines = [FilePathInline, FilePatternInline]
@@ -46,7 +50,7 @@ class FileAdmin(admin.ModelAdmin):
     filter_horizontal = ('exceptHours',)
 
 class PackageAdmin(admin.ModelAdmin):
-    inlines = [PackagePathInline, PackageInputInline, PackageOutputInline]
+    inlines = [PackagePathInline, PackageInputInline, PackageOutputInline, PackageExtraInfoInline]
     list_display = ('name', 'version', 'codeClass', 'get_inputs', 'get_outputs')
 
 class SourceAdmin(admin.ModelAdmin):

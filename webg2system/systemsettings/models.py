@@ -107,6 +107,9 @@ class PackageOutput(models.Model):
     specificTimeslots = models.ManyToManyField('TimeslotDisplacer', null=True, 
                                                blank=True, verbose_name='timeslots')
 
+class PackageExtraInfo(MarkedString):
+    package = models.ForeignKey(Package)
+
 class Source(models.Model):
     name = models.CharField(max_length=100)
     
