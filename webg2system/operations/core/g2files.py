@@ -5,20 +5,7 @@
 ...
 """
 
-# standard imports
-import datetime as dt
-import re
-import fnmatch
-import os
-import logging
-from xml.dom import minidom
-import socket
-
-# this package's specific imports
-import utilities
-from g2item import G2Item
-#from g2hosts import G2Host, host_creator
-#from quickviewgenerator import HDF5TileQuickviewGenerator
+from g2item import GenericItem
 
 # TODO 
 #
@@ -29,13 +16,11 @@ from g2item import G2Item
 #     as input (with the default being the hosts defined in the xml settings 
 #
 
-class G2File(G2Item):
+class G2File(GenericItem):
 
     hosts = dict()
 
-    def __init__(self, name, source, timeslot, host, numFiles, searchPaths, 
-                 searchPatterns, fileType, frequency, makeCopies):
-    #def __init__(self, settings, timeslot, area, host):
+    def __init__(self, settings, timeslot, areaSettings, hostSettings):
         '''
         Inputs
 
@@ -64,328 +49,332 @@ class G2File(G2Item):
                 with more than 1GB of size).
         '''
 
-        super(G2File, self).__init__(name, timeslot, source)
-        self.logger = logging.getLogger(self.__class__.__name__)
-        if host is None:
-            host = socket.gethostname()
-        if self.hosts.get(host) is None:
-            hostObj = factories.create_host(host)
-            self.hosts[host] = hostObj
-        self.defaultHost = self.hosts.get(host)
-        self.package = None
-        self.makeCopies = makeCopies
-        self.numFiles = numFiles
-        self.fileType = fileType
-        self.frequency = frequency
-        self.searchPaths = []
-        for pathTuple in searchPaths:
-            marksTup = (pathTuple[1], pathTuple[2])
-            parsedPath = utilities.parse_marked(marksTup, self)
-            self.searchPaths.append({'isRelative' : pathTuple[0],
-                                    'path' : parsedPath})
-        self.searchPatterns = []
-        for pattTuple in searchPatterns:
-            self.searchPatterns.append(utilities.parse_marked(pattTuple, 
-                                                           self))
-
-    def find(self, hostName=None, useArchive=None, lookForBigFiles=False):
-        '''
-        Find this object's files in hostName.
-
-        This method will also sort the found files, removing possible
-        duplicates. If the same file is present on more than one directory,
-        only one of them will be returned. Also, if a file is present in
-        compressed and uncompressed forms, only the uncompressed one will
-        be returned.
-        If the files cannot be found in the host, the archives may also be 
-        searched.
-
-        Inputs:
-
-            hostName - The name of a G2Host object specifying where to look 
-                       for the files. If it is None (the default), the 
-                       instance's default host will be used.
-
-            useArchive - A string indicating what kind of file is to be
-                searched for in the archives. Accepted values are 'inputs'
-                and 'outputs'. A value of None (the default) causes the
-                archives not to be searched at all.
-
-            lookForBigFiles - escrever aqui ...
-
-        Returns:
-
-            A dictionary with keys:
-                'host' : the name of the host where the files have been found
-                'paths' : a list with the full paths of found files
-            If the files cannot be found, the method will return None.
-        '''
-
-        relPaths = self._get_all_relative_paths()
-        absPaths = self._get_all_absolute_paths()
-        result = None
-        if hostName is None:
-            theHost = self.defaultHost
-        else:
-            theHost = factories.create_host(hostName)
-        relFound = theHost.find(relPaths)
-        relatives = self._return_unique_file_names(relFound)
-        absFound = theHost.find(absPaths, absolute=True)
-        absolutes = self._return_unique_file_names(absFound)
-        allPaths = relatives + absolutes
-        if len(allPaths) > 0:
-            # the files have been found
-            result = {'host' : theHost.name, 'paths' : allPaths}
-        elif len(allPaths) == 0 and useArchive is not None:
-            # nothing has been found in the host
-            if not self.makeCopies and not lookForBigFiles:
-                # don't search for the files in the archives
-                self.logger.warning('%s is not marked as "makeCopies"'\
-                                    ', skipping its search in the archives' % \
-                                    self.name)
-            else:
-                # let's try the archives
-                self.logger.info('Trying the archives...')
-                archives = utilities.get_archive_names(useArchive)
-                for archName in archives:
-                    host = factories.create_host(archName)
-                    relFound = host.find(relPaths)
-                    relatives = self._return_unique_file_names(relFound)
-                    absFound = host.find(absPaths)
-                    absolutes = self._return_unique_file_names(absFound)
-                    allPaths = relatives + absolutes
-                    if len(allPaths) > 0:
-                        result = {'host': archName, 'paths' : allPaths}
-                        break
-        return result
-
-    def _return_unique_file_names(self, pathList):
-        '''
-        Return a list with unique filepaths, discarding files that apear more
-        than once, but on different directories.
-        '''
-
-        uniquePathList = []
-        uniqueNames = []
-        uniqueExtensions = []
-        for path in pathList:
-            basename = os.path.basename(path)
-            name = basename.partition('.')[0]
-            ext = basename.rpartition('.')[-1]
-            if name in uniqueNames:
-                nameIndex = uniqueNames.index(name)
-                previousExtension = uniqueExtensions[uniqueNames.index(name)]
-                if previousExtension == 'bz2':
-                    uniquePathList[nameIndex] = path
-                    uniqueExtensions[uniqueNames.index(name)] = ext
-            else:
-                uniquePathList.append(path)
-                uniqueNames.append(name)
-                uniqueExtensions.append(ext)
-        return uniquePathList
-
-    # FIXME
-    # - Currently working on this method...
-    def fetch(self, targetDir, sourceHost=None, targetHost=None, useArchive=None,
-              forceCopy=False):
-        '''
-        Fetch files from the source host to the destination directory.
-
-        This method's main purpose is to copy local or remote files to
-        a destination directory.
-
-        However, if the instance's 'makeCopies' attribute is set to False, 
-        the files will not be copied. This is to prevent accidental copies of 
-        big files (local copies and network copies as well).
-
-        Also note that, if the files are on a local host and are not compressed,
-        the default behaviour is to not copy them, the method will just return 
-        their local path. This can be overriden by using the 'forceCopy' flag.
-
-        Inputs:
-            
-            targetDir - A string with the relative path (relative to the
-                'targetHost') of the directory where the files should be
-                copied to.
-
-            sourceHost - A string with the name of the host that is the
-                source of the files. A value of None (the default) will use
-                the file's own host as a source.
-
-            targetHost - A string with the name of the host that is the 
-                destination for the fetching. A value of None (the default)
-                will use the file's own default host as a destination.
-
-            useArchive - A string indicating what kind of file is to be
-                searched and fetched for in the archives. Accepted values are 
-                'inputs' and 'outputs'. A value of None (the default) causes 
-                the archives not to be searched at all.
-
-            forceCopy - A boolean indicating if the files must be copied even
-                if 'sourceHost' is the local host and they are not compressed.
-                This is generally not the intended behaviour and, as such, the
-                default is False.
-
-        Returns:
-
-            A list of strings with the full paths of the files that have been
-            fetched.
-        '''
-
-        result = None
-        compressedPatt = re.compile(r'\.bz2$')
-        if self.makeCopies:
-            foundDict = self.find(sourceHost, useArchive)
-            if foundDict is not None:
-                # the files have been found somewhere
-                if targetHost is None:
-                    theHost = self.defaultHost
-                else:
-                    theHost = factories.create_host(targetHost)
-                if theHost.name == foundDict['host']:
-                    # files need a local copy.
-                    toCopy = []
-                    toGetLink = []
-                    for path in foundDict['paths']:
-                        path = path + '$'
-                        if compressedPatt.search(path) is not None:
-                            # this path is compressed, it is to be copied 
-                            # regardless
-                            toCopy.append(path)
-                        else:
-                            if forceCopy:
-                                # copy the files
-                                toCopy.append(path)
-                            else:
-                                # just get their link
-                                toGetLink.append(path)
-                    fetched = theHost.fetch(toCopy, targetDir, foundDict['host']) + toGetLink
-                else:
-                    # the copy will be remote
-                    fetched = theHost.fetch(foundDict['paths'], targetDir, foundDict['host'])
-                result = fetched
-        return result
-
-    def is_file(self, filePath):
-        '''
-        Return True it the filePath is one of the files specified by this
-        object's searchPatterns.
-        '''
-
-
-        patts = [re.compile(fnmatch.translate(p)) for p in self.searchPatterns]
-        isFile = False
-        for patt in patts:
-            if patt.search(filePath) is not None:
-                isFile = True
-        return isFile
-
-    def generate_quickview(self):
-        raise NotImplementedError
-
-    def generate_xml_metadata(self):
-        raise NotImplementedError
-
-    # Is this method really necessary?
-    def get_originator_package(self):
-        '''
-        Return a G2Package instance that is the originator of this G2File
-        object.
-
-        Note: The returned package's timeslot, source and host will be the
-        same as this instance's, which can be incorrect.
-        '''
+        super(G2File, self).__init__(timeslot, areaSettings, hostSettings)
+        self.name = settings.inputItem.name
+        self.optional = settings.optional
         
-        originatorPack = None
-        result = None
-        allPackDetails = utilities.get_all_packages()
-        for packDict in allPackDetails:
-            packName = packDict['name']
-            packModes = [md.get('name') for md in packDict['modes']]
-            for mode in packModes:
-                currentVersion = utilities.get_current_version_number(packName,
-                                                                      mode)
-                outputs = utilities.get_file_names(packName, mode,
-                                                   currentVersion, 'outputs')
-                if self.name in outputs:
-                    originatorPack = factories.create_package(
-                                        packName, mode, 
-                                        self.timeslot.strftime('%Y%m%d%H%M'),
-                                        self.source.name)
-                    result = (packName, mode, self.timeslot.strftime('%Y%m%d%H%M'),self.source.name)
-        return originatorPack, result
+        #super(G2File, self).__init__(name, timeslot, source)
+        #self.logger = logging.getLogger(self.__class__.__name__)
+        #if host is None:
+        #    host = socket.gethostname()
+        #if self.hosts.get(host) is None:
+        #    hostObj = factories.create_host(host)
+        #    self.hosts[host] = hostObj
+        #self.defaultHost = self.hosts.get(host)
+        #self.package = None
+        #self.makeCopies = makeCopies
+        #self.numFiles = numFiles
+        #self.fileType = fileType
+        #self.frequency = frequency
+        #self.searchPaths = []
+        #for pathTuple in searchPaths:
+        #    marksTup = (pathTuple[1], pathTuple[2])
+        #    parsedPath = utilities.parse_marked(marksTup, self)
+        #    self.searchPaths.append({'isRelative' : pathTuple[0],
+        #                            'path' : parsedPath})
+        #self.searchPatterns = []
+        #for pattTuple in searchPatterns:
+        #    self.searchPatterns.append(utilities.parse_marked(pattTuple, 
+        #                                                   self))
 
-    # FIXME
-    # - this method hasn't been properly tested yet.
-    # - also, the version number shouldn't be a number, a string would be
-    #   better
-    def get_originator_version(self):
-        '''
-        Return the version of the package that originated this file.
-
-        The version returned will be the one marked as 'current' in the
-        settings. If no version can be found it will return None.
-        '''
-
-        theVersion = None
-        allPackDetails = utilities.get_all_packages()
-        for packName, packDetails in allPackDetails.iteritems():
-            for modeName, modeDetails in packDetails.get('modes').iteritems():
-                versions = modeDetails.get('versions')
-                if versions is not None:
-                    for version in versions:
-                        if version.get('status') == 'current':
-                            outputs = [o['name'] for o in version.get('outputs')]
-                            if self.name in outputs:
-                                theVersion = version.get('number')
-        return theVersion
-
-    def get_originator_output_dir(self):
-        '''
-        Return the output directory for the package that created this file.
-        '''
-
-        theDir = None
-        allPackDetails = utilities.get_all_packages()
-        for packName, packDetails in allPackDetails.iteritems():
-            for modeName, modeDetails in packDetails.get('modes').iteritems():
-                outDirTup = modeDetails.get('outputDir')
-                # working...
-
-    def get_dependent_packages(self):
-        '''
-        Return a list of G2Package instances that depend on this G2File
-        object in order to run.
-        '''
-        
-        raise NotImplementedError
-
-
-    def _get_all_relative_paths(self):
-        '''
-        Return a list with all the relative search paths and search patterns 
-        combined.
-        '''
-
-        allRelPaths = []
-        for pathDict in self.searchPaths:
-            if pathDict['isRelative']:
-                allRelPaths += [os.path.join(pathDict['path'], p) for p in \
-                                self.searchPatterns]
-        return allRelPaths
-
-    def _get_all_absolute_paths(self):
-        '''
-        Return a list with all the absolute search paths and search patterns 
-        combined.
-        '''
-
-        allAbsPaths = []
-        for pathDict in self.searchPaths:
-            if not pathDict['isRelative']:
-                allAbsPaths += [os.path.join(pathDict['path'], p) for p in \
-                                self.searchPatterns]
-        return allAbsPaths
+#    def find(self, hostName=None, useArchive=None, lookForBigFiles=False):
+#        '''
+#        Find this object's files in hostName.
+#
+#        This method will also sort the found files, removing possible
+#        duplicates. If the same file is present on more than one directory,
+#        only one of them will be returned. Also, if a file is present in
+#        compressed and uncompressed forms, only the uncompressed one will
+#        be returned.
+#        If the files cannot be found in the host, the archives may also be 
+#        searched.
+#
+#        Inputs:
+#
+#            hostName - The name of a G2Host object specifying where to look 
+#                       for the files. If it is None (the default), the 
+#                       instance's default host will be used.
+#
+#            useArchive - A string indicating what kind of file is to be
+#                searched for in the archives. Accepted values are 'inputs'
+#                and 'outputs'. A value of None (the default) causes the
+#                archives not to be searched at all.
+#
+#            lookForBigFiles - escrever aqui ...
+#
+#        Returns:
+#
+#            A dictionary with keys:
+#                'host' : the name of the host where the files have been found
+#                'paths' : a list with the full paths of found files
+#            If the files cannot be found, the method will return None.
+#        '''
+#
+#        relPaths = self._get_all_relative_paths()
+#        absPaths = self._get_all_absolute_paths()
+#        result = None
+#        if hostName is None:
+#            theHost = self.defaultHost
+#        else:
+#            theHost = factories.create_host(hostName)
+#        relFound = theHost.find(relPaths)
+#        relatives = self._return_unique_file_names(relFound)
+#        absFound = theHost.find(absPaths, absolute=True)
+#        absolutes = self._return_unique_file_names(absFound)
+#        allPaths = relatives + absolutes
+#        if len(allPaths) > 0:
+#            # the files have been found
+#            result = {'host' : theHost.name, 'paths' : allPaths}
+#        elif len(allPaths) == 0 and useArchive is not None:
+#            # nothing has been found in the host
+#            if not self.makeCopies and not lookForBigFiles:
+#                # don't search for the files in the archives
+#                self.logger.warning('%s is not marked as "makeCopies"'\
+#                                    ', skipping its search in the archives' % \
+#                                    self.name)
+#            else:
+#                # let's try the archives
+#                self.logger.info('Trying the archives...')
+#                archives = utilities.get_archive_names(useArchive)
+#                for archName in archives:
+#                    host = factories.create_host(archName)
+#                    relFound = host.find(relPaths)
+#                    relatives = self._return_unique_file_names(relFound)
+#                    absFound = host.find(absPaths)
+#                    absolutes = self._return_unique_file_names(absFound)
+#                    allPaths = relatives + absolutes
+#                    if len(allPaths) > 0:
+#                        result = {'host': archName, 'paths' : allPaths}
+#                        break
+#        return result
+#
+#    def _return_unique_file_names(self, pathList):
+#        '''
+#        Return a list with unique filepaths, discarding files that apear more
+#        than once, but on different directories.
+#        '''
+#
+#        uniquePathList = []
+#        uniqueNames = []
+#        uniqueExtensions = []
+#        for path in pathList:
+#            basename = os.path.basename(path)
+#            name = basename.partition('.')[0]
+#            ext = basename.rpartition('.')[-1]
+#            if name in uniqueNames:
+#                nameIndex = uniqueNames.index(name)
+#                previousExtension = uniqueExtensions[uniqueNames.index(name)]
+#                if previousExtension == 'bz2':
+#                    uniquePathList[nameIndex] = path
+#                    uniqueExtensions[uniqueNames.index(name)] = ext
+#            else:
+#                uniquePathList.append(path)
+#                uniqueNames.append(name)
+#                uniqueExtensions.append(ext)
+#        return uniquePathList
+#
+#    # FIXME
+#    # - Currently working on this method...
+#    def fetch(self, targetDir, sourceHost=None, targetHost=None, useArchive=None,
+#              forceCopy=False):
+#        '''
+#        Fetch files from the source host to the destination directory.
+#
+#        This method's main purpose is to copy local or remote files to
+#        a destination directory.
+#
+#        However, if the instance's 'makeCopies' attribute is set to False, 
+#        the files will not be copied. This is to prevent accidental copies of 
+#        big files (local copies and network copies as well).
+#
+#        Also note that, if the files are on a local host and are not compressed,
+#        the default behaviour is to not copy them, the method will just return 
+#        their local path. This can be overriden by using the 'forceCopy' flag.
+#
+#        Inputs:
+#            
+#            targetDir - A string with the relative path (relative to the
+#                'targetHost') of the directory where the files should be
+#                copied to.
+#
+#            sourceHost - A string with the name of the host that is the
+#                source of the files. A value of None (the default) will use
+#                the file's own host as a source.
+#
+#            targetHost - A string with the name of the host that is the 
+#                destination for the fetching. A value of None (the default)
+#                will use the file's own default host as a destination.
+#
+#            useArchive - A string indicating what kind of file is to be
+#                searched and fetched for in the archives. Accepted values are 
+#                'inputs' and 'outputs'. A value of None (the default) causes 
+#                the archives not to be searched at all.
+#
+#            forceCopy - A boolean indicating if the files must be copied even
+#                if 'sourceHost' is the local host and they are not compressed.
+#                This is generally not the intended behaviour and, as such, the
+#                default is False.
+#
+#        Returns:
+#
+#            A list of strings with the full paths of the files that have been
+#            fetched.
+#        '''
+#
+#        result = None
+#        compressedPatt = re.compile(r'\.bz2$')
+#        if self.makeCopies:
+#            foundDict = self.find(sourceHost, useArchive)
+#            if foundDict is not None:
+#                # the files have been found somewhere
+#                if targetHost is None:
+#                    theHost = self.defaultHost
+#                else:
+#                    theHost = factories.create_host(targetHost)
+#                if theHost.name == foundDict['host']:
+#                    # files need a local copy.
+#                    toCopy = []
+#                    toGetLink = []
+#                    for path in foundDict['paths']:
+#                        path = path + '$'
+#                        if compressedPatt.search(path) is not None:
+#                            # this path is compressed, it is to be copied 
+#                            # regardless
+#                            toCopy.append(path)
+#                        else:
+#                            if forceCopy:
+#                                # copy the files
+#                                toCopy.append(path)
+#                            else:
+#                                # just get their link
+#                                toGetLink.append(path)
+#                    fetched = theHost.fetch(toCopy, targetDir, foundDict['host']) + toGetLink
+#                else:
+#                    # the copy will be remote
+#                    fetched = theHost.fetch(foundDict['paths'], targetDir, foundDict['host'])
+#                result = fetched
+#        return result
+#
+#    def is_file(self, filePath):
+#        '''
+#        Return True it the filePath is one of the files specified by this
+#        object's searchPatterns.
+#        '''
+#
+#
+#        patts = [re.compile(fnmatch.translate(p)) for p in self.searchPatterns]
+#        isFile = False
+#        for patt in patts:
+#            if patt.search(filePath) is not None:
+#                isFile = True
+#        return isFile
+#
+#    def generate_quickview(self):
+#        raise NotImplementedError
+#
+#    def generate_xml_metadata(self):
+#        raise NotImplementedError
+#
+#    # Is this method really necessary?
+#    def get_originator_package(self):
+#        '''
+#        Return a G2Package instance that is the originator of this G2File
+#        object.
+#
+#        Note: The returned package's timeslot, source and host will be the
+#        same as this instance's, which can be incorrect.
+#        '''
+#        
+#        originatorPack = None
+#        result = None
+#        allPackDetails = utilities.get_all_packages()
+#        for packDict in allPackDetails:
+#            packName = packDict['name']
+#            packModes = [md.get('name') for md in packDict['modes']]
+#            for mode in packModes:
+#                currentVersion = utilities.get_current_version_number(packName,
+#                                                                      mode)
+#                outputs = utilities.get_file_names(packName, mode,
+#                                                   currentVersion, 'outputs')
+#                if self.name in outputs:
+#                    originatorPack = factories.create_package(
+#                                        packName, mode, 
+#                                        self.timeslot.strftime('%Y%m%d%H%M'),
+#                                        self.source.name)
+#                    result = (packName, mode, self.timeslot.strftime('%Y%m%d%H%M'),self.source.name)
+#        return originatorPack, result
+#
+#    # FIXME
+#    # - this method hasn't been properly tested yet.
+#    # - also, the version number shouldn't be a number, a string would be
+#    #   better
+#    def get_originator_version(self):
+#        '''
+#        Return the version of the package that originated this file.
+#
+#        The version returned will be the one marked as 'current' in the
+#        settings. If no version can be found it will return None.
+#        '''
+#
+#        theVersion = None
+#        allPackDetails = utilities.get_all_packages()
+#        for packName, packDetails in allPackDetails.iteritems():
+#            for modeName, modeDetails in packDetails.get('modes').iteritems():
+#                versions = modeDetails.get('versions')
+#                if versions is not None:
+#                    for version in versions:
+#                        if version.get('status') == 'current':
+#                            outputs = [o['name'] for o in version.get('outputs')]
+#                            if self.name in outputs:
+#                                theVersion = version.get('number')
+#        return theVersion
+#
+#    def get_originator_output_dir(self):
+#        '''
+#        Return the output directory for the package that created this file.
+#        '''
+#
+#        theDir = None
+#        allPackDetails = utilities.get_all_packages()
+#        for packName, packDetails in allPackDetails.iteritems():
+#            for modeName, modeDetails in packDetails.get('modes').iteritems():
+#                outDirTup = modeDetails.get('outputDir')
+#                # working...
+#
+#    def get_dependent_packages(self):
+#        '''
+#        Return a list of G2Package instances that depend on this G2File
+#        object in order to run.
+#        '''
+#        
+#        raise NotImplementedError
+#
+#
+#    def _get_all_relative_paths(self):
+#        '''
+#        Return a list with all the relative search paths and search patterns 
+#        combined.
+#        '''
+#
+#        allRelPaths = []
+#        for pathDict in self.searchPaths:
+#            if pathDict['isRelative']:
+#                allRelPaths += [os.path.join(pathDict['path'], p) for p in \
+#                                self.searchPatterns]
+#        return allRelPaths
+#
+#    def _get_all_absolute_paths(self):
+#        '''
+#        Return a list with all the absolute search paths and search patterns 
+#        combined.
+#        '''
+#
+#        allAbsPaths = []
+#        for pathDict in self.searchPaths:
+#            if not pathDict['isRelative']:
+#                allAbsPaths += [os.path.join(pathDict['path'], p) for p in \
+#                                self.searchPatterns]
+#        return allAbsPaths
 
 
 #class G2File(G2Item):

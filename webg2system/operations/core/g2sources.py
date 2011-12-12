@@ -24,3 +24,4 @@ class G2Source(object):
             if specSource.startDate <= timeslot < specSource.endDate:
                 self.name = specSource.name
         self.generalName = settings.name
+        self.areas = [a.name for a in settings.area_set.all()]

@@ -1,6 +1,9 @@
 import os
 
+import systemsettings
+
 from g2item import GenericItem
+from g2files import G2File
 import utilities
 
 class GenericPackage(GenericItem):
@@ -33,7 +36,7 @@ class FetchData(GenericPackage):
         - outputDir
     '''
 
-    def __init__(self, settings, timeslot, source, host):
+    def __init__(self, settings, timeslot, area, host):
         '''
         Inputs:
 
@@ -41,12 +44,12 @@ class FetchData(GenericPackage):
 
             timeslot - A datetime.datetime object
 
-            source - A systemsettings.models.Source object
+            area - A systemsettings.models.Area object
 
             host - A systemsettings.models.Host object
         '''
 
-        super(FetchData, self).__init__(timeslot, source, host)
+        super(FetchData, self).__init__(timeslot, area.name, host)
         self.rawSettings = settings
         relativeOutDir = utilities.parse_marked(
                 settings.packagepath_set.get(name='outputDir'), 
@@ -57,14 +60,24 @@ class FetchData(GenericPackage):
         self.outputs = settings.packageOutput_systemsettings_packageoutput_related.all()
 
     def _create_inputs(self, allInpSettings):
+        inputs = []
         for inpSettings in allInpSettings:
             timeslots = []
             for tsDisplacement in inpSettings.specificTimeslots.all():
                 timeslots += utilities.displace_timeslot(self.timeslot, tsDisplacement)
             if len(timeslots) == 0:
                 timeslots.append(self.timeslot)
-            areas = []
-            pass
+            specificAreas = [a for a in inpSettings.specificAreas.all()]
+            if len(specificAreas) == 0:
+                specificAreas = systemsettings.models.Source.objects.get(name=self.source.generalName).area_set.all()
+            for spArea in specificAreas:
+                for spTimeslot in timeslots:
+                    # create a new input
+                    hostSettings = systemsettings.models.Host.objects.get(name=self.host.name)
+                    inputs.append(G2File(inpSettings, spTimeslot, spArea, hostSettings))
+        return inputs
+
+
 
     def prepare(self, callback):
         import time
