@@ -55,27 +55,58 @@ class FetchData(GenericPackage):
                 settings.packagepath_set.get(name='outputDir'), 
                 self)
         self.outputDir = os.path.join(self.host.basePath, relativeOutDir)
-        # not creating any G2File objects yet
-        self.inputs = self._create_inputs(settings.packageInput_systemsettings_packageinput_related.all())
-        self.outputs = settings.packageOutput_systemsettings_packageoutput_related.all()
+        #self.inputs = self._create_inputs(settings.packageInput_systemsettings_packageinput_related.all())
+        self.inputs = self._create_files('input', settings.packageInput_systemsettings_packageinput_related.all())
+        self.outputs = self._create_files('output', settings.packageOutput_systemsettings_packageoutput_related.all())
 
-    def _create_inputs(self, allInpSettings):
-        inputs = []
-        for inpSettings in allInpSettings:
+    def _create_files(self, fileRole, filesSettings):
+        objects = []
+        hostSettings = systemsettings.models.Host.objects.get(name=self.host.name)
+        for specificSettings in filesSettings:
             timeslots = []
-            for tsDisplacement in inpSettings.specificTimeslots.all():
+            for tsDisplacement in specificSettings.specificTimeslots.all():
                 timeslots += utilities.displace_timeslot(self.timeslot, tsDisplacement)
             if len(timeslots) == 0:
                 timeslots.append(self.timeslot)
-            specificAreas = [a for a in inpSettings.specificAreas.all()]
+            specificAreas = [a for a in specificSettings.specificAreas.all()]
             if len(specificAreas) == 0:
                 specificAreas = systemsettings.models.Source.objects.get(name=self.source.generalName).area_set.all()
             for spArea in specificAreas:
                 for spTimeslot in timeslots:
                     # create a new input
-                    hostSettings = systemsettings.models.Host.objects.get(name=self.host.name)
-                    inputs.append(G2File(inpSettings, spTimeslot, spArea, hostSettings))
-        return inputs
+                    generalFileSettings = eval('specificSettings.%sItem.file' \
+                                               % fileRole)
+                    newObject = G2File(generalFileSettings, spTimeslot, spArea,
+                                       hostSettings, specificSettings.optional)
+                    objects.append(newObject)
+        return objects
+
+
+    #def _create_inputs(self, allInpSettings):
+    #    inputs = []
+    #    hostSettings = systemsettings.models.Host.objects.get(name=self.host.name)
+    #    for inpSettings in allInpSettings:
+    #        timeslots = []
+    #        for tsDisplacement in inpSettings.specificTimeslots.all():
+    #            timeslots += utilities.displace_timeslot(self.timeslot, tsDisplacement)
+    #        if len(timeslots) == 0:
+    #            timeslots.append(self.timeslot)
+    #        specificAreas = [a for a in inpSettings.specificAreas.all()]
+    #        if len(specificAreas) == 0:
+    #            specificAreas = systemsettings.models.Source.objects.get(name=self.source.generalName).area_set.all()
+    #        for spArea in specificAreas:
+    #            for spTimeslot in timeslots:
+    #                # create a new input
+    #                newInput = G2File(inpSettings.inputItem.file, spTimeslot, 
+    #                                  spArea, hostSettings, 
+    #                                  inpSettings.optional)
+    #                inputs.append(newInput)
+    #    return inputs
+
+    #def _create_outputs(self, allOutpSettings):
+    #    ouputs = []
+    #    hostSettings = systemsettings.models.Host.objects.get(name=self.host.name)
+
 
 
 

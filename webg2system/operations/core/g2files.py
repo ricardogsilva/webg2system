@@ -5,7 +5,10 @@
 ...
 """
 
+import os
+
 from g2item import GenericItem
+import utilities
 
 # TODO 
 #
@@ -20,62 +23,43 @@ class G2File(GenericItem):
 
     hosts = dict()
 
-    def __init__(self, settings, timeslot, areaSettings, hostSettings):
+    def __init__(self, fileSettings, timeslot, areaSettings, hostSettings, optional=False):
         '''
         Inputs
 
-            name - The name of the object to create, according to the settings
+            fileSettings - A systemsettings.models.File object
                 defined in the XML file.
 
-            source - A G2Source object.
+            timeslot - A datetime.datetime object
 
-            timeslot - A datetime.datetime object.
+            areaSettings - A systemsettings.models.Area object
 
-            host - The name of the g2Host object that this instance should use
+            hostSettings - A systemsettings.models.Host object
 
-            numFiles - An integer specifying how many files are expected.
-
-            searchPaths - 
-
-            searchPatterns - 
-
-            fileType - 
-
-            frequency - 
-
-            makeCopies - A boolean that defaults to True and specifies if
-                the file can be copied. This is to prevent accidentally
-                copying and transfering huge files (like some static files 
-                with more than 1GB of size).
+            optional - A boolean indicating if the object is optional or not.
         '''
 
         super(G2File, self).__init__(timeslot, areaSettings, hostSettings)
-        self.name = settings.inputItem.name
-        self.optional = settings.optional
-        
-        #super(G2File, self).__init__(name, timeslot, source)
-        #self.logger = logging.getLogger(self.__class__.__name__)
-        #if host is None:
-        #    host = socket.gethostname()
-        #if self.hosts.get(host) is None:
-        #    hostObj = factories.create_host(host)
-        #    self.hosts[host] = hostObj
-        #self.defaultHost = self.hosts.get(host)
-        #self.package = None
-        #self.makeCopies = makeCopies
-        #self.numFiles = numFiles
-        #self.fileType = fileType
-        #self.frequency = frequency
-        #self.searchPaths = []
-        #for pathTuple in searchPaths:
-        #    marksTup = (pathTuple[1], pathTuple[2])
-        #    parsedPath = utilities.parse_marked(marksTup, self)
-        #    self.searchPaths.append({'isRelative' : pathTuple[0],
-        #                            'path' : parsedPath})
-        #self.searchPatterns = []
-        #for pattTuple in searchPatterns:
-        #    self.searchPatterns.append(utilities.parse_marked(pattTuple, 
-        #                                                   self))
+        self.name = fileSettings.name
+        self.optional = optional
+        self.toCopy = fileSettings.toCopy
+        self.toCompress = fileSettings.toCompress
+        self.toArchive = fileSettings.toArchive
+        self.toDisseminate = fileSettings.toDisseminate
+        self.numFiles = fileSettings.numFiles
+        self.exceptHours = [eh.hour for eh in fileSettings.exceptHours.all()]
+        self.fileType = fileSettings.fileType
+        self.frequency = fileSettings.frequency
+        self.searchPaths = []
+        for filePathObj in fileSettings.filepath_set.all():
+            relativePath = utilities.parse_marked(filePathObj, self)
+            #self.searchPaths.append(os.path.join(self.host.basePath, 
+            #                        relativePath))
+            self.searchPaths.append(relativePath)
+        self.searchPatterns = []
+        for searchPattObj in fileSettings.filepattern_set.all():
+            pattern = utilities.parse_marked(searchPattObj, self)
+            self.searchPatterns.append(pattern)
 
 #    def find(self, hostName=None, useArchive=None, lookForBigFiles=False):
 #        '''

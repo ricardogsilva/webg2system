@@ -18,18 +18,20 @@ def parse_marked(markedStringObj, obj):
     Parse the marked string.
     '''
 
+    newString = markedStringObj.string
     markSign = '#'
     markList = [i.strip() for i in markedStringObj.marks.split(',')]
-    realMarks = convert_marks(markList, obj)
-    newString = markedStringObj.string
-    counter = 0
-    while newString.partition(markSign)[1] != '':
-        partList = newString.partition(markSign)
-        newString = partList[0] + str(realMarks[counter]) + partList[2]
-        counter += 1
+    if len(markList) == 1 and markList[0] == '':
+        pass
+    else:
+        realMarks = convert_marks(markList, obj)
+        counter = 0
+        while newString.partition(markSign)[1] != '':
+            partList = newString.partition(markSign)
+            newString = partList[0] + str(realMarks[counter]) + partList[2]
+            counter += 1
     return newString
 
-# FIXME - Implement specificsource recognition for the marks
 def convert_marks(markList, obj):
     newMarks = []
     for mark in markList:
