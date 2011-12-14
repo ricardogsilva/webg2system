@@ -11,6 +11,9 @@ class Host(models.Model):
     ip = models.IPAddressField()
     username = models.CharField(max_length=50)
     password = models.CharField(max_length=50)
+    isArchive = models.BooleanField(default=False, help_text='Should this '\
+                                    'host be used when searching the '\
+                                    'archives?', verbose_name='Is archive?')
 
     def __unicode__(self):
         return self.name
@@ -71,7 +74,14 @@ class File(Item):
     toCompress = models.BooleanField(verbose_name='Compress')
     toDisseminate = models.BooleanField(verbose_name='Disseminate')
     toCopy = models.BooleanField(verbose_name='Copy')
-    exceptHours = models.ManyToManyField(ExceptHour)
+    exceptHours = models.ManyToManyField(ExceptHour, blank=True)
+    specificArchives = models.ManyToManyField(Host, null=True, blank=True,
+                                              help_text='What hosts should '\
+                                              'be considered to be archives '\
+                                              'for this file? Leave this '\
+                                              'blank if you want to search '\
+                                              'all the archives.', 
+                                              verbose_name='Specific archives')
 
     def get_except_hours(self):
         return ', '.join([str(h.hour) for h in self.exceptHours.all()])

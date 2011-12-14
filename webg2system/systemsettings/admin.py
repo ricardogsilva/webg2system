@@ -2,7 +2,7 @@ from models import *
 from django.contrib import admin
 
 class HostAdmin(admin.ModelAdmin):
-    list_display = ('name', 'basePath', 'ip')
+    list_display = ('name', 'basePath', 'ip', 'isArchive')
 
 class SpecificSourceInline(admin.StackedInline):
     model = SpecificSource
@@ -18,11 +18,11 @@ class AreaInline(admin.StackedInline):
 
 class FilePathInline(admin.StackedInline):
     model = FilePath
-    extra = 1
+    extra = 0
 
 class FilePatternInline(admin.StackedInline):
     model = FilePattern
-    extra = 1
+    extra = 0
 
 class PackagePathInline(admin.StackedInline):
     model = PackagePath
@@ -47,7 +47,7 @@ class FileAdmin(admin.ModelAdmin):
     list_display = ('name', 'toCopy', 'toCompress', 'toArchive',
                     'toDisseminate', 'get_except_hours', 'get_search_paths',
                     'get_search_patterns')
-    filter_horizontal = ('exceptHours',)
+    filter_horizontal = ('exceptHours', 'specificArchives')
 
 class PackageAdmin(admin.ModelAdmin):
     inlines = [PackagePathInline, PackageInputInline, PackageOutputInline, PackageExtraInfoInline]

@@ -66,6 +66,7 @@ class G2Host(object):
         self.host = settings.ip
         self.user = settings.username
         self.password = settings.password
+        self.isArchive = settings.isArchive
 
     def find(self, relativePaths):
         raise NotImplementedError

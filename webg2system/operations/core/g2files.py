@@ -8,6 +8,7 @@
 import os
 
 from g2item import GenericItem
+from g2hosts import G2Host
 import utilities
 
 # TODO 
@@ -60,6 +61,24 @@ class G2File(GenericItem):
         for searchPattObj in fileSettings.filepattern_set.all():
             pattern = utilities.parse_marked(searchPattObj, self)
             self.searchPatterns.append(pattern)
+        if self.toArchive:
+            self.archives = [G2Host(hs) for hs in fileSettings.specificArchives.all()]
+        else:
+            self.archives = None
+
+    def find(self, host=None, useArchives=None):
+        if host is None:
+            host = self.host
+        allPaths = []
+        for path in self.searchPaths:
+            allPaths += [os.path.join(path, p) for p in self.searchPatterns]
+        pathsFound = host.find(allPaths)
+        if len(pathsFound) > 0:
+            result = {'host' : host, 'paths' : pathsFound} # found the files
+        elif len(pathsFound) == 0 and useArchives is not None:
+            for archive in useArchives:
+                found = archive.find(allPaths)
+                # work-in-progress...
 
 #    def find(self, hostName=None, useArchive=None, lookForBigFiles=False):
 #        '''
