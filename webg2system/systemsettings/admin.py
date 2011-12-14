@@ -48,6 +48,8 @@ class FileAdmin(admin.ModelAdmin):
                     'toDisseminate', 'get_except_hours', 'get_search_paths',
                     'get_search_patterns')
     filter_horizontal = ('exceptHours', 'specificArchives')
+    #list_filter = ['toCopy', 'toArchive', 'toDisseminate', 'toCompress']
+    search_fields = ['name']
 
 class PackageAdmin(admin.ModelAdmin):
     inlines = [PackagePathInline, PackageInputInline, PackageOutputInline, PackageExtraInfoInline]
