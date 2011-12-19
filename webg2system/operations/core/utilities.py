@@ -13,9 +13,15 @@ def show_status(status, progress):
     '''
     print(status, progress)
 
-def parse_marked(markedStringObj, obj):
+def parse_marked(markedStringObj, obj, markSign='#'):
     '''
     Parse the marked string.
+
+    Inputs:
+
+        markedString - A systemsettings.MarkedString object.
+
+        obj - An object where the marks should be searched for.
     '''
 
     newString = markedStringObj.string
@@ -37,7 +43,7 @@ def convert_marks(markList, obj):
     for mark in markList:
         markValue = None
         if mark == 'source':
-            markValue = obj.source
+            markValue = obj.source.name
         else:
             try:
                 markValue = eval('obj.%s' % mark)
@@ -60,5 +66,4 @@ def displace_timeslot(timeslot, displacementObj):
         newTimeslot = timeslot + dt.timedelta(seconds=(i * displacementUnit))
         displacedTimeslots.append(newTimeslot)
     return displacedTimeslots
-
 

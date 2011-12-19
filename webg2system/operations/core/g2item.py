@@ -58,3 +58,4 @@ class GenericItem(object):
     @property
     def minute(self):
         return self.timeslot.strftime('%M')
+

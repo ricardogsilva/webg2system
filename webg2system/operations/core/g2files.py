@@ -7,9 +7,12 @@
 
 import os
 
+from systemsettings import models as ss
+
 from g2item import GenericItem
 from g2hosts import G2Host
 import utilities
+import g2packages as g2p
 
 # TODO 
 #
@@ -53,7 +56,8 @@ class G2File(GenericItem):
         self.frequency = fileSettings.frequency
         self.searchPaths = []
         for filePathObj in fileSettings.filepath_set.all():
-            relativePath = utilities.parse_marked(filePathObj, self)
+            #relativePath = utilities.parse_marked(filePathObj, self)
+            relativePath = self.get_path(filePathObj, self)
             #self.searchPaths.append(os.path.join(self.host.basePath, 
             #                        relativePath))
             self.searchPaths.append(relativePath)
@@ -79,6 +83,27 @@ class G2File(GenericItem):
             for archive in useArchives:
                 found = archive.find(allPaths)
                 # work-in-progress...
+
+    def get_path(self, markedString, obj):
+        '''
+        Return a path that has been specified via the markedString mechanism.
+
+        Inputs:
+
+            markedString
+        '''
+
+        if markedString.string == 'fromOriginator':
+            dirName = markedString.name
+            originatorList = [po.package for po in \
+                             ss.PackageOutput.objects.all() if \
+                             po.outputItem.name==self.name]
+            if len(originatorList) != 0:
+                theOriginator = originatorList[0]
+                markedString = theOriginator.packagepath_set.get(name=dirName)
+        thePath = utilities.parse_marked(markedString, obj)
+        return thePath
+             
 
 #    def find(self, hostName=None, useArchive=None, lookForBigFiles=False):
 #        '''

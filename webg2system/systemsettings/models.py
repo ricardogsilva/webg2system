@@ -63,7 +63,8 @@ class Package(Item):
 
     #FIXME
     def get_outputs(self):
-        return ', '.join([str(i) for i in self.packageOutput_systemsettings_packageoutput_related.all()])
+        outs = [o.outputItem.name for o in self.packageOutput_systemsettings_packageoutput_related.all()]
+        return ', '.join(outs)
     get_outputs.short_description = 'Outputs'
 
 class File(Item):
