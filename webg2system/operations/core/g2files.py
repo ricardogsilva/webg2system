@@ -70,19 +70,62 @@ class G2File(GenericItem):
         else:
             self.archives = None
 
-    def find(self, host=None, useArchives=None):
+    # FIXME
+    # - Should this method filter out any opssible duplicate files (compressed 
+    # vs non-copmpressed, etc) or is it being done somewhere else?
+    # - NEW FEATURE: files that specify absolute searchPaths should get 
+    # searched in the host that they specify, regardless of it being an archive
+    def find(self, useArchives=None, host=None):
+        '''
+        Find the files and return their fullPaths.
+
+        Inputs:
+
+            useArchives - A list of G2Host objects where the files may be
+                archived. If None (the default), no archives will be searched.
+
+            host - A G2Host object where the search for the files is to be 
+                made. If None (the default), the object's own host will be
+                used.
+
+        Returns:
+
+            A dictionary with keys 'host' and 'paths'...
+        '''
+
+        result = {'host' : host, 'paths' : []}
         if host is None:
             host = self.host
         allPaths = []
         for path in self.searchPaths:
             allPaths += [os.path.join(path, p) for p in self.searchPatterns]
-        pathsFound = host.find(allPaths)
-        if len(pathsFound) > 0:
-            result = {'host' : host, 'paths' : pathsFound} # found the files
-        elif len(pathsFound) == 0 and useArchives is not None:
-            for archive in useArchives:
-                found = archive.find(allPaths)
-                # work-in-progress...
+
+        hostList = [host]
+        if useArchives is not None:
+            hostList += useArchives
+        hostIndex = 0
+        allFound = False
+        lastHost = False
+        # search every host
+        while (not allFound) and (not lastHost):
+            theHost = hostList[hostIndex]
+            if theHost is not host:
+                self.logger.info('Trying the archives: %s' % theHost)
+            pathsFound = theHost.find(allPaths)
+            if len(pathsFound) > 0:
+                allFound = True
+                numFound = len(pathsFound)
+                if numFound < self.numFiles:
+                    self.logger.warning('Not all files have been found. '\
+                            'Found %i files. Was expecting at least %i.' 
+                            % (numFiles, self.numFiles))
+                result['host'] = host
+                result['paths'] = pathsFound
+            if hostIndex + 1 == len(hostList):
+                lastHost = True
+            else:
+                hostIndex += 1
+        return result
 
     def get_path(self, markedString, obj):
         '''

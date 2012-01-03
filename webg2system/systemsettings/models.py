@@ -14,6 +14,12 @@ class Host(models.Model):
     isArchive = models.BooleanField(default=False, help_text='Should this '\
                                     'host be used when searching the '\
                                     'archives?', verbose_name='Is archive?')
+    hasSMS = models.BooleanField(default=False, help_text='Can this host'\
+                                 ' be used for running SMS suites?', 
+                                 verbose_name='Has SMS?')
+    hasMapserver = models.BooleanField(default=False, help_text='Does this '\
+                                 'host have the Mapserver software installed?',
+                                 verbose_name='Has Mapserver?')
 
     def __unicode__(self):
         return self.name

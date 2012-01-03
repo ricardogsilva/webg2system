@@ -14,6 +14,8 @@ class GenericPackage(GenericItem):
     implementations for the method stubs defined here.
     '''
 
+    name = ''
+
     def prepare(self, callback):
         raise NotImplementedError
 
@@ -27,6 +29,9 @@ class GenericPackage(GenericItem):
         for directory in dirlist:
             if not self.host.is_dir(directory):
                 self.host.make_dir(directory)
+
+    def __unicode__(self):
+        return unicode(self.name)
 
 
 class FetchData(GenericPackage):
@@ -51,6 +56,7 @@ class FetchData(GenericPackage):
 
         super(FetchData, self).__init__(timeslot, area.name, host)
         self.rawSettings = settings
+        self.name = settings.name
         relativeOutDir = utilities.parse_marked(
                 settings.packagepath_set.get(name='outputDir'), 
                 self)

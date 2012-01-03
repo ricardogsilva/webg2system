@@ -5,6 +5,10 @@
 This module holds the G2Host classes. these classes take care of the actual
 file IO operations between the different host machines involved in the
 G2system's processes.
+
+The G2Host classes should not be instantiated directly. They should use the
+create_host() function, that simultaneously implements a factory and sigleton
+pattern for unique hosts.
 """
 
 # standard library imports
@@ -15,7 +19,7 @@ import re
 from subprocess import Popen, PIPE
 from xml.etree.ElementTree import ElementTree as et
 import ftplib
-import socket # needed to check ftplib's error
+import socket
 from pexpect import spawn
 #import glob
 #import fnmatch
@@ -28,6 +32,45 @@ import utilities
 # TODO
 # - Review all the methods that have a FIXME tag
 # - Implement the remaining methods on G2RemoteHost class
+
+_hosts = dict()
+
+def create_host(hostSettings):
+    '''
+    Return a new G2host instance.
+
+    This function, coupled with the _hosts module variable, implements a 
+    (soft)singleton pattern. This is to prevent the creation of multiple
+    G2Host objects pointing to the same host and eventually creating multiple
+    SSH or FTP connections that may overload the network. The objective of
+    this mechanism is to have only one connection to from a host to another
+    one.
+
+    Inputs:
+
+        hostSettings - A systemsettings.models.Host object
+    '''
+
+    global _hosts
+    name = hostSettings.name
+    ip = hostSettings.ip
+    localName = socket.gethostname()
+    try:
+        localIP = socket.gethostbyname(name)
+    except socket.gaierror:
+        factoriesLogger.warning('Couldn\'t determine %s\'s IP address' \
+                                % name)
+        localIP = None
+    if name not in _hosts.keys():
+        # about to create a new host object
+        if name == localName or ip == localIP:
+            theClass = G2LocalHost
+        else:
+            theClass = G2RemoteHost
+        hostObj = theClass(hostSettings)
+        _hosts[name] = hostObj
+    return _hosts.get(name)
+
 
 class G2Host(object):
 
@@ -59,7 +102,8 @@ class G2Host(object):
             -->
         '''
 
-        self.logger = logging.getLogger(self.__class__.__name__)
+        #self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger = logging.getLogger('.'.join((__name__, self.__class__.__name__)))
         self.name = settings.name
         self.connections[self.name] = dict()
         self.basePath = settings.basePath
@@ -67,8 +111,10 @@ class G2Host(object):
         self.user = settings.username
         self.password = settings.password
         self.isArchive = settings.isArchive
+        self.hasSMS = settings.hasSMS
+        self.hasMapserver = settings.hasMapserver
 
-    def find(self, relativePaths):
+    def find(self, pathList):
         raise NotImplementedError
 
     def fetch(self, relativePaths, relativeDestinationDir, sourceHost):
@@ -113,7 +159,7 @@ class G2LocalHost(G2Host):
     This class has the implementation of the local file IO operations.
     """
 
-    def find(self, pathList, absolute=False):
+    def find(self, pathList):
         '''
         Search for the paths in the local directory tree.
 
@@ -127,28 +173,27 @@ class G2LocalHost(G2Host):
             pathList - A list with paths for the files to search. The paths 
                 are treated as regular expressions.
 
-            absolute - A boolean indicating if the list of paths to search
-                contains relative paths or absolute paths.
-
         Returns:
 
             A list with the full paths to the found files.
         '''
 
+        #self.logger.info('locals: %s' % locals())
         foundFiles = []
         for path in pathList:
-            if absolute:
+            if path.startswith(os.path.sep):
                 fullSearchPath = path
             else:
                 fullSearchPath = os.path.join(self.basePath, path)
             searchDir, searchPattern = os.path.split(fullSearchPath)
-            pattRE = re.compile(searchPattern)
-            try:
+            patt = re.compile(searchPattern)
+            dirExists = os.path.isdir(searchDir)
+            if dirExists:
                 for item in os.listdir(searchDir):
-                    if pattRE.search(item) is not None:
+                    if patt.search(item) is not None:
                         foundFiles.append(os.path.join(searchDir, item))
-            except OSError, errorObj:
-                self.logger.warning(errorObj)
+            else:
+                self.logger.warning('No such directory: %s' % searchDir)
         return foundFiles
 
     def fetch(self, paths, directory, sourceHost=None, absolute=False):

@@ -5,10 +5,12 @@
 ...
 """
 
+import logging
+
 from systemsettings.models import Area
 
 from g2sources import G2Source
-from g2hosts import G2Host
+from g2hosts import create_host
 
 class GenericItem(object):
     '''
@@ -29,10 +31,12 @@ class GenericItem(object):
             hostSettings - A systemsettings.models.Host object
         '''
 
+        self.logger = logging.getLogger(
+                '.'.join((__name__, self.__class__.__name__)))
         self.timeslot = timeslot
         areaSettings = Area.objects.get(name=area)
         self.source = G2Source(areaSettings.source, timeslot)
-        self.host = G2Host(hostSettings)
+        self.host = create_host(hostSettings)
 
     @property
     def doy(self):
