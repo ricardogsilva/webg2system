@@ -10,7 +10,7 @@ import os
 from systemsettings import models as ss
 
 from g2item import GenericItem
-from g2hosts import G2Host
+from g2hosts import HostFactory
 import utilities
 import g2packages as g2p
 
@@ -65,51 +65,42 @@ class G2File(GenericItem):
         for searchPattObj in fileSettings.filepattern_set.all():
             pattern = utilities.parse_marked(searchPattObj, self)
             self.searchPatterns.append(pattern)
-        if self.toArchive:
-            self.archives = [G2Host(hs) for hs in fileSettings.specificArchives.all()]
-        else:
-            self.archives = None
+        hf = HostFactory()
+        self.archives = [hf.create_host(hs) for hs in fileSettings.specificArchives.all()]
 
     # FIXME
-    # - Should this method filter out any opssible duplicate files (compressed 
+    # - Should this method filter out any possible duplicate files (compressed 
     # vs non-copmpressed, etc) or is it being done somewhere else?
     # - NEW FEATURE: files that specify absolute searchPaths should get 
     # searched in the host that they specify, regardless of it being an archive
-    def find(self, useArchives=None, host=None):
+    def find(self, useArchives=False):
         '''
         Find the files and return their fullPaths.
 
         Inputs:
 
-            useArchives - A list of G2Host objects where the files may be
-                archived. If None (the default), no archives will be searched.
-
-            host - A G2Host object where the search for the files is to be 
-                made. If None (the default), the object's own host will be
-                used.
+            useArchives - A boolean indicating if the file's specific 
+                archives are to be searched. Defaults to False.
 
         Returns:
 
             A dictionary with keys 'host' and 'paths'...
         '''
 
-        result = {'host' : host, 'paths' : []}
-        if host is None:
-            host = self.host
+        result = {'host' : self.host, 'paths' : []}
         allPaths = []
         for path in self.searchPaths:
             allPaths += [os.path.join(path, p) for p in self.searchPatterns]
-
-        hostList = [host]
-        if useArchives is not None:
-            hostList += useArchives
+        hostList = [self.host]
+        if useArchives:
+            hostList += self.archives
         hostIndex = 0
         allFound = False
         lastHost = False
         # search every host
         while (not allFound) and (not lastHost):
             theHost = hostList[hostIndex]
-            if theHost is not host:
+            if theHost is not self.host:
                 self.logger.info('Trying the archives: %s' % theHost)
             pathsFound = theHost.find(allPaths)
             if len(pathsFound) > 0:
@@ -119,7 +110,7 @@ class G2File(GenericItem):
                     self.logger.warning('Not all files have been found. '\
                             'Found %i files. Was expecting at least %i.' 
                             % (numFiles, self.numFiles))
-                result['host'] = host
+                result['host'] = tehHost
                 result['paths'] = pathsFound
             if hostIndex + 1 == len(hostList):
                 lastHost = True

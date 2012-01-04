@@ -26,50 +26,49 @@ from pexpect import spawn
 
 # specific imports
 import utilities
-#from sshproxy import SSHProxy
-#from ftpproxy import FTPProxy
+from sshproxy import SSHProxy
+from ftpproxy import FTPProxy
 
 # TODO
 # - Review all the methods that have a FIXME tag
 # - Implement the remaining methods on G2RemoteHost class
 
-_hosts = dict()
+class HostFactory(object):
 
-def create_host(hostSettings):
-    '''
-    Return a new G2host instance.
+    _hosts = dict()
 
-    This function, coupled with the _hosts module variable, implements a 
-    (soft)singleton pattern. This is to prevent the creation of multiple
-    G2Host objects pointing to the same host and eventually creating multiple
-    SSH or FTP connections that may overload the network. The objective of
-    this mechanism is to have only one connection to from a host to another
-    one.
+    def __init__(self):
+        self.logger = logging.getLogger('.'.join((__name__, 
+                                        self.__class__.__name__)))
 
-    Inputs:
+    def create_host(self, hostSettings):
+        '''
+        Return a new G2host instance.
 
-        hostSettings - A systemsettings.models.Host object
-    '''
+        Inputs:
 
-    global _hosts
-    name = hostSettings.name
-    ip = hostSettings.ip
-    localName = socket.gethostname()
-    try:
-        localIP = socket.gethostbyname(name)
-    except socket.gaierror:
-        factoriesLogger.warning('Couldn\'t determine %s\'s IP address' \
-                                % name)
-        localIP = None
-    if name not in _hosts.keys():
-        # about to create a new host object
-        if name == localName or ip == localIP:
-            theClass = G2LocalHost
-        else:
-            theClass = G2RemoteHost
-        hostObj = theClass(hostSettings)
-        _hosts[name] = hostObj
-    return _hosts.get(name)
+            hostSettings - A systemsettings.models.Host object
+        '''
+
+        name = hostSettings.name
+        ip = hostSettings.ip
+        localName = socket.gethostname()
+        try:
+            localIP = socket.gethostbyname(localName)
+        except socket.gaierror:
+            self.logger.warning('Couldn\'t determine %s\'s IP address' \
+                                % localName)
+            localIP = None
+        if name not in self._hosts.keys():
+            self.logger.info('Creating a new %s host object...' % 
+                             (hostSettings.name))
+            if name == localName or ip == localIP:
+                theClass = G2LocalHost
+            else:
+                theClass = G2RemoteHost
+            hostObj = theClass(hostSettings)
+            self._hosts[name] = hostObj
+        return self._hosts.get(name)
 
 
 class G2Host(object):
@@ -102,7 +101,6 @@ class G2Host(object):
             -->
         '''
 
-        #self.logger = logging.getLogger(self.__class__.__name__)
         self.logger = logging.getLogger('.'.join((__name__, self.__class__.__name__)))
         self.name = settings.name
         self.connections[self.name] = dict()
@@ -534,28 +532,44 @@ class G2RemoteHost(G2Host):
 
     _connections = dict()
 
-    def __init__(self, name, basePath, ip, username, password):
+    def __init__(self, settings):
         '''
         Inputs:
+
+            settings - A systemsettings.models.Host object
+
+            <-- old docstring
+            isLocal- A boolean. It indicates if this host object is dealing
+                with the current machine or with another remote machine
+                over the network.
 
             name - A string with the name of the host
 
             basePath - A string with the basepath that is to be used for
                 all operations on the host
 
-            ip - A string with the ip of the host
+            ip - A string with the ip or hostname of the host
 
             username - A string with the user name of the user authorized to
                 perform operations on the host
 
             password - A string with the password
+            -->
         '''
 
-        super(G2RemoteHost, self).__init__(name, basePath, ip, username, password)
-        self.logger = logging.getLogger("G2ProcessingLine.G2RemoteHostHost")
+        self.logger = logging.getLogger('.'.join((__name__, self.__class__.__name__)))
+        self.name = settings.name
+        self.connections[self.name] = dict()
+        self.basePath = settings.basePath
+        self.host = settings.ip
+        self.user = settings.username
+        self.password = settings.password
+        self.isArchive = settings.isArchive
+        self.hasSMS = settings.hasSMS
+        self.hasMapserver = settings.hasMapserver
         if self._connections.get(self.name) is None:
             self._connections[self.name] = {
-                    'ftp' : FTPProxy(self.user, self.host, self.password),
+                    'ftp' : FTPProxy(self.host),
                     'ssh' : SSHProxy(self.user, self.host, self.password)
                     }
         self.ftp = self._connections[self.name]['ftp']
@@ -570,7 +584,7 @@ class G2RemoteHost(G2Host):
 
         self.connection.otherOptions = otherOptions
 
-    def find(self, pathList, absolute=False, protocol='ftp'):
+    def find(self, pathList, protocol='ftp'):
         '''
         Find the paths.
 
@@ -579,12 +593,10 @@ class G2RemoteHost(G2Host):
             pathList - A list with paths for the files to search. The paths 
             are treated as regular expressions.
 
-            absolute - A boolean indicating if the list of paths to search
-                contains relative paths or absolute paths.
-
             protocol - The name of the protocol used to find the files.
                 Available values are 'ftp' (the default) and 'ssh'.
                 NOTE: currently only the 'ftp' protocol is implemented.
+
         Returns:
 
             A list with the full paths to the found files.
@@ -592,10 +604,10 @@ class G2RemoteHost(G2Host):
 
         fullSearchPaths = []
         for path in pathList:
-            if absolute:
-                fullSearchPaths.append(path)
+            if path.startswith(os.path.sep):
+                fullSearchPath = path
             else:
-                fullSearchPaths.append(os.path.join(self.basePath, path))
+                fullSearchPath = os.path.join(self.basePath, path)
         foundFiles = eval('self.%s.find(fullSearchPaths)' % protocol)
         return foundFiles
 

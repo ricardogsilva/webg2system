@@ -94,6 +94,38 @@ class FetchData(GenericPackage):
                     objects.append(newObject)
         return objects
 
+    def _find_files(self, g2files, useArchive):
+        '''
+        Inputs:
+
+            g2files - A list of g2file instances
+
+            useArchive - A boolean indicating if the archives are to be
+                searched if the files are not found in their expected
+                location.
+
+        Returns:
+            A dictionary with the input g2files as keys and another 
+            sub-dictionary as values. This sub-dictionary contais a 'paths' 
+            key with a list of strings with full file paths as values and 
+            another key 'host', with the name of the host where the files have
+            been found as values. If a g2file was not found in any of the given
+            hostNames, the corresponding value for its key will be None.
+        '''
+
+        result = dict()
+        for g2f in g2files:
+            self.logger.info('Looking for %s...' % g2f.name)
+            result[g2f] = g2f.find(useArchive)
+        return result
+
+    def find_inputs(self, useArchive=False):
+        return self.find_files(self.inputs, useArchive)
+
+    def find_outputs(self, useArchive=False):
+        return self.find_files(self.outputs, useArchive)
+
+
     def prepare(self, callback):
         import time
         callback('sleeping a bit...', 1)

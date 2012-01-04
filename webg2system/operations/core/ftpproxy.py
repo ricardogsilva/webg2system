@@ -16,37 +16,22 @@ import os
 import re
 import logging
 
-import factories
-
 class FTPProxy(object):
     '''
     Connect to another server through FTP and perform various actions.
     '''
 
-    def __init__(self, user, ip, password, host=None):
+    def __init__(self, host):
         '''
         Inputs:
 
-            user - A string with the name of the user.
-
-            ip - A string with the ip or the name of the host.
-
-            password - A string with the user's password.
-
             host - A G2Host object specifying the host that started this 
-                connection. A value of None (the default) will not bind
-                this connection to any host.
+                connection. 
         '''
 
         self.logger = logging.getLogger(self.__class__.__name__)
         self.connection = FTP()
-        self.user = user
-        self.ip = ip
-        self.password = password
-        if host is None:
-            self.host = factories.create_host()
-        else:
-            self.host = host
+        self.host = host
 
     def _connect(self):
         '''
@@ -60,18 +45,16 @@ class FTPProxy(object):
             self.logger.debug('The connection already exists')
         except AttributeError:
             #no, the connection hasn't been established yet
-            self.logger.info('Connecting to %s...' % self.ip)
+            self.logger.info('Connecting to %s...' % self.host.ip)
             try:
-                self.connection.connect(self.ip)
-                self.connection.login(self.user, self.password)
+                self.connection.connect(self.host.ip)
+                self.connection.login(self.host.user, self.host.password)
                 result = True
                 self.logger.info('Connection successful')
             except socket.error, errorMsg:
                 if errorMsg[0] == 113:
-                    #raise IOError('%s unreachable. Maybe the host is down?' \
-                    #              % self.ip)
                     self.logger.warning('%s unreachable. Maybe the host is ' +\
-                                        'down?' % self.ip)
+                                        'down?' % self.host.ip)
                 else:
                     #raise IOError('socket error: %s' % (str(errorMsg)))
                     self.logger.warning('socket error: %s' % (str(errorMsg)))
@@ -122,6 +105,45 @@ class FTPProxy(object):
                     self.logger.warning(msg)
                     #raise
         return fileList
+
+    # G2LocalHost implementation
+    #def find(self, pathList):
+    #    '''
+    #    Search for the paths in the local directory tree.
+
+    #    This method is to return all the paths that are found, even if there
+    #    are duplicate files or the same file in compressed and uncompressed
+    #    forms. It will be up to the client code to sort out which paths are
+    #    interesting.
+
+    #    Inputs:
+
+    #        pathList - A list with paths for the files to search. The paths 
+    #            are treated as regular expressions.
+
+    #    Returns:
+
+    #        A list with the full paths to the found files.
+    #    '''
+
+    #    #self.logger.info('locals: %s' % locals())
+    #    foundFiles = []
+    #    for path in pathList:
+    #        if path.startswith(os.path.sep):
+    #            fullSearchPath = path
+    #        else:
+    #            fullSearchPath = os.path.join(self.basePath, path)
+    #        searchDir, searchPattern = os.path.split(fullSearchPath)
+    #        patt = re.compile(searchPattern)
+    #        dirExists = os.path.isdir(searchDir)
+    #        if dirExists:
+    #            for item in os.listdir(searchDir):
+    #                if patt.search(item) is not None:
+    #                    foundFiles.append(os.path.join(searchDir, item))
+    #        else:
+    #            self.logger.warning('No such directory: %s' % searchDir)
+    #    return foundFiles
+
 
     def send(self, paths, destination):
         '''
