@@ -68,13 +68,13 @@ class G2File(GenericItem):
         hf = HostFactory()
         self.archives = [hf.create_host(hs) for hs in fileSettings.specificArchives.all()]
 
-    def find(self, useArchives=False):
+    def find(self, useArchive=False):
         '''
         Find the files and return their fullPaths.
 
         Inputs:
 
-            useArchives - A boolean indicating if the file's specific 
+            useArchive - A boolean indicating if the file's specific 
                 archives are to be searched. Defaults to False.
 
         Returns:
@@ -92,7 +92,7 @@ class G2File(GenericItem):
         for path in self.searchPaths:
             allPaths += [os.path.join(path, p) for p in self.searchPatterns]
         hostList = [self.host]
-        if useArchives:
+        if useArchive:
             hostList += self.archives
         hostIndex = 0
         allFound = False
@@ -118,6 +118,67 @@ class G2File(GenericItem):
             else:
                 hostIndex += 1
         return result
+
+    # FIXME
+    # - Currently working on this method...
+    def fetch(self, relTargetDir, useArchive=None):
+        '''
+        Fetch files from the source host to the destination directory.
+
+        This method's main purpose is to copy local or remote files to
+        a destination directory.
+
+        If self.toCopy is True the files will always get copied over to
+        relTargetDir. This will happen regardless of the files being
+        on a remote host or on the local host.
+
+        If self.toCopy is False the files will only get copied over to
+        relTargetDir if they are currently in a compressed state. If
+        you don't want to force local copies of big files make sure they
+        are not being stored in a compressed state. Otherwise they'll get
+        copied and decompressed everytime this method is called.
+
+        If self.toCopy is False and the files are not compressed they
+        will not be copied to relTargetDir. Instead a reference to their
+        current path is returned. This behaviour intends to avoid 
+        unnecessary file copies.
+
+        After being copied the files will always be decompressed, in
+        order to be ready for further usage
+
+        Inputs:
+            
+            relTargetDir - A string with the relative path (relative to the
+                instance's host) of the directory where the files should be
+                copied to.
+
+            useArchive - A boolean indicating if the files are to be searched
+                for in the archives, in case they cannot be found in host.
+
+        Returns:
+
+            A list of strings with the full paths of the files that have been
+            fetched.
+        '''
+
+        result = []
+        if self.toCopy:
+            foundDict = self.find(useArchive)
+            # does this comparison matter? The self.host.fetch method should 
+            # have the same signature for both local and remote hosts anyway.
+            if self.host.name == foundDict['host'].name:
+                # the copy will be local
+                toCopy = [f+'$' for f in foundDict['paths']]
+                # wainting on the host.fetch method
+                #fetched = self.host.fetch(toCopy, relTargetDir, foundDict['host']) + toGetLink
+            else:
+                # the copy will be remote
+                # wainting on the host.fetch method
+                #fetched = self.host.fetch(foundDict['paths'], relTargetDir, foundDict['host'])
+                pass
+            result = fetched
+        return result
+
 
     def _return_unique_file_names(self, pathList):
         '''
@@ -168,77 +229,6 @@ class G2File(GenericItem):
         return self.name
              
 
-#    def find(self, hostName=None, useArchive=None, lookForBigFiles=False):
-#        '''
-#        Find this object's files in hostName.
-#
-#        This method will also sort the found files, removing possible
-#        duplicates. If the same file is present on more than one directory,
-#        only one of them will be returned. Also, if a file is present in
-#        compressed and uncompressed forms, only the uncompressed one will
-#        be returned.
-#        If the files cannot be found in the host, the archives may also be 
-#        searched.
-#
-#        Inputs:
-#
-#            hostName - The name of a G2Host object specifying where to look 
-#                       for the files. If it is None (the default), the 
-#                       instance's default host will be used.
-#
-#            useArchive - A string indicating what kind of file is to be
-#                searched for in the archives. Accepted values are 'inputs'
-#                and 'outputs'. A value of None (the default) causes the
-#                archives not to be searched at all.
-#
-#            lookForBigFiles - escrever aqui ...
-#
-#        Returns:
-#
-#            A dictionary with keys:
-#                'host' : the name of the host where the files have been found
-#                'paths' : a list with the full paths of found files
-#            If the files cannot be found, the method will return None.
-#        '''
-#
-#        relPaths = self._get_all_relative_paths()
-#        absPaths = self._get_all_absolute_paths()
-#        result = None
-#        if hostName is None:
-#            theHost = self.defaultHost
-#        else:
-#            theHost = factories.create_host(hostName)
-#        relFound = theHost.find(relPaths)
-#        relatives = self._return_unique_file_names(relFound)
-#        absFound = theHost.find(absPaths, absolute=True)
-#        absolutes = self._return_unique_file_names(absFound)
-#        allPaths = relatives + absolutes
-#        if len(allPaths) > 0:
-#            # the files have been found
-#            result = {'host' : theHost.name, 'paths' : allPaths}
-#        elif len(allPaths) == 0 and useArchive is not None:
-#            # nothing has been found in the host
-#            if not self.makeCopies and not lookForBigFiles:
-#                # don't search for the files in the archives
-#                self.logger.warning('%s is not marked as "makeCopies"'\
-#                                    ', skipping its search in the archives' % \
-#                                    self.name)
-#            else:
-#                # let's try the archives
-#                self.logger.info('Trying the archives...')
-#                archives = utilities.get_archive_names(useArchive)
-#                for archName in archives:
-#                    host = factories.create_host(archName)
-#                    relFound = host.find(relPaths)
-#                    relatives = self._return_unique_file_names(relFound)
-#                    absFound = host.find(absPaths)
-#                    absolutes = self._return_unique_file_names(absFound)
-#                    allPaths = relatives + absolutes
-#                    if len(allPaths) > 0:
-#                        result = {'host': archName, 'paths' : allPaths}
-#                        break
-#        return result
-#
 #    def _return_unique_file_names(self, pathList):
 #        '''
 #        Return a list with unique filepaths, discarding files that apear more

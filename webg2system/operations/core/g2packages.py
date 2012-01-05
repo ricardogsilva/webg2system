@@ -151,21 +151,6 @@ class FetchData(GenericPackage):
         '''
         Fetch the input g2files from their destination to relTargetDir.
 
-        If self.toCopy is True the files will always get copied over to
-        relTargetDir. This will happen regardless of the files being
-        on a remote host or on the local host.
-
-        If self.toCopy is False the files will only get copied over to
-        relTargetDir if they are currently in a compressed state. If
-        you don't want to force local copies of big files make sure they
-        are not being stored in a compressed state. Otherwise they'll get
-        copied and decompressed everytime this method is called.
-
-        If self.toCopy is False and the files are not compressed they
-        will not be copied to relTargetDir. Instead a reference to their
-        current path is returned. This behaviour intends to avoid 
-        unnecessary file copies.
-
         After being copied the files will always be decompressed, in
         order to be ready for further usage
 
