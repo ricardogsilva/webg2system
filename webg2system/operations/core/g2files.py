@@ -68,11 +68,6 @@ class G2File(GenericItem):
         hf = HostFactory()
         self.archives = [hf.create_host(hs) for hs in fileSettings.specificArchives.all()]
 
-    # FIXME
-    # - Should this method filter out any possible duplicate files (compressed 
-    # vs non-copmpressed, etc) or is it being done somewhere else?
-    # - NEW FEATURE: files that specify absolute searchPaths should get 
-    # searched in the host that they specify, regardless of it being an archive
     def find(self, useArchives=False):
         '''
         Find the files and return their fullPaths.
@@ -84,7 +79,12 @@ class G2File(GenericItem):
 
         Returns:
 
-            A dictionary with keys 'host' and 'paths'...
+            A dictionary with keys 'host' and 'paths'. The values are a G2Host
+            object and a list with the full paths to the files.
+
+        This method will also remove any duplicate files from the list. A
+        duplicate is a file that has the same name as another one, regardless
+        of its path or compression state.
         '''
 
         result = {'host' : self.host, 'paths' : []}
@@ -103,20 +103,46 @@ class G2File(GenericItem):
             if theHost is not self.host:
                 self.logger.info('Trying the archives: %s' % theHost)
             pathsFound = theHost.find(allPaths)
-            if len(pathsFound) > 0:
+            numFound = len(pathsFound)
+            self.logger.info('Found %i files.' % numFound)
+            if numFound > 0:
                 allFound = True
-                numFound = len(pathsFound)
                 if numFound < self.numFiles:
                     self.logger.warning('Not all files have been found. '\
                             'Found %i files. Was expecting at least %i.' 
-                            % (numFiles, self.numFiles))
-                result['host'] = tehHost
-                result['paths'] = pathsFound
+                            % (numFound, self.numFiles))
+                result['host'] = theHost
+                result['paths'] = self._return_unique_file_names(pathsFound)
             if hostIndex + 1 == len(hostList):
                 lastHost = True
             else:
                 hostIndex += 1
         return result
+
+    def _return_unique_file_names(self, pathList):
+        '''
+        Return a list with unique filepaths, discarding files that apear more
+        than once, but on different directories.
+        '''
+
+        uniquePathList = []
+        uniqueNames = []
+        uniqueExtensions = []
+        for path in pathList:
+            basename = os.path.basename(path)
+            name = basename.partition('.')[0]
+            ext = basename.rpartition('.')[-1]
+            if name in uniqueNames:
+                nameIndex = uniqueNames.index(name)
+                previousExtension = uniqueExtensions[uniqueNames.index(name)]
+                if previousExtension == 'bz2':
+                    uniquePathList[nameIndex] = path
+                    uniqueExtensions[uniqueNames.index(name)] = ext
+            else:
+                uniquePathList.append(path)
+                uniqueNames.append(name)
+                uniqueExtensions.append(ext)
+        return uniquePathList
 
     def get_path(self, markedString, obj):
         '''
@@ -137,6 +163,9 @@ class G2File(GenericItem):
                 markedString = theOriginator.packagepath_set.get(name=dirName)
         thePath = utilities.parse_marked(markedString, obj)
         return thePath
+
+    def __repr__(self):
+        return self.name
              
 
 #    def find(self, hostName=None, useArchive=None, lookForBigFiles=False):

@@ -47,7 +47,8 @@ class FileAdmin(admin.ModelAdmin):
     inlines = [FilePathInline, FilePatternInline]
     list_display = ('name', 'toCopy', 'toCompress', 'toArchive',
                     'toDisseminate', 'get_except_hours', 'get_search_paths',
-                    'get_search_patterns')
+                    'get_search_patterns', 'get_package_output', 
+                    'get_package_inputs')
     filter_horizontal = ('exceptHours', 'specificArchives')
     #list_filter = ['toCopy', 'toArchive', 'toDisseminate', 'toCompress']
     search_fields = ['name']

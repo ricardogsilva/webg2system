@@ -11,7 +11,7 @@ external FTP client directly).
 
 from ftplib import FTP, error_temp, error_perm
 import socket # needed to check ftplib's error
-socket.setdefaulttimeout(3) # timeout for ftp connections, in seconds
+socket.setdefaulttimeout(10) # timeout for ftp connections, in seconds
 import os
 import re
 import logging
@@ -29,32 +29,39 @@ class FTPProxy(object):
                 connection. 
         '''
 
-        self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger = logging.getLogger('.'.join((__name__, 
+                                        self.__class__.__name__)))
         self.connection = FTP()
         self.host = host
+
+    def _test_connection(self):
+        '''Return True if the connection already exists.'''
+
+        result = False
+        try:
+            self.connection.nlst()
+            result = True
+        except AttributeError:
+            pass
+        return result
 
     def _connect(self):
         '''
         Establish a connection with the remote host.
         '''
 
-        result = False
-        try:
-            self.connection.nlst()
-            result = True
-            self.logger.debug('The connection already exists')
-        except AttributeError:
-            #no, the connection hasn't been established yet
-            self.logger.info('Connecting to %s...' % self.host.ip)
+        result = self._test_connection()
+        if not result:
+            self.logger.debug('Connecting to %s...' % self.host.host)
             try:
-                self.connection.connect(self.host.ip)
+                self.connection.connect(self.host.host)
                 self.connection.login(self.host.user, self.host.password)
                 result = True
-                self.logger.info('Connection successful')
+                self.logger.debug('Connection successful')
             except socket.error, errorMsg:
                 if errorMsg[0] == 113:
                     self.logger.warning('%s unreachable. Maybe the host is ' +\
-                                        'down?' % self.host.ip)
+                                        'down?' % self.host.host)
                 else:
                     #raise IOError('socket error: %s' % (str(errorMsg)))
                     self.logger.warning('socket error: %s' % (str(errorMsg)))
@@ -68,29 +75,33 @@ class FTPProxy(object):
                           'Waiting %i seconds' % secs)
                     time.sleep(secs)
                     result = self._connect()
-        except error_temp, errMsg:
-            if errMsg[0] == 421:
-                self.logger.warning('The connection has timed out. Closing '\
-                                    'this connection and re-connecting...')
-                self.connection.quit()
-                self.connection = None
-                self.connection = FTP()
+            except error_perm, errMsg:
+                patt = re.compile(r'(^\d+)')
+                errNum = patt.search(str(errMsg)).group(1)
+                if errNum == '530':
+                    self.logger.error(errMsg)
+                    self.connection.quit()
+                    self.connection = None
+                    self.connection = FTP()
+                    raise
+        else:
+            self.logger.debug('The connection already exists')
         return result
 
-    def find(self, paths):
+    def find(self, pathList):
         '''
-        Return a list of paths that match the 'paths' argument.
+        Return a list of paths that match the 'pathList' argument.
         
         Inputs:
 
-            paths - A list of strings specifying the full path to the paths
+            pathList - A list of strings specifying the full path to the paths
                 to search. Each string is interpreted as a regular expression.
         '''
 
         fileList = []
         if self._connect():
-            for pathRegExp in paths:
-                searchDir, searchPattern = os.path.split(pathRegExp)
+            for path in pathList:
+                searchDir, searchPattern = os.path.split(path)
                 self.logger.debug('searchDir: %s' % searchDir)
                 self.logger.debug('searchPattern: %s' % searchPattern)
                 pattRE = re.compile(searchPattern)
@@ -105,45 +116,6 @@ class FTPProxy(object):
                     self.logger.warning(msg)
                     #raise
         return fileList
-
-    # G2LocalHost implementation
-    #def find(self, pathList):
-    #    '''
-    #    Search for the paths in the local directory tree.
-
-    #    This method is to return all the paths that are found, even if there
-    #    are duplicate files or the same file in compressed and uncompressed
-    #    forms. It will be up to the client code to sort out which paths are
-    #    interesting.
-
-    #    Inputs:
-
-    #        pathList - A list with paths for the files to search. The paths 
-    #            are treated as regular expressions.
-
-    #    Returns:
-
-    #        A list with the full paths to the found files.
-    #    '''
-
-    #    #self.logger.info('locals: %s' % locals())
-    #    foundFiles = []
-    #    for path in pathList:
-    #        if path.startswith(os.path.sep):
-    #            fullSearchPath = path
-    #        else:
-    #            fullSearchPath = os.path.join(self.basePath, path)
-    #        searchDir, searchPattern = os.path.split(fullSearchPath)
-    #        patt = re.compile(searchPattern)
-    #        dirExists = os.path.isdir(searchDir)
-    #        if dirExists:
-    #            for item in os.listdir(searchDir):
-    #                if patt.search(item) is not None:
-    #                    foundFiles.append(os.path.join(searchDir, item))
-    #        else:
-    #            self.logger.warning('No such directory: %s' % searchDir)
-    #    return foundFiles
-
 
     def send(self, paths, destination):
         '''

@@ -12,6 +12,9 @@ class RunningPackage(models.Model):
     host = models.ForeignKey(Host)
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, 
                               default='stopped')
+    force = models.BooleanField(default=False, help_text='Should the package'\
+                                ' run even if its outputs are already '\
+                                'available?')
     result = models.BooleanField(default=False)
 
     def __unicode__(self):
@@ -55,7 +58,8 @@ class RunningPackage(models.Model):
     def run(self, callback):
         '''
         Interfaces with the core packages, calling their public
-        prepare(), run_main() and clean_up() methods sequentially.
+        delete_outputs(), prepare(), run_main() and clean_up() 
+        methods sequentially.
         It MUSTN'T call any other method from the core packages.
 
         Accepts a callback function that should be used to supply
@@ -69,15 +73,18 @@ class RunningPackage(models.Model):
             self.save()
             callback('Creating package for processing...', 1)
             pack = self._initialize()
-            callback('Preparing files...', 2)
+            if self.force:
+                callback('Deleting any previously present output files...', 2)
+                pack.delete_outputs()
+            callback('Preparing files...', 3)
             prepareResult = pack.prepare(callback)
-            callback('Running main process...', 3)
+            callback('Running main process...', 4)
             mainResult = pack.run_main()
-            callback('Cleaning up...', 4)
+            callback('Cleaning up...', 5)
             cleanResult = pack.clean_up()
             self.status = 'stopped'
             self.save()
-            callback('All done!', 5)
+            callback('All done!', 6)
         except:
             self.status = 'stopped'
             self.result = False

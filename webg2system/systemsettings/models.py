@@ -102,6 +102,15 @@ class File(Item):
         return ', '.join([str(p) for p in self.filepattern_set.all()])
     get_search_patterns.short_description = 'Search patterns'
 
+    def get_package_output(self):
+        return self.packageoutput_set.get().package.name
+    get_package_output.short_description = 'Output from package'
+
+    def get_package_inputs(self):
+        packInputs = self.inputItem_systemsettings_packageinput_related.all()
+        return ', '.join([pi.package.name for pi in packInputs])
+    get_package_inputs.short_description = 'Input to packages'
+
 class PackageInput(models.Model):
     package = models.ForeignKey(Package, help_text='A package '\
             'that will be the parent of this setting type.', 

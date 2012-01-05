@@ -19,6 +19,9 @@ class GenericPackage(GenericItem):
     def prepare(self, callback):
         raise NotImplementedError
 
+    def delete_outputs(self, callback):
+        raise NotImplementedError
+
     def run_main(self, callback):
         raise NotImplementedError
 
@@ -120,16 +123,160 @@ class FetchData(GenericPackage):
         return result
 
     def find_inputs(self, useArchive=False):
-        return self.find_files(self.inputs, useArchive)
+        '''
+        IMPORTANT: In order for this method to work correctly, the 
+        searchPatterns of both the inputs and outputs must match!
+        '''
+
+        if useArchive:
+            # the fetchData is special because the inputs and outputs are 
+            # actually the same files. So we can search for the outputs in the
+            # archive and return them as if they were the inputs.
+            found = self.find_outputs(useArchive)
+            result = dict()
+            for inp in self.inputs:
+                for outp, foundDict in found.iteritems():
+                    if outp.searchPatterns == inp.searchPatterns:
+                        result[inp] = foundDict.copy()
+                if result.get(inp) is None:
+                    result[inp] = {'host' : inp.host, 'paths' : []}
+        else:
+            result = self._find_files(self.inputs, useArchive)
+        return result
 
     def find_outputs(self, useArchive=False):
-        return self.find_files(self.outputs, useArchive)
+        return self._find_files(self.outputs, useArchive)
 
+    def _fetch_files(self, g2files, relTargetDir, useArchive):
+        '''
+        Fetch the input g2files from their destination to relTargetDir.
+
+        If self.toCopy is True the files will always get copied over to
+        relTargetDir. This will happen regardless of the files being
+        on a remote host or on the local host.
+
+        If self.toCopy is False the files will only get copied over to
+        relTargetDir if they are currently in a compressed state. If
+        you don't want to force local copies of big files make sure they
+        are not being stored in a compressed state. Otherwise they'll get
+        copied and decompressed everytime this method is called.
+
+        If self.toCopy is False and the files are not compressed they
+        will not be copied to relTargetDir. Instead a reference to their
+        current path is returned. This behaviour intends to avoid 
+        unnecessary file copies.
+
+        After being copied the files will always be decompressed, in
+        order to be ready for further usage
+
+        Inputs:
+            
+            g2files - A list of G2File instances specifying the files that
+                are to be fetched.
+
+            relTargetDir - The relative (relative to the host) path to the
+                directory, where files should be placed if they were
+                originally in a compressed form.
+
+            useArchive - A boolean indicating if the files are to be searched
+                for in the archives, in case they cannot be found in host.
+
+        Returns:
+
+        '''
+
+        pass
+
+    def fetch_inputs(self, relTargetDir, useArchive=False):
+        pass
+
+    def fetch_outputs(self, relTargetDir, useArchive=False):
+        pass
+
+#    Old implementation
+#    def fetch_files(self, g2files, relTargetDir, hostName=None,
+#                    useArchive=None, forceCopy=False, decompress=False):
+#        '''
+#        Fetch the input g2files from their destination to relTargetDir.
+#
+#        If a file is on a remote host, it will always be copied to the target
+#        directory, regardless of its compression state. If a file is on a
+#        local host and it is compressed it will also always get copied over
+#        to the target directory, regardless of it being decompressed
+#        afterwards or not. The decompression of files is always done after 
+#        copying them to the target directory and can be controlled by the
+#        'decompress' argument. If a file is on a local host and it is not
+#        compressed, it may be copied to the target dir or left at its original
+#        location, depending on the value of the 'forceCopy' argument.
+#
+#        Inputs:
+#
+#            g2files - A list of G2File instances specifying the files that
+#                are to be fetched.
+#
+#            relTargetDir - The relative (relative to the host) path to the
+#                directory, where files should be placed if they were
+#                originally in a compressed form.
+#
+#            hostName - A string with the names of a G2Host where the files 
+#                are to be copied from.
+#
+#            <------
+#            useArchive - A boolean indicating if the files are to be searched
+#                for in the archives, in case they cannot be found in host.
+#                ------->
+#
+#            forceCopy - A boolean indicating if the files should be copied
+#                to the target directory even if they are not compressed. The
+#                default is False.
+#
+#            decompress - A boolean indicating if the files should be
+#                decompressed after being copied to the target directory.
+#                The default is False.
+#
+#        Returns:
+#            A dictionary with the input g2files as keys and a sub-dictionary
+#            as values. This sub-dictionary contains...
+#        '''
+#
+#        for g2f in g2files:
+#            paths = g2f.fetch(relTargetDir, hostName, useArchive=useArchive,
+#                              forceCopy=forceCopy)
+#            if decompress:
+#                relPaths = [self._get_relative_path(p) for p in paths]
+#                paths = self._decompress_files(relPaths)
+#            return paths
+#
+
+    def outputs_available(self):
+        '''
+        Return a boolean indicating if the outputs are already available.
+
+        The outputs are searched only in the defined host and NOT in the
+        archives.
+        '''
+
+        allAvailable = True
+        found = self.find_outputs(useArchive=False)
+        for g2f, foundDict in found.iteritems():
+            if len(foundDict['paths']) == 0:
+                allAvailable = False
+                break
+        return allAvailable
+
+    def delete_outputs(self):
+        '''
+        Delete the package's output files.
+        '''
+
+        foundOutputs = self.find_outputs(useArchive=False)
+        for g2f, foundDict in foundOutputs.iteritems():
+            foundDict['host'].delete_files(foundDict['paths'])
 
     def prepare(self, callback):
-        import time
-        callback('sleeping a bit...', 1)
-        time.sleep(20)
+        #import time
+        #callback('sleeping a bit...', 1)
+        #time.sleep(20)
         return 0
 
     def run_main(self, callback):

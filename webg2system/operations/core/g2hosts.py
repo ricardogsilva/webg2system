@@ -130,7 +130,7 @@ class G2Host(object):
     def create_file():
         raise NotImplementedError
 
-    def delete_file():
+    def delete_files():
         raise NotImplementedError
 
     def get_cwd():
@@ -143,6 +143,11 @@ class G2Host(object):
         raise NotImplementedError
 
     def remove_dir():
+        '''Delete a directory along with any contents it may have.'''
+        raise NotImplementedError
+
+    def clean_dirs():
+        '''Delete an empty directory and any (empty) parent directories.'''
         raise NotImplementedError
 
     def run_program():
@@ -458,16 +463,24 @@ class G2LocalHost(G2Host):
         retCode = newProcess.returncode
         return stdout, stderr, retCode
 
-    #FIXME - To be reviewed
-    def delete_file(self, relativeFilePath):
-        '''Delete the file from the filesystem.'''
+    def delete_files(self, relativePathList):
+        '''
+        Delete the files from the filesystem.
 
-        fullPath = os.path.join(self.basePath, relativeFilePath)
-        try:
-            os.remove(fullPath)
-        except OSError:
-            # file doesn't exist
-            pass
+        If the directories where the files were present become empty
+        after deletion, they will also get deleted.
+        '''
+
+        for relPath in relativePathList:
+            fullPath = os.path.join(self.basePath, relPath)
+            try:
+                self.logger.debug('Deleting %s...' % fullPath)
+                os.remove(fullPath)
+                dirPath = os.path.dirname(fullPath)
+                self.clean_dirs(dirPath)
+            except OSError:
+                # file doesn't exist
+                pass
 
     def get_cwd(self):
         return os.getcwd()
@@ -484,15 +497,20 @@ class G2LocalHost(G2Host):
     #FIXME - To be reviewed
     def remove_dir(self, relativeDirPath):
         '''
-        Remove directory along with any content it may have and also remove
-        any parent directories that may become empty.
+        Remove directory along with any content it may have.
         '''
 
         fullPath = os.path.join(self.basePath, relativeDirPath)
         shutil.rmtree(fullPath)
-        # remove the deleted dir from the path
-        newPath = fullPath.rpartition(os.path.sep)[0]
-        os.removedirs(newPath)
+
+    def clean_dirs(self, relativeDirPath):
+        '''Remove the directory if it is empty. Also remove empty parents.'''
+
+        fullPath = os.path.join(self.basePath, relativeDirPath)
+        try:
+            os.removedirs(fullPath)
+        except OSError:
+            pass
 
     #FIXME - To be reviewed
     def is_dir(self, relativeDirPath):
@@ -557,7 +575,8 @@ class G2RemoteHost(G2Host):
             -->
         '''
 
-        self.logger = logging.getLogger('.'.join((__name__, self.__class__.__name__)))
+        self.logger = logging.getLogger('.'.join((__name__, 
+                                        self.__class__.__name__)))
         self.name = settings.name
         self.connections[self.name] = dict()
         self.basePath = settings.basePath
@@ -569,7 +588,7 @@ class G2RemoteHost(G2Host):
         self.hasMapserver = settings.hasMapserver
         if self._connections.get(self.name) is None:
             self._connections[self.name] = {
-                    'ftp' : FTPProxy(self.host),
+                    'ftp' : FTPProxy(self),
                     'ssh' : SSHProxy(self.user, self.host, self.password)
                     }
         self.ftp = self._connections[self.name]['ftp']
@@ -605,9 +624,9 @@ class G2RemoteHost(G2Host):
         fullSearchPaths = []
         for path in pathList:
             if path.startswith(os.path.sep):
-                fullSearchPath = path
+                fullSearchPaths.append(path)
             else:
-                fullSearchPath = os.path.join(self.basePath, path)
+                fullSearchPaths.append(os.path.join(self.basePath, path))
         foundFiles = eval('self.%s.find(fullSearchPaths)' % protocol)
         return foundFiles
 
