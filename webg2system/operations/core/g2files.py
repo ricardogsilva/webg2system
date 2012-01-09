@@ -121,7 +121,7 @@ class G2File(GenericItem):
 
     # FIXME
     # - Currently working on this method...
-    def fetch(self, relTargetDir, useArchive=None):
+    def fetch(self, targetDir, useArchive=None, decompress=True):
         '''
         Fetch files from the source host to the destination directory.
 
@@ -129,31 +129,37 @@ class G2File(GenericItem):
         a destination directory.
 
         If self.toCopy is True the files will always get copied over to
-        relTargetDir. This will happen regardless of the files being
+        targetDir. This will happen regardless of the files being
         on a remote host or on the local host.
 
         If self.toCopy is False the files will only get copied over to
-        relTargetDir if they are currently in a compressed state. If
+        targetDir if they are currently in a compressed state. If
         you don't want to force local copies of big files make sure they
         are not being stored in a compressed state. Otherwise they'll get
         copied and decompressed everytime this method is called.
 
         If self.toCopy is False and the files are not compressed they
-        will not be copied to relTargetDir. Instead a reference to their
+        will not be copied to targetDir. Instead a reference to their
         current path is returned. This behaviour intends to avoid 
         unnecessary file copies.
 
-        After being copied the files will always be decompressed, in
-        order to be ready for further usage
+        After being copied the files will optionally be decompressed, in
+        order to be ready for further usage.
 
         Inputs:
             
-            relTargetDir - A string with the relative path (relative to the
+            targetDir - A string with the relative path (relative to the
                 instance's host) of the directory where the files should be
                 copied to.
 
             useArchive - A boolean indicating if the files are to be searched
                 for in the archives, in case they cannot be found in host.
+                
+            decompress - A boolean indicating if the newly fetched files are
+                to be decompressed. It only affects files which have actually
+                been fetched, so if a file has the "copy" attribute set as
+                False (meaning it will not be copied), it will never be
+                decompressed.
 
         Returns:
 
@@ -161,24 +167,17 @@ class G2File(GenericItem):
             fetched.
         '''
 
-        result = []
+        found = self.find(useArchive)
         if self.toCopy:
-            foundDict = self.find(useArchive)
-            # does this comparison matter? The self.host.fetch method should 
-            # have the same signature for both local and remote hosts anyway.
-            if self.host.name == foundDict['host'].name:
-                # the copy will be local
-                toCopy = [f+'$' for f in foundDict['paths']]
-                # wainting on the host.fetch method
-                #fetched = self.host.fetch(toCopy, relTargetDir, foundDict['host']) + toGetLink
-            else:
-                # the copy will be remote
-                # wainting on the host.fetch method
-                #fetched = self.host.fetch(foundDict['paths'], relTargetDir, foundDict['host'])
-                pass
-            result = fetched
+            fetched = self.host.fetch(found['paths'], targetDir, found['host'])
+            decompressed = self.host.decompress(fetched)
+            result = decompressed
+        else:
+            self.logger.debug('%s is not marked as "copy" in the settings. '\
+                              'Returning only the original file paths...' 
+                              % self.name)
+            result = found['paths']
         return result
-
 
     def _return_unique_file_names(self, pathList):
         '''
@@ -213,7 +212,7 @@ class G2File(GenericItem):
 
             markedString
         '''
-
+        
         if markedString.string == 'fromOriginator':
             dirName = markedString.name
             originatorList = [po.package for po in \
@@ -221,7 +220,20 @@ class G2File(GenericItem):
                              po.outputItem.name==self.name]
             if len(originatorList) != 0:
                 theOriginator = originatorList[0]
+                # origClass = the
                 markedString = theOriginator.packagepath_set.get(name=dirName)
+                origOutputs = theOriginator.packageOutput_systemsettings_packageoutput_related.all()
+                theOut = [f for f in origOutputs if f.name == self.name][0]
+                specificTS = theOut.specificTimeslots.all()
+                if len(specificTS) > 0:
+                    # get the correct timeslot for the package object that we 
+                    # have to generate (not implemented yet)
+                    theTS = None
+                    raise NotImplementedError
+                else:
+                    theTS = self.timeslot
+                #origPack = g2p.
+
         thePath = utilities.parse_marked(markedString, obj)
         return thePath
 

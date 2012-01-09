@@ -115,7 +115,7 @@ class G2Host(object):
     def find(self, pathList):
         raise NotImplementedError
 
-    def fetch(self, relativePaths, relativeDestinationDir, sourceHost):
+    def fetch(self, fullPaths, relativeDestinationDir, sourceHost):
         raise NotImplementedError
 
     def send(self, relativePaths, relativeDestinationDir, destinationHost):
@@ -124,7 +124,7 @@ class G2Host(object):
     def compress(self, relativePaths):
         raise NotImplementedError
 
-    def decompress(self, relativePaths):
+    def decompress(self, paths):
         raise NotImplementedError
 
     def create_file():
@@ -198,109 +198,54 @@ class G2LocalHost(G2Host):
             else:
                 self.logger.warning('No such directory: %s' % searchDir)
         return foundFiles
-
-    def fetch(self, paths, directory, sourceHost=None, absolute=False):
+    
+    def fetch(self, fullPaths, relativeDestinationDir, sourceHost):
         '''
         Fetch the files from sourceHost.
-
-        This method is to fetch EVERY file that matches the 'paths' input. It
-        is not to make any filtering of possible duplicate files. It is up to
-        the client who calls this method to sort out the correct 'paths' 
-        argument so as to avoid copying duplicate files.
-
+        
         Inputs:
-
-            paths - A list of strings specifying the paths to the files to
-                fetch. Each string is interpreted as a regular expression.
-
-            directory - The directory on the local host where the files
-                will be copied to. It will be created in case it doesn't
-                exist.
-
-            sourceHost - A string with the name of the host where the
-                desired files are. A value of None (the default) assumes
-                that the files are on the local host.
-
-            absolute - A boolean indicating if the list of paths to search
-                contains relative paths or absolute paths.
-
+        
+            fullPaths - A list of strings specifying the full paths to the
+                files that should be copied.
+                
+            relativeDestinationDir - The directory on the local host where
+                the files will be copied to. It will be created in case it
+                doens't exist. This directory is relative to the host's
+                "basepath" attribute.
+            
+            sourceHost - A G2host instance representing the host where the
+                files will be copied from.
+                
         Returns:
-
-            A list of strings with the full paths of the files that were
-            fetched.
+        
+            A list of strings with the full paths to the newly fetched files.
         '''
-
-        if sourceHost is None or sourceHost == self.name:
-            result = self._fetch_from_local(paths, directory, absolute)
+        
+        if sourceHost is self:
+            result = self._fetch_from_local(fullPaths, relativeDestinationDir)
         else:
-            result = self._fetch_from_remote(paths, directory, sourceHost, 
-                                             absolute)
+            result = self._fetch_from_remote(fullPaths, relativeDestinationDir, 
+                                             sourceHost)
         return result
+        
 
-    def _fetch_from_local(self, paths, directory, absolute):
-        '''
-        Fetch the existing files to the destination path.
+    def _fetch_from_local(self, fullPaths, directory):
 
-        Inputs:
-            
-            paths - A list of strings specifying the paths to the files to
-                fetch. Each string is interpreted as a regular expression.
-
-            directory - The directory on the local host where the files
-                will be copied to. It will be created in case it doesn't
-                exist. The directory's location is relative to the local
-                host's 'basePath' attribute.
-
-            absolute - A boolean indicating if the list of paths to search
-                contains relative paths or absolute paths.
-
-        Returns:
-            
-            A list with the full paths of all the files that have been copied.
-        '''
-
-        fullPaths = self.find(paths, absolute)
         fullDestPaths = []
+        outputDir = os.path.join(self.basePath, directory)
+        if not self.is_dir(outputDir):
+                self.make_dir(outputDir)
         for path in fullPaths:
-            fullDestDirPath = os.path.join(self.basePath, directory)
-            if not self.is_dir(fullDestDirPath):
-                self.make_dir(fullDestDirPath)
-            shutil.copy(path, fullDestDirPath)
-            newPath = os.path.join(fullDestDirPath, os.path.basename(path))
+            shutil.copy(path, outputDir)
+            newPath = os.path.join(outputDir, os.path.basename(path))
             fullDestPaths.append(newPath)
         return fullDestPaths
 
-    def _fetch_from_remote(self, paths, directory, sourceHost, absolute):
-        '''
-        Fetch the existing files to the destination path.
-
-        Inputs:
-            
-            paths - A list of strings specifying the paths to the files to
-                fetch. Each string is interpreted as a regular expression.
-
-            directory - The directory on the local host where the files
-                will be copied to. It will be created in case it doesn't
-                exist. The directory's location is relative to the local
-                host's 'basePath' attribute.
-
-            sourceHost - A string with the name of the host where the
-                desired files are to be fetched from.
-
-            absolute - A boolean indicating if the list of paths to search
-                contains relative paths or absolute paths.
-
-        Returns:
-            
-            A list with the full paths of all the files that have been copied.
-        '''
-
-
-        source = factories.create_host(sourceHost)
-        fullPaths = source.find(paths, absolute)
-        connection = self._get_connection(source.name, 'ftp')
-        fullDestDirPath = os.path.join(self.basePath, directory)
-        newPaths = connection.send(fullPaths, fullDestDirPath)
+    def _fetch_from_remote(self, fullPaths, directory, sourceHost):
+        
+        connection = self._get_connection(sourceHost.name, 'ftp')
+        outputDir = os.path.join(self.basePath, directory)
+        newPaths = connection.send(fullPaths, outputDir)
         return newPaths
 
     #FIXME - To be reviewed
@@ -415,29 +360,32 @@ class G2LocalHost(G2Host):
 
         raise NotImplementedError
 
-    def decompress(self, relativePaths):
+    def decompress(self, paths):
         '''
         Decompress the files and leave them in the same directory.
 
         Inputs:
             
-            relativePaths - A list with the relative paths of the files
+            relativePaths - A list with the full paths of the files
                 that are to be decompressed.
 
         Returns:
 
             A list with the new filenames, after decompression
         '''
-
-        fullPaths = [os.path.join(self.basePath, p) for p in relativePaths]
-        stdout, stderr, retCode = self.run_program('bunzip2 %s' % \
-                                                   ' '.join(fullPaths))
-        if retCode == 0:
-            decompressedPaths = [p.replace('.bz2', '') for p in fullPaths]
-        else:
-            #there has been an error decompressing the files
-            raise Exception
-        return decompressedPaths
+        
+        compressed = [p for p in paths if p.endswith('.bz2')]
+        decompressed = [p for p in paths if not p.endswith('.bz2')]
+        newPaths = decompressed
+        if len(compressed) > 0:
+            stdout, stderr, retCode = self.run_program('bunzip2 %s' % \
+                                                       ' '.join(compressed))
+            if retCode == 0:
+                newPaths += [p.replace('.bz2', '') for p in compressed]
+            else:
+                #there has been an error decompressing the files
+                raise Exception
+        return newPaths
 
     #FIXME - To be reviewed
     def run_program(self, command, workingDir=None):

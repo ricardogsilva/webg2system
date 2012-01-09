@@ -147,12 +147,13 @@ class FetchData(GenericPackage):
     def find_outputs(self, useArchive=False):
         return self._find_files(self.outputs, useArchive)
 
-    def _fetch_files(self, g2files, relTargetDir, useArchive):
+    def _fetch_files(self, g2files, relTargetDir, useArchive, 
+                     decompress=False):
         '''
         Fetch the input g2files from their destination to relTargetDir.
 
-        After being copied the files will always be decompressed, in
-        order to be ready for further usage
+        After being copied the files will optionally be decompressed, in
+        order to be ready for further usage.
 
         Inputs:
             
@@ -165,73 +166,33 @@ class FetchData(GenericPackage):
 
             useArchive - A boolean indicating if the files are to be searched
                 for in the archives, in case they cannot be found in host.
+                
+            decompress - A boolean indicating if the newly fetched files are
+                to be decompressed. It only affects files which have actually
+                been fetched, so if a file has the "copy" attribute set as
+                False (meaning it will not be copied), it will never be
+                decompressed.
 
         Returns:
-
+        
+        A dictionary with the input g2files as keys and a list with the full 
+        paths to the newly fetched files.
         '''
+        
+        result = dict()
+        for g2f in g2files:
+            self.logger.info('Fetching %s...' % g2f.name)
+            localPathList = g2f.fetch(relTargetDir, useArchive, decompress)
+            result[g2f] = localPathList
+        return result
 
-        pass
-
-    def fetch_inputs(self, relTargetDir, useArchive=False):
-        pass
-
-    def fetch_outputs(self, relTargetDir, useArchive=False):
-        pass
-
-#    Old implementation
-#    def fetch_files(self, g2files, relTargetDir, hostName=None,
-#                    useArchive=None, forceCopy=False, decompress=False):
-#        '''
-#        Fetch the input g2files from their destination to relTargetDir.
-#
-#        If a file is on a remote host, it will always be copied to the target
-#        directory, regardless of its compression state. If a file is on a
-#        local host and it is compressed it will also always get copied over
-#        to the target directory, regardless of it being decompressed
-#        afterwards or not. The decompression of files is always done after 
-#        copying them to the target directory and can be controlled by the
-#        'decompress' argument. If a file is on a local host and it is not
-#        compressed, it may be copied to the target dir or left at its original
-#        location, depending on the value of the 'forceCopy' argument.
-#
-#        Inputs:
-#
-#            g2files - A list of G2File instances specifying the files that
-#                are to be fetched.
-#
-#            relTargetDir - The relative (relative to the host) path to the
-#                directory, where files should be placed if they were
-#                originally in a compressed form.
-#
-#            hostName - A string with the names of a G2Host where the files 
-#                are to be copied from.
-#
-#            <------
-#            useArchive - A boolean indicating if the files are to be searched
-#                for in the archives, in case they cannot be found in host.
-#                ------->
-#
-#            forceCopy - A boolean indicating if the files should be copied
-#                to the target directory even if they are not compressed. The
-#                default is False.
-#
-#            decompress - A boolean indicating if the files should be
-#                decompressed after being copied to the target directory.
-#                The default is False.
-#
-#        Returns:
-#            A dictionary with the input g2files as keys and a sub-dictionary
-#            as values. This sub-dictionary contains...
-#        '''
-#
-#        for g2f in g2files:
-#            paths = g2f.fetch(relTargetDir, hostName, useArchive=useArchive,
-#                              forceCopy=forceCopy)
-#            if decompress:
-#                relPaths = [self._get_relative_path(p) for p in paths]
-#                paths = self._decompress_files(relPaths)
-#            return paths
-#
+    def fetch_inputs(self, useArchive=False):
+        '''
+        Copy and decompress the available inputs to the outputDir.
+        '''
+        
+        return self._fetch_files(self.inputs, self.outputDir, useArchive,
+                                 decompress=True)
 
     def outputs_available(self):
         '''
@@ -258,16 +219,36 @@ class FetchData(GenericPackage):
         for g2f, foundDict in foundOutputs.iteritems():
             foundDict['host'].delete_files(foundDict['paths'])
 
+    def _delete_inputs(self):
+        '''
+        Delete the package's input files from their original location.
+        '''
+
+        foundInputs = self.find_inputs(useArchive=False)
+        for g2f, foundDict in foundInputs.iteritems():
+            foundDict['host'].delete_files(foundDict['paths'])
+
     def prepare(self, callback):
+        '''
+        Prepare the inputs for running the main code.
+
+        The fetchData class has no real use for this method, as it only
+        moves files from their temporary input location to their final 
+        destination.
+        '''
         #import time
         #callback('sleeping a bit...', 1)
         #time.sleep(20)
         return 0
 
     def run_main(self, callback):
+        self.fetch_inputs(useArchive=False)
         return 0
 
     def clean_up(self, callback):
+        # delete the workingDir (not needed for fetchData class)
+        # delete any extra dirs that may have become empty
+        #self._delete_inputs()
         return 0
 
 #
