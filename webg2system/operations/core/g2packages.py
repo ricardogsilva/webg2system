@@ -16,22 +16,23 @@ class GenericPackage(GenericItem):
 
     name = ''
 
-    def prepare(self, callback):
+    def prepare(self, callback=None):
         raise NotImplementedError
 
-    def delete_outputs(self, callback):
+    def delete_outputs(self, callback=None):
         raise NotImplementedError
 
-    def run_main(self, callback):
+    def run_main(self, callback=None):
         raise NotImplementedError
 
-    def clean_up(self, callback):
+    def clean_up(self, callback=None):
         raise NotImplementedError
 
-    def ensure_dirs(self, *dirlist):
-        for directory in dirlist:
-            if not self.host.is_dir(directory):
-                self.host.make_dir(directory)
+    # FIXME - this method seems to be unnecessary
+    #def ensure_dirs(self, *dirlist):
+    #    for directory in dirlist:
+    #        if not self.host.is_dir(directory):
+    #            self.host.make_dir(directory)
 
     def __unicode__(self):
         return unicode(self.name)
@@ -93,7 +94,8 @@ class FetchData(GenericPackage):
                     generalFileSettings = eval('specificSettings.%sItem.file' \
                                                % fileRole)
                     newObject = G2File(generalFileSettings, spTimeslot, spArea,
-                                       hostSettings, specificSettings.optional)
+                                       hostSettings, specificSettings.optional,
+                                       parent=self)
                     objects.append(newObject)
         return objects
 
@@ -189,10 +191,27 @@ class FetchData(GenericPackage):
     def fetch_inputs(self, useArchive=False):
         '''
         Copy and decompress the available inputs to the outputDir.
+
+        IMPORTANT: In order for this method to work correctly when using
+        the useArchive flag, the searchPatterns of both the inputs and 
+        outputs must match!
         '''
         
-        return self._fetch_files(self.inputs, self.outputDir, useArchive,
-                                 decompress=True)
+        if useArchive:
+            result = dict()
+            # the fetchData class is special because the inputs and outputs are
+            # actually the same files. So we can search for the outputs in the
+            # archive and return them as if they were the inputs.
+            for inp in self.inputs:
+                for outp in self.outputs:
+                    if outp.searchPatterns == inp.searchPatterns:
+                        result[inp] = outp.fetch(self.outputDir, useArchive, 
+                                                 decompress=True)
+        else:
+            # use the default _fetch_files method
+            result = self._fetch_files(self.inputs, self.outputDir, useArchive,
+                                       decompress=True)
+        return result
 
     def outputs_available(self):
         '''
@@ -210,7 +229,7 @@ class FetchData(GenericPackage):
                 break
         return allAvailable
 
-    def delete_outputs(self):
+    def delete_outputs(self, callback=None):
         '''
         Delete the package's output files.
         '''
@@ -228,7 +247,7 @@ class FetchData(GenericPackage):
         for g2f, foundDict in foundInputs.iteritems():
             foundDict['host'].delete_files(foundDict['paths'])
 
-    def prepare(self, callback):
+    def prepare(self, callback=None):
         '''
         Prepare the inputs for running the main code.
 
@@ -241,14 +260,14 @@ class FetchData(GenericPackage):
         #time.sleep(20)
         return 0
 
-    def run_main(self, callback):
-        self.fetch_inputs(useArchive=False)
+    def run_main(self, callback=None):
+        self.fetch_inputs(useArchive=True)
         return 0
 
-    def clean_up(self, callback):
+    def clean_up(self, callback=None):
         # delete the workingDir (not needed for fetchData class)
         # delete any extra dirs that may have become empty
-        #self._delete_inputs()
+        self._delete_inputs()
         return 0
 
 #

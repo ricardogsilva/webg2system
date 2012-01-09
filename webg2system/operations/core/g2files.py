@@ -27,7 +27,8 @@ class G2File(GenericItem):
 
     hosts = dict()
 
-    def __init__(self, fileSettings, timeslot, areaSettings, hostSettings, optional=False):
+    def __init__(self, fileSettings, timeslot, areaSettings, hostSettings, 
+                 optional=False, parent=None):
         '''
         Inputs
 
@@ -41,10 +42,13 @@ class G2File(GenericItem):
             hostSettings - A systemsettings.models.Host object
 
             optional - A boolean indicating if the object is optional or not.
+
+            parent - A operations.core.g2pacakges.G2Package object.
         '''
 
         super(G2File, self).__init__(timeslot, areaSettings, hostSettings)
         self.name = fileSettings.name
+        self.parent = parent
         self.optional = optional
         self.toCopy = fileSettings.toCopy
         self.toCompress = fileSettings.toCompress
@@ -119,8 +123,6 @@ class G2File(GenericItem):
                 hostIndex += 1
         return result
 
-    # FIXME
-    # - Currently working on this method...
     def fetch(self, targetDir, useArchive=None, decompress=True):
         '''
         Fetch files from the source host to the destination directory.
@@ -215,26 +217,12 @@ class G2File(GenericItem):
         
         if markedString.string == 'fromOriginator':
             dirName = markedString.name
-            originatorList = [po.package for po in \
-                             ss.PackageOutput.objects.all() if \
-                             po.outputItem.name==self.name]
-            if len(originatorList) != 0:
-                theOriginator = originatorList[0]
-                # origClass = the
-                markedString = theOriginator.packagepath_set.get(name=dirName)
-                origOutputs = theOriginator.packageOutput_systemsettings_packageoutput_related.all()
-                theOut = [f for f in origOutputs if f.name == self.name][0]
-                specificTS = theOut.specificTimeslots.all()
-                if len(specificTS) > 0:
-                    # get the correct timeslot for the package object that we 
-                    # have to generate (not implemented yet)
-                    theTS = None
-                    raise NotImplementedError
-                else:
-                    theTS = self.timeslot
-                #origPack = g2p.
-
-        thePath = utilities.parse_marked(markedString, obj)
+            fullPath = eval('self.parent.%s' % dirName)
+            # trimming the first character in order to eliminate the '/'
+            relativePath = fullPath.replace(self.parent.host.basePath, '')[1:]
+            thePath = relativePath
+        else:
+            thePath = utilities.parse_marked(markedString, obj)
         return thePath
 
     def __repr__(self):

@@ -55,7 +55,9 @@ class RunningPackage(models.Model):
         pack = self._initialize()
         return pack
 
-    def run(self, callback):
+    # TODO
+    # Daemonize this method
+    def run(self, callback=None):
         '''
         Interfaces with the core packages, calling their public
         delete_outputs(), prepare(), run_main() and clean_up() 
@@ -68,25 +70,58 @@ class RunningPackage(models.Model):
         tuple.
         '''
 
+        if callback is None:
+            def callback(msg, step):
+                pass
+
         try:
             self.status = 'running'
             self.save()
-            callback('Creating package for processing...', 1)
+            processSteps = 6
+            callback('Creating package for processing...', 
+                     self.progress(1, processSteps))
             pack = self._initialize()
-            if self.force:
-                callback('Deleting any previously present output files...', 2)
-                pack.delete_outputs()
-            callback('Preparing files...', 3)
-            prepareResult = pack.prepare(callback)
-            callback('Running main process...', 4)
-            mainResult = pack.run_main()
-            callback('Cleaning up...', 5)
-            cleanResult = pack.clean_up()
+            outputsAvailable = pack.outputs_available()
+            if outputsAvailable:
+                if self.force:
+                    runPackage = True
+                    callback('Deleting any previously present output files...',
+                             self.progress(2, processSteps))
+                    pack.delete_outputs()
+                else:
+                    runPackage = False
+            else:
+                runPackage = True
+            if runPackage:
+                callback('Preparing files...', 
+                         self.progress(3, processSteps))
+                prepareResult = pack.prepare(callback)
+                callback('Running main process...', 
+                         self.progress(4, processSteps))
+                mainResult = pack.run_main()
+                # Will be able to add other error codes later
+                if mainResult not in (1,):
+                    self.result = True
+                callback('Cleaning up...', 
+                         self.progress(5, processSteps))
+                cleanResult = pack.clean_up()
+            else:
+                callback('Outputs are already available.', 
+                         self.progress(5, processSteps))
+                self.result = True
             self.status = 'stopped'
             self.save()
-            callback('All done!', 6)
+            callback('All done!', self.progress(6, processSteps))
         except:
+            print('something went wrong')
             self.status = 'stopped'
             self.result = False
             self.save()
+
+    def progress(self, currentStep, totalSteps=100):
+        '''
+        Return the progress, in percentage.
+        '''
+
+        return currentStep * 100 / totalSteps
 
