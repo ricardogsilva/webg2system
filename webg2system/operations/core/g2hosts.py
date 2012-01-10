@@ -25,7 +25,6 @@ from pexpect import spawn
 #import fnmatch
 
 # specific imports
-import utilities
 from sshproxy import SSHProxy
 from ftpproxy import FTPProxy
 
@@ -181,7 +180,6 @@ class G2LocalHost(G2Host):
             A list with the full paths to the found files.
         '''
 
-        #self.logger.info('locals: %s' % locals())
         foundFiles = []
         for path in pathList:
             if path.startswith(os.path.sep):
@@ -227,7 +225,6 @@ class G2LocalHost(G2Host):
             result = self._fetch_from_remote(fullPaths, relativeDestinationDir, 
                                              sourceHost)
         return result
-        
 
     def _fetch_from_local(self, fullPaths, directory):
 
@@ -242,38 +239,53 @@ class G2LocalHost(G2Host):
         return fullDestPaths
 
     def _fetch_from_remote(self, fullPaths, directory, sourceHost):
+        '''
+        Fetch the files from the remote host.
+
+        Inputs:
+            
+            fullPaths - 
+
+            directory - 
+
+            sourceHost - A G2Host object.
+
+        Returns:
+
+            A list of string with the full paths to the newly fetched files.
+        '''
         
-        connection = self._get_connection(sourceHost.name, 'ftp')
+        connection = self._get_connection(sourceHost, 'ftp')
         outputDir = os.path.join(self.basePath, directory)
         newPaths = connection.send(fullPaths, outputDir)
         return newPaths
 
-    #FIXME - To be reviewed
     def _get_connection(self, host, protocol):
         '''
         Return the relevant connection object.
 
         Inputs:
 
-            host - A string with the name of the host to connect to.
+            host - A G2Host object.
 
             protocol - A string with the name of the connection protocol.
                 Currently planned protocols are 'ftp' and 'ssh'.
         '''
 
-        hostConnections = self.connections[self.name].get(host)
+        hostConnections = self.connections[self.name].get(host.name)
         if hostConnections is not None:
             connection = hostConnections.get(protocol)
             if connection is not None:
-                self.logger.info('Reusing previously opened connection to %s.' % host)
+                self.logger.info('Reusing previously opened connection to %s.'\
+                                 % host.name)
                 result = connection
             else:
                 self.logger.info('Creating connection to %s with protocol %s' % 
-                      (host, protocol))
+                                 (host.name, protocol))
                 result = self._connect(host, protocol)
         else:
             self.logger.info('Creating the first connection to %s with protocol %s' % 
-                  (host, protocol))
+                             (host.name, protocol))
             result = self._connect(host, protocol)
         return result
 
@@ -281,20 +293,24 @@ class G2LocalHost(G2Host):
         '''
         Establish a connection between the local host and the 'host' argument
         using 'protocol'.
+
+        Inputs:
+
+            host - A G2Host object
+
+            protocol -
         '''
 
-        if self.connections[self.name].get(host) is None:
-            self.connections[self.name][host] = dict()
-        if self.connections[self.name].get(host).get(protocol) is None:
-            hostDetails = utilities.get_host_details(host)
+        if self.connections[self.name].get(host.name) is None:
+            # create the dictionary that will hold the FTP and SSH connections
+            self.connections[self.name][host.name] = dict()
+        if self.connections[self.name].get(host.name).get(protocol) is None:
             if protocol == 'ssh':
-                self.connections[self.name][host]['ssh'] = SSHProxy(
-                        hostDetails['username'], hostDetails['ip'])
+                self.connections[self.name][host.name]['ssh'] = SSHProxy(
+                        host.user, host.host)
             elif protocol == 'ftp':
-                self.connections[self.name][host]['ftp'] = FTPProxy(
-                        hostDetails['username'], hostDetails['ip'], 
-                        hostDetails['password'], host=self)
-        return self.connections[self.name][host][protocol]
+                self.connections[self.name][host.name]['ftp'] = FTPProxy(host)
+        return self.connections[self.name][host.name][protocol]
 
     #FIXME - To be reviewed
     def send(self, relativePaths, destPath, destHost, compress):
@@ -348,7 +364,7 @@ class G2LocalHost(G2Host):
     #FIXME - To be reviewed
     def _send_to_remote(self, relativePaths, destPath, destHost, compress):
         raise NotImplementedError
-        
+
     def compress(self, relativePaths):
         '''
         Compress the files and leave them in the same directory.

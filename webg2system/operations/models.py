@@ -73,50 +73,51 @@ class RunningPackage(models.Model):
         if callback is None:
             def callback(msg, step):
                 pass
-
-        try:
-            self.status = 'running'
-            self.save()
-            processSteps = 6
-            callback('Creating package for processing...', 
-                     self.progress(1, processSteps))
-            pack = self._initialize()
-            outputsAvailable = pack.outputs_available()
-            if outputsAvailable:
-                if self.force:
-                    runPackage = True
-                    callback('Deleting any previously present output files...',
-                             self.progress(2, processSteps))
-                    pack.delete_outputs()
-                else:
-                    runPackage = False
-            else:
+        #try:
+        self.status = 'running'
+        self.save()
+        processSteps = 8
+        callback('Creating package for processing...', 
+                 self.progress(1, processSteps))
+        pack = self._initialize()
+        callback('Looking for previously available outputs...', 
+                 self.progress(2, processSteps))
+        outputsAvailable = pack.outputs_available()
+        if outputsAvailable:
+            if self.force:
                 runPackage = True
-            if runPackage:
-                callback('Preparing files...', 
+                callback('Deleting any previously present output files...',
                          self.progress(3, processSteps))
-                prepareResult = pack.prepare(callback)
-                callback('Running main process...', 
-                         self.progress(4, processSteps))
-                mainResult = pack.run_main()
-                # Will be able to add other error codes later
-                if mainResult not in (1,):
-                    self.result = True
-                callback('Cleaning up...', 
-                         self.progress(5, processSteps))
-                cleanResult = pack.clean_up()
+                pack.delete_outputs()
             else:
-                callback('Outputs are already available.', 
-                         self.progress(5, processSteps))
+                runPackage = False
+        else:
+            runPackage = True
+        if runPackage:
+            callback('Preparing files...', 
+                     self.progress(4, processSteps))
+            prepareResult = pack.prepare(callback)
+            callback('Running main process...', 
+                     self.progress(5, processSteps))
+            mainResult = pack.run_main()
+            # Will be able to add other error codes later
+            if mainResult not in (1,):
                 self.result = True
-            self.status = 'stopped'
-            self.save()
-            callback('All done!', self.progress(6, processSteps))
-        except:
-            print('something went wrong')
-            self.status = 'stopped'
-            self.result = False
-            self.save()
+            callback('Cleaning up...', 
+                     self.progress(6, processSteps))
+            cleanResult = pack.clean_up()
+        else:
+            callback('Outputs are already available.', 
+                     self.progress(7, processSteps))
+            self.result = True
+        self.status = 'stopped'
+        self.save()
+        callback('All done!', self.progress(8, processSteps))
+        #except:
+        #    print('something went wrong')
+        #    self.status = 'stopped'
+        #    self.result = False
+        #    self.save()
 
     def progress(self, currentStep, totalSteps=100):
         '''

@@ -152,11 +152,7 @@ class FTPProxy(object):
         return copiedPaths
 
     # FIXME
-    #   - this method hasn't been tested yet and it certainly is wrong
-    #     because:
-    #           - it is not using the boolean return value of the _connect()
-    #             method into account;
-    #           - other reasons
+    #   - this method hasn't been tested yet.
     def fetch(self, paths, destination):
         '''
         Put the local paths to the remote server.
@@ -176,24 +172,25 @@ class FTPProxy(object):
             The total return code of the transfer(s).
         '''
 
-        self._connect()
-        oldDir = os.getcwd()
-        results = []
-        for path in paths:
-            dirPath, fname = os.path.split(path)
-            if os.path.isdir(dirPath):
-                os.chdir(dirPath)
-                self._create_remote_dirs(destination)
-                self.connection.cwd(path)
-                result = self.connection.storbinary("STOR %s" % fname,
-                                                    open(fname, "rb"))
-                results.append(float(result.split()[0]))
-        os.chdir(oldDir)
         endResult = 1
-        if not False in [i == 226.0 for i in results]:
-            # 226 is the FTP return code that indicates a successful transfer
-            endResult = 0
-        self.logger.debug("send method exiting.")
+        if self._connect():
+            oldDir = os.getcwd()
+            results = []
+            for path in paths:
+                dirPath, fname = os.path.split(path)
+                if os.path.isdir(dirPath):
+                    os.chdir(dirPath)
+                    self._create_remote_dirs(destination)
+                    self.connection.cwd(path)
+                    result = self.connection.storbinary("STOR %s" % fname,
+                                                        open(fname, "rb"))
+                    results.append(float(result.split()[0]))
+            os.chdir(oldDir)
+            endResult = 1
+            if not False in [i == 226.0 for i in results]:
+                # 226 is the FTP return code that indicates a successful transfer
+                endResult = 0
+            self.logger.debug("send method exiting.")
         return endResult
 
     # FIXME

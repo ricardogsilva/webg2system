@@ -91,6 +91,7 @@ class G2File(GenericItem):
         of its path or compression state.
         '''
 
+        self.logger.info('Looking for: %s...' % self.name)
         result = {'host' : self.host, 'paths' : []}
         allPaths = []
         for path in self.searchPaths:
@@ -169,6 +170,7 @@ class G2File(GenericItem):
             fetched.
         '''
 
+        self.logger.info('Fetching %s...' % self.name)
         found = self.find(useArchive)
         if self.toCopy:
             fetched = self.host.fetch(found['paths'], targetDir, found['host'])
