@@ -21,7 +21,11 @@ class FTPProxy(object):
     Connect to another server through FTP and perform various actions.
     '''
 
-    def __init__(self, host):
+    # FIXME
+    # - Create the localHost and remoteHost attributes, replacing the 'host' 
+    # attribute
+    # - Rename the send() and fetch() methods in a more intuitive way
+    def __init__(self, localHost, remoteHost):
         '''
         Inputs:
 
@@ -32,12 +36,13 @@ class FTPProxy(object):
         self.logger = logging.getLogger('.'.join((__name__, 
                                         self.__class__.__name__)))
         self.connection = FTP()
-        self.host = host
+        self.localHost = localHost
+        self.remoteHost = remoteHost
 
     def _test_for_connection(self):
         '''Return True if the connection has already been established.'''
 
-        return self.getwelcome() is not None
+        return self.connection.getwelcome() is not None
 
     def _connect(self, timeoutRetries=5):
         '''
@@ -71,16 +76,17 @@ class FTPProxy(object):
                     result = self._connect()
         else:
             #create the connection
-            self.logger.debug('Connecting to %s...' % self.host.host)
+            self.logger.debug('Connecting to %s...' % self.remoteHost.host)
             try:
-                self.connection.connect(self.host.host)
-                self.connection.login(self.host.user, self.host.password)
+                self.connection.connect(self.remoteHost.host)
+                self.connection.login(self.remoteHost.user, 
+                                      self.remoteHost.password)
                 result = True
                 self.logger.debug('Connection successful')
             except socket.error, errorMsg:
                 if errorMsg[0] == 113:
                     self.logger.error('%s unreachable. Maybe the host is ' +\
-                                        'down?' % self.host.host)
+                                        'down?' % self.remoteHost.host)
                 else:
                     self.logger.warning('socket error: %s' % (str(errorMsg)))
             except error_perm, errMsg:
@@ -122,43 +128,46 @@ class FTPProxy(object):
                     #raise
         return fileList
 
-    def send(self, paths, destination):
+    # FIXME
+    # - test this method out
+    def fetch(self, paths, destination):
         '''
-        Get the paths from the remote server to the local destination.
+        Fetch the input paths from remoteHost.
+        
+        The paths are copied to localHost's destination.
 
         Inputs:
-            
-            paths - A list of paths in the remote host that are to be copied. 
-            
-            destination - The target directory on the local machine where to 
-                put the copied files. It will be created in case it doesn't 
-                exist.
+
+            paths - A list with the full paths of the files to get.
+
+            destination - The directory on this instance's localHost attribute
+                where the files are to be copied to.
 
         Returns:
-            
-            A list with the paths to the newly-copied files.
+
+            A list with the paths to the newly fetched files.
         '''
 
         copiedPaths = []
         if self._connect():
-            pathsToCopy = self.find(paths)
-            if len(pathsToCopy) > 0:
-                oldDir = self.host.get_cwd()
-                if not self.host.is_dir(destination):
-                    self.host.make_dir(destination)
-                self.host.change_dir(destination)
-                for path in pathsToCopy:
-                    dirPath, fname = os.path.split(path)
-                    self.connection.retrbinary('RETR %s' % path, 
-                                               open(fname, 'wb').write)
-                    copiedPaths.append(os.path.join(destination, fname))
-                os.chdir(oldDir)
-                self.host.change_dir(oldDir)
+            oldDir = self.localHost.get_cwd()
+            if not self.localHost.is_dir(destination):
+                self.localHost.make_dir(destination)
+            self.localHost.change_dir(destination)
+            for path in paths:
+                dirPath, fname = os.path.split(path)
+                # this code only works with local hosts
+                # as the open().write piece assumes local
+                # filesystem
+                self.connection.retrbinary('RETR %s' % path, 
+                                           open(fname, 'wb').write)
+                copiedPaths.append(os.path.join(destination, fname))
+            self.localHost.change_dir(oldDir)
         return copiedPaths
 
     # FIXME
     #   - this method hasn't been tested yet.
-    def fetch(self, paths, destination):
+    def send(self, paths, destination):
         '''
         Put the local paths to the remote server.
 

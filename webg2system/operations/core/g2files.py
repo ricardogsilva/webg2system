@@ -208,6 +208,9 @@ class G2File(GenericItem):
                 uniqueExtensions.append(ext)
         return uniquePathList
 
+    # FIXME
+    # This method only works when the file being processed is output to its 
+    # parent package. 
     def get_path(self, markedString, obj):
         '''
         Return a path that has been specified via the markedString mechanism.

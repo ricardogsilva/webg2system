@@ -261,7 +261,7 @@ class G2LocalHost(G2Host):
         
         connection = self._get_connection(sourceHost, 'ftp')
         outputDir = os.path.join(self.basePath, directory)
-        newPaths = connection.send(fullPaths, outputDir)
+        newPaths = connection.fetch(fullPaths, outputDir)
         return newPaths
 
     def _get_connection(self, host, protocol):
@@ -313,7 +313,8 @@ class G2LocalHost(G2Host):
                 self.connections[host.name]['ssh'] = SSHProxy(
                         host.user, host.host)
             elif protocol == 'ftp':
-                self.connections[host.name]['ftp'] = FTPProxy(host)
+                self.connections[host.name]['ftp'] = FTPProxy(localHost=self, 
+                                                              remoteHost=host)
         return self.connections[host.name][protocol]
 
     #FIXME - To be reviewed
@@ -456,10 +457,14 @@ class G2LocalHost(G2Host):
     def change_dir(self, destination):
         os.chdir(destination)
 
-    def make_dir(self, relativeDirPath):
+    #FIXME - Does this method ever get called with relative paths?
+    def make_dir(self, directory):
         '''Recursively make every directory needed to ensure relativeDirPath.'''
 
-        fullPath = os.path.join(self.basePath, relativeDirPath)
+        if directory.startswith('/'):
+            fullPath = directory
+        else:
+            fullPath = os.path.join(self.basePath, relativeDirPath)
         os.makedirs(fullPath)
 
     #FIXME - To be reviewed
@@ -480,9 +485,12 @@ class G2LocalHost(G2Host):
         except OSError:
             pass
 
-    #FIXME - To be reviewed
-    def is_dir(self, relativeDirPath):
-        fullPath = os.path.join(self.basePath, relativeDirPath)
+    #FIXME - Does this method ever get called with relative paths?
+    def is_dir(self, directory):
+        if directory.startswith('/'):
+            fullPath = directory
+        else:
+            fullPath = os.path.join(self.basePath, relativeDirPath)
         return os.path.isdir(fullPath)
 
     #FIXME - To be reviewed
