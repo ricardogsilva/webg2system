@@ -34,24 +34,43 @@ class FTPProxy(object):
         self.connection = FTP()
         self.host = host
 
-    def _test_connection(self):
-        '''Return True if the connection already exists.'''
+    def _test_for_connection(self):
+        '''Return True if the connection has already been established.'''
+
+        return self.getwelcome() is not None
+
+    def _connect(self, timeoutRetries=5):
+        '''
+        Establish a new connection to the remote server.
+
+        Inputs:
+
+            timeoutRetries - An integer specifying the number of seconds
+                to wait before reconnecting after a timeout error.
+
+        Returns:
+
+            A boolean with the result of the connection attempt.
+        '''
 
         result = False
-        try:
-            self.connection.nlst()
-            result = True
-        except AttributeError:
-            pass
-        return result
-
-    def _connect(self):
-        '''
-        Establish a connection with the remote host.
-        '''
-
-        result = self._test_connection()
-        if not result:
+        if self._test_for_connection():
+            self.logger.debug('The connection already exists')
+            try:
+                #check for timeouts
+                self.connection.pwd()
+                result = True
+            except error_temp, errMsg:
+                patt = re.compile(r'(^\d+)')
+                errNum = patt.search(str(errMsg)).group(1)
+                if errNum == '421':
+                    # timeout, try to connect again in timeoutRetries seconds
+                    self.logger.info('The FTP connection timed out. Waiting '\
+                                     '%i seconds' % timeoutRetries)
+                    time.sleep(timeoutRetries)
+                    result = self._connect()
+        else:
+            #create the connection
             self.logger.debug('Connecting to %s...' % self.host.host)
             try:
                 self.connection.connect(self.host.host)
@@ -60,21 +79,10 @@ class FTPProxy(object):
                 self.logger.debug('Connection successful')
             except socket.error, errorMsg:
                 if errorMsg[0] == 113:
-                    self.logger.warning('%s unreachable. Maybe the host is ' +\
+                    self.logger.error('%s unreachable. Maybe the host is ' +\
                                         'down?' % self.host.host)
                 else:
-                    #raise IOError('socket error: %s' % (str(errorMsg)))
                     self.logger.warning('socket error: %s' % (str(errorMsg)))
-            except error_temp, errMsg:
-                patt = re.compile(r'(^\d+)')
-                errNum = patt.search(str(errMsg)).group(1)
-                if errNum == '421':
-                    # try to connect again in secs seconds
-                    secs = 15
-                    self.logger.info('Too many connections at the moment. ' \
-                          'Waiting %i seconds' % secs)
-                    time.sleep(secs)
-                    result = self._connect()
             except error_perm, errMsg:
                 patt = re.compile(r'(^\d+)')
                 errNum = patt.search(str(errMsg)).group(1)
@@ -83,9 +91,6 @@ class FTPProxy(object):
                     self.connection.quit()
                     self.connection = None
                     self.connection = FTP()
-                    raise
-        else:
-            self.logger.debug('The connection already exists')
         return result
 
     def find(self, pathList):
