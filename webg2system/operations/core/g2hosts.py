@@ -42,7 +42,7 @@ class HostFactory(object):
 
     def create_host(self, hostSettings):
         '''
-        Return a new G2host instance.
+        Return a new G2host instance or return an already existing one.
 
         Inputs:
 
@@ -59,7 +59,7 @@ class HostFactory(object):
                                 % localName)
             localIP = None
         if name not in self._hosts.keys():
-            self.logger.info('Creating a new %s host object...' % 
+            self.logger.debug('Creating a new %s host object...' % 
                              (hostSettings.name))
             if name == localName or ip == localIP:
                 theClass = G2LocalHost
@@ -67,6 +67,8 @@ class HostFactory(object):
                 theClass = G2RemoteHost
             hostObj = theClass(hostSettings)
             self._hosts[name] = hostObj
+        else:
+            self.logger.debug('%s host already exists.' % hostSettings.name)
         return self._hosts.get(name)
 
 
@@ -111,6 +113,10 @@ class G2Host(object):
         self.hasSMS = settings.hasSMS
         self.hasMapserver = settings.hasMapserver
 
+    def __repr__(self):
+        return self.name
+
+    # method stubs
     def find(self, pathList):
         raise NotImplementedError
 
@@ -126,34 +132,31 @@ class G2Host(object):
     def decompress(self, paths):
         raise NotImplementedError
 
-    def create_file():
+    def create_file(self):
         raise NotImplementedError
 
-    def delete_files():
+    def delete_files(self):
         raise NotImplementedError
 
-    def get_cwd():
+    def get_cwd(self):
         raise NotImplementedError
 
-    def change_dir():
+    def change_dir(self):
         raise NotImplementedError
 
-    def make_dir():
+    def make_dir(self):
         raise NotImplementedError
 
-    def remove_dir():
+    def remove_dir(self):
         '''Delete a directory along with any contents it may have.'''
         raise NotImplementedError
 
-    def clean_dirs():
+    def clean_dirs(self):
         '''Delete an empty directory and any (empty) parent directories.'''
         raise NotImplementedError
 
-    def run_program():
+    def run_program(self):
         raise NotImplementedError
-
-    def __repr__(self):
-        return self.name
 
 
 class G2LocalHost(G2Host):
