@@ -75,7 +75,6 @@ class HostFactory(object):
 class G2Host(object):
 
     name=''
-    connections = dict()
 
     def __init__(self, settings):
         '''
@@ -104,7 +103,7 @@ class G2Host(object):
 
         self.logger = logging.getLogger('.'.join((__name__, self.__class__.__name__)))
         self.name = settings.name
-        self.connections[self.name] = dict()
+        self.connections = dict()
         self.basePath = settings.basePath
         self.host = settings.ip
         self.user = settings.username
@@ -223,8 +222,10 @@ class G2LocalHost(G2Host):
         '''
         
         if sourceHost is self:
+            self.logger.debug('About to perform a local fetch...')
             result = self._fetch_from_local(fullPaths, relativeDestinationDir)
         else:
+            self.logger.debug('About to perform a remote fetch...')
             result = self._fetch_from_remote(fullPaths, relativeDestinationDir, 
                                              sourceHost)
         return result
@@ -275,19 +276,19 @@ class G2LocalHost(G2Host):
                 Currently planned protocols are 'ftp' and 'ssh'.
         '''
 
-        hostConnections = self.connections[self.name].get(host.name)
+        hostConnections = self.connections.get(host.name)
         if hostConnections is not None:
             connection = hostConnections.get(protocol)
             if connection is not None:
-                self.logger.info('Reusing previously opened connection to %s.'\
+                self.logger.debug('Reusing previously opened connection to %s.'\
                                  % host.name)
                 result = connection
             else:
-                self.logger.info('Creating connection to %s with protocol %s' % 
+                self.logger.debug('Creating connection to %s with protocol %s' % 
                                  (host.name, protocol))
                 result = self._connect(host, protocol)
         else:
-            self.logger.info('Creating the first connection to %s with protocol %s' % 
+            self.logger.debug('Creating the first connection to %s with protocol %s' % 
                              (host.name, protocol))
             result = self._connect(host, protocol)
         return result
@@ -304,16 +305,16 @@ class G2LocalHost(G2Host):
             protocol -
         '''
 
-        if self.connections[self.name].get(host.name) is None:
+        if self.connections.get(host.name) is None:
             # create the dictionary that will hold the FTP and SSH connections
-            self.connections[self.name][host.name] = dict()
-        if self.connections[self.name].get(host.name).get(protocol) is None:
+            self.connections[host.name] = dict()
+        if self.connections.get(host.name).get(protocol) is None:
             if protocol == 'ssh':
-                self.connections[self.name][host.name]['ssh'] = SSHProxy(
+                self.connections[host.name]['ssh'] = SSHProxy(
                         host.user, host.host)
             elif protocol == 'ftp':
-                self.connections[self.name][host.name]['ftp'] = FTPProxy(host)
-        return self.connections[self.name][host.name][protocol]
+                self.connections[host.name]['ftp'] = FTPProxy(host)
+        return self.connections[host.name][protocol]
 
     #FIXME - To be reviewed
     def send(self, relativePaths, destPath, destHost, compress):
@@ -545,7 +546,7 @@ class G2RemoteHost(G2Host):
         self.logger = logging.getLogger('.'.join((__name__, 
                                         self.__class__.__name__)))
         self.name = settings.name
-        self.connections[self.name] = dict()
+        self.connections = dict()
         self.basePath = settings.basePath
         self.host = settings.ip
         self.user = settings.username
