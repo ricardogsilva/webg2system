@@ -25,8 +25,6 @@ import g2packages as g2p
 
 class G2File(GenericItem):
 
-    hosts = dict()
-
     def __init__(self, fileSettings, timeslot, areaSettings, hostSettings, 
                  optional=False, parent=None):
         '''
@@ -91,7 +89,6 @@ class G2File(GenericItem):
         of its path or compression state.
         '''
 
-        self.logger.info('Looking for: %s...' % self.name)
         result = {'host' : self.host, 'paths' : []}
         allPaths = []
         for path in self.searchPaths:

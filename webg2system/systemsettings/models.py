@@ -59,7 +59,6 @@ class Item(models.Model):
 
 class Package(Item):
     codeClass = models.ForeignKey('CodeClass')
-    version = models.CharField(max_length=10)
     inputs = models.ManyToManyField(Item, through='PackageInput',
                                     related_name='inputs')
 

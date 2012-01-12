@@ -25,6 +25,7 @@ from pexpect import spawn
 #import fnmatch
 
 # specific imports
+import systemsettings.models as ss
 from sshproxy import SSHProxy
 from ftpproxy import FTPProxy
 
@@ -40,17 +41,16 @@ class HostFactory(object):
         self.logger = logging.getLogger('.'.join((__name__, 
                                         self.__class__.__name__)))
 
-    def create_host(self, hostSettings):
+    def create_host(self, hostSettings=None):
         '''
         Return a new G2host instance or return an already existing one.
 
         Inputs:
 
-            hostSettings - A systemsettings.models.Host object
+            hostSettings - A systemsettings.models.Host object. If None, the
+                local host's settings will be used.
         '''
 
-        name = hostSettings.name
-        ip = hostSettings.ip
         localName = socket.gethostname()
         try:
             localIP = socket.gethostbyname(localName)
@@ -58,9 +58,13 @@ class HostFactory(object):
             self.logger.warning('Couldn\'t determine %s\'s IP address' \
                                 % localName)
             localIP = None
+        if hostSettings is None:
+            hostSettings = ss.Host.objects.get(name=localName)
+        name = hostSettings.name
+        ip = hostSettings.ip
         if name not in self._hosts.keys():
             self.logger.debug('Creating a new %s host object...' % 
-                             (hostSettings.name))
+                             (name))
             if name == localName or ip == localIP:
                 theClass = G2LocalHost
             else:
@@ -370,7 +374,7 @@ class G2LocalHost(G2Host):
     def _send_to_remote(self, relativePaths, destPath, destHost, compress):
         raise NotImplementedError
 
-    def compress(self, relativePaths):
+    def compress(self, paths):
         '''
         Compress the files and leave them in the same directory.
 
@@ -379,7 +383,26 @@ class G2LocalHost(G2Host):
             A list with the full paths to the newly compressed files.
         '''
 
-        raise NotImplementedError
+        newPaths = []
+        toCompress = []
+        for path in paths:
+            if path.startswith(os.path.sep):
+                thePath = path
+            else:
+                thePath = os.path.join(self.basePath, path)
+            if thePath.endswith('.bz2'):
+                newPaths.append(thePath)
+            else:
+                toCompress.append(thePath)
+        if len(toCompress) > 0:
+            stdout, stderr, retCode = self.run_program('bzip2 %s' % \
+                                                       ' '.join(toCompress))
+            if retCode == 0:
+                newPaths += [p+'.bz2' for p in toCompress]
+            else:
+                #there has been an error compressing the files
+                raise Exception
+        return newPaths
 
     def decompress(self, paths):
         '''
@@ -524,7 +547,6 @@ class G2RemoteHost(G2Host):
     This class implements file IO and other operations in a remote host.
     '''
 
-    _connections = dict()
 
     def __init__(self, settings):
         '''
@@ -551,33 +573,15 @@ class G2RemoteHost(G2Host):
             -->
         '''
 
-        self.logger = logging.getLogger('.'.join((__name__, 
-                                        self.__class__.__name__)))
-        self.name = settings.name
-        self.connections = dict()
-        self.basePath = settings.basePath
-        self.host = settings.ip
-        self.user = settings.username
-        self.password = settings.password
-        self.isArchive = settings.isArchive
-        self.hasSMS = settings.hasSMS
-        self.hasMapserver = settings.hasMapserver
-        if self._connections.get(self.name) is None:
-            self._connections[self.name] = {
-                    'ftp' : FTPProxy(self),
-                    'ssh' : SSHProxy(self.user, self.host, self.password)
-                    }
-        self.ftp = self._connections[self.name]['ftp']
-        self.ssh = self._connections[self.name]['ssh']
-
-    # To be removed
-    def setup(self, otherOptions):
-        '''
-        This method is only temporary and serves only to workaround current
-        testing limitations.
-        '''
-
-        self.connection.otherOptions = otherOptions
+        super(G2RemoteHost, self).__init__(settings)
+        # _localConnection is the connection by which the local machine
+        # sends commands to this remoteHost
+        factory = HostFactory()
+        localHost = factory.create_host()
+        self._localConnection = {
+                'ftp' : FTPProxy(localHost=localHost, remoteHost=self),
+                'ssh' : SSHProxy(self.user, self.host, self.password),
+                }
 
     def find(self, pathList, protocol='ftp'):
         '''
@@ -597,13 +601,17 @@ class G2RemoteHost(G2Host):
             A list with the full paths to the found files.
         '''
 
-        fullSearchPaths = []
-        for path in pathList:
-            if path.startswith(os.path.sep):
-                fullSearchPaths.append(path)
-            else:
-                fullSearchPaths.append(os.path.join(self.basePath, path))
-        foundFiles = eval('self.%s.find(fullSearchPaths)' % protocol)
+        foundFiles = []
+        if protocol == 'ftp':
+            fullSearchPaths = []
+            for path in pathList:
+                if path.startswith(os.path.sep):
+                    fullSearchPaths.append(path)
+                else:
+                    fullSearchPaths.append(os.path.join(self.basePath, path))
+            foundFiles = self._localConnection['ftp'].find(fullSearchPaths)
+        else:
+            raise NotImplementedError
         return foundFiles
 
     def run_program(self, command, workingDir=None):

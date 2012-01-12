@@ -120,8 +120,12 @@ class FetchData(GenericPackage):
 
         result = dict()
         for g2f in g2files:
-            self.logger.info('Looking for %s...' % g2f.name)
-            result[g2f] = g2f.find(useArchive)
+            if int(g2f.hour) in g2f.exceptHours:
+                self.logger.info('%s is not supposed to be available at %s '\
+                                 'hour. Skipping...' % (g2f.name, g2f.hour))
+            else:
+                self.logger.info('Looking for %s...' % g2f.name)
+                result[g2f] = g2f.find(useArchive)
         return result
 
     def find_inputs(self, useArchive=False):
@@ -130,6 +134,7 @@ class FetchData(GenericPackage):
         searchPatterns of both the inputs and outputs must match!
         '''
 
+        self.logger.debug('Looking for %s\'s inputs...' % self.name)
         if useArchive:
             # the fetchData is special because the inputs and outputs are 
             # actually the same files. So we can search for the outputs in the
@@ -147,6 +152,7 @@ class FetchData(GenericPackage):
         return result
 
     def find_outputs(self, useArchive=False):
+        self.logger.debug('Looking for %s\'s outputs...' % self.name)
         return self._find_files(self.outputs, useArchive)
 
     def _fetch_files(self, g2files, relTargetDir, useArchive, 
@@ -183,9 +189,13 @@ class FetchData(GenericPackage):
         
         result = dict()
         for g2f in g2files:
-            self.logger.info('Fetching %s...' % g2f.name)
-            localPathList = g2f.fetch(relTargetDir, useArchive, decompress)
-            result[g2f] = localPathList
+            if int(g2f.hour) in g2f.exceptHours:
+                self.logger.info('%s is not supposed to be available at %s '\
+                                 'hour. Skipping...' % (self.name, self.hour))
+            else:
+                self.logger.info('Fetching %s...' % g2f.name)
+                localPathList = g2f.fetch(relTargetDir, useArchive, decompress)
+                result[g2f] = localPathList
         return result
 
     def fetch_inputs(self, useArchive=False):
@@ -264,12 +274,39 @@ class FetchData(GenericPackage):
         self.fetch_inputs(useArchive=True)
         return 0
 
-    def clean_up(self, callback=None):
+    def clean_up(self, compressOutputs=True, callback=None):
         # delete the workingDir (not needed for fetchData class)
         # delete any extra dirs that may have become empty
         self._delete_inputs()
+        if compressOutputs:
+            self.compress_outputs()
         return 0
 
+    def compress_outputs(self):
+        '''
+        Compress the outputs of this package with bzip2.
+        '''
+
+        self.logger.info('Compressing %s outputs...' % self.name)
+        foundOutputs = self.find_outputs(useArchive=False)
+        toCompress = []
+        for g2f, foundDict in foundOutputs.iteritems():
+            for p in foundDict['paths']:
+                toCompress.append(p)
+        self.host.compress(toCompress)
+
+    def decompress_outputs(self):
+        '''
+        Decompress the outputs of this package with bunzip2.
+        '''
+
+        self.logger.info('Decompressing %s outputs...' % self.name)
+        foundOutputs = self.find_outputs(useArchive=False)
+        toDecompress = []
+        for g2f, foundDict in foundOutputs.iteritems():
+            for p in foundDict['paths']:
+                toDecompress.append(p)
+        self.host.decompress(toDecompress)
 #
 #    #@log_calls
 #    def _create_files(self, fileRole):

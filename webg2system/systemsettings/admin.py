@@ -55,7 +55,7 @@ class FileAdmin(admin.ModelAdmin):
 
 class PackageAdmin(admin.ModelAdmin):
     inlines = [PackagePathInline, PackageInputInline, PackageOutputInline, PackageExtraInfoInline]
-    list_display = ('name', 'version', 'codeClass', 'get_inputs', 'get_outputs')
+    list_display = ('name', 'codeClass', 'get_inputs', 'get_outputs')
 
 class SourceAdmin(admin.ModelAdmin):
     inlines = [AreaInline, SpecificSourceInline, SourceExtraInfoInline]
