@@ -7,6 +7,8 @@ This module contains some helper functions.
 
 import datetime as dt
 import logging
+import re
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -66,8 +68,44 @@ def displace_timeslot(timeslot, displacementObj):
         displacementUnit = 60 # measured in seconds
     else:
         displacementUnit = 0
-    for i in range(displacementObj.startValue, (displacementObj.endValue + 1)):
+    if displacementObj.endValue > displacementObj.startValue:
+        first = displacementObj.startValue
+        last = displacementObj.endValue
+    else:
+        first = displacementObj.endValue
+        last = displacementObj.startValue
+
+    for i in range(first, last + 1):
         newTimeslot = timeslot + dt.timedelta(seconds=(i * displacementUnit))
         displacedTimeslots.append(newTimeslot)
     return displacedTimeslots
 
+def extract_timeslot(filePath):
+    '''
+    Try to extract a timeslot from the input filePath.
+
+    Returns:
+
+        A datetime.datetime object or None, if no timeslot can be found
+        on the file's name.
+    '''
+
+    timeslot = None
+    dirPath, fileName = os.path.split(filePath)
+    timeslotREs = {
+            '%Y%m%d%H%M' : re.compile(r'\d{12}'),
+            'year_doy' : re.compile(r'(?P<year>\d{4})_(?P<doy>\d{3})'),
+            }
+    for dtExpr, regexp in timeslotREs.iteritems():
+        match = regexp.search(fileName)
+        if match is not None:
+            try:
+                timeslot = dt.datetime.strptime(match.group(), dtExpr)
+            except ValueError:
+                if dtExpr == 'year_doy':
+                    d = match.groupdict()
+                    yTS = dt.datetime(year=int(d['year']), month=1, day=1)
+                    timeslot = yTS + dt.timedelta(days=int(d['doy']) - 1)
+                else:
+                    raise
+    return timeslot

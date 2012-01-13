@@ -1,4 +1,5 @@
 import os
+import time
 
 import systemsettings
 
@@ -168,7 +169,7 @@ class FetchData(GenericPackage):
 
             useArchive - A boolean indicating if the files are to be searched
                 for in the archives, in case they cannot be found in host.
-                
+
             decompress - A boolean indicating if the newly fetched files are
                 to be decompressed. It only affects files which have actually
                 been fetched, so if a file has the "copy" attribute set as
@@ -188,7 +189,8 @@ class FetchData(GenericPackage):
                                  'hour. Skipping...' % (self.name, self.hour))
             else:
                 self.logger.info('Fetching %s...' % g2f.name)
-                localPathList = g2f.fetch(relTargetDir, useArchive, decompress)
+                localPathList = g2f.fetch(relTargetDir, useArchive, 
+                                          decompress=decompress)
                 result[g2f] = localPathList
         return result
 
@@ -209,7 +211,7 @@ class FetchData(GenericPackage):
             for inp in self.inputs:
                 for outp in self.outputs:
                     if outp.searchPatterns == inp.searchPatterns:
-                        result[inp] = outp.fetch(self.outputDir, useArchive, 
+                        result[inp] = outp.fetch(self.outputDir, useArchive,
                                                  decompress=True)
         else:
             # use the default _fetch_files method
@@ -284,17 +286,16 @@ class FetchData(GenericPackage):
             An integer with the exit code. Zero means success.
         '''
 
-        allFetched = True
+        allFetched = False
         currentAttempt = 0
-        while currentAttempt <= retries:
-            fetched = self.fetch_inputs(useArchive=True)
-            for g2f, pathList in fetched.iteritems():
-                if len(pathList) == 0:
-                    allFetched = False
-            if not allFetched:
+        while (not allFetched) and (currentAttempt <= retries):
+            if currentAttempt > 0:
                 self.logger.info('Retrying in %i minutes...' % interval)
                 time.sleep(60 * interval)
-                currentAttempt += 1
+            fetched = self.fetch_inputs(useArchive=True)
+            allFetched = len(fetched.keys()) == len([1 for k, v in \
+                         fetched.iteritems() if len(v) > 0])
+            currentAttempt += 1
         return int(not allFetched)
 
     def clean_up(self, compressOutputs=True, callback=None):

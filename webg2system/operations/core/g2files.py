@@ -70,7 +70,7 @@ class G2File(GenericItem):
         hf = HostFactory()
         self.archives = [hf.create_host(hs) for hs in fileSettings.specificArchives.all()]
 
-    def find(self, useArchive=False):
+    def find(self, useArchive=False, staticFiles='latest timeslot absolute'):
         '''
         Find the files and return their fullPaths.
 
@@ -78,6 +78,23 @@ class G2File(GenericItem):
 
             useArchive - A boolean indicating if the file's specific 
                 archives are to be searched. Defaults to False.
+
+            staticFiles - A string indicating what behaviour to adopt for
+                static files. Accepted values:
+                    - latest timeslot absolute: The files are assumed to have 
+                        a timeslot on their filename. They are sorted and only
+                        the latest file is fetched. Being the latest means 
+                        that the file is as recent as the instance's timeslot,
+                        but not more recent than that. This is the default 
+                        behaviour.
+                    - latest timeslot month: Works like 'latest timeslot day'
+                        but only the files that have the same month as the 
+                        instance's timeslot are relevant for the fetching.
+                    - latest run: The files are assumed to have a run pattern
+                        on their filename. they are sorted accordingly and
+                        the latest run is returned.
+                    - first: The first file in the filelist is fetched.
+                    - all: All the files in the file are fetched.
 
         Returns:
 
@@ -106,15 +123,16 @@ class G2File(GenericItem):
                 self.logger.info('Trying the archives: %s' % theHost)
             pathsFound = theHost.find(allPaths)
             numFound = len(pathsFound)
-            self.logger.info('Found %i files.' % numFound)
             if numFound > 0:
                 allFound = True
                 if numFound < self.numFiles:
                     self.logger.warning('Not all files have been found. '\
-                            'Found %i files. Was expecting at least %i.' 
+                           'Found %i files. Was expecting at least %i.' 
                             % (numFound, self.numFiles))
                 result['host'] = theHost
-                result['paths'] = self._return_unique_file_names(pathsFound)
+                uniquePaths = self._return_unique_file_names(pathsFound)
+                result['paths'] = self._filter_file_list(uniquePaths, 
+                                                         staticFiles)
             if hostIndex + 1 == len(hostList):
                 lastHost = True
             else:
@@ -167,18 +185,82 @@ class G2File(GenericItem):
             fetched.
         '''
 
-        self.logger.info('Fetching %s...' % self.name)
+        self.logger.info('Fetching %s %s...' % (self.name, self.source.area))
         found = self.find(useArchive)
+        result = found['paths']
         if self.toCopy:
-            fetched = self.host.fetch(found['paths'], targetDir, found['host'])
-            decompressed = self.host.decompress(fetched)
-            result = decompressed
+            if len(found['paths']) > 0:
+                fetched = self.host.fetch(found['paths'], targetDir, 
+                                          found['host'])
+                decompressed = self.host.decompress(fetched)
+                result = decompressed
+            else:
+                self.logger.debug('Cannot fetch, no files have been found.')
         else:
             self.logger.debug('%s is not marked as "copy" in the settings. '\
                               'Returning only the original file paths...' 
                               % self.name)
-            result = found['paths']
         return result
+
+    def _filter_file_list(self, paths, behaviour):
+        '''
+        Filters a list of paths according to the input behaviour.
+
+        Only files whose frequency is 'static' are currently being
+        filtered.
+        '''
+
+        newPaths = paths
+        if self.frequency == 'static':
+            behaviourList = behaviour.split() 
+            if behaviourList[0] == 'latest':
+                if behaviourList[1] == 'timeslot':
+                    timeUnit = behaviourList[2]
+                    newPaths = [self._sort_latest_timeslot(paths, timeUnit)]
+                elif behaviourList[1] == 'run':
+                    raise NotImplementedError
+            elif behaviourList[0] == 'first':
+                newPaths = [paths[0]]
+            elif behaviourList[0] == 'all':
+                pass
+        return newPaths
+
+    def _sort_latest_timeslot(self, paths, timeUnit):
+        '''
+        Return the latest file.
+
+        Inputs:
+
+            paths - A list of file paths to analyze.
+
+            timeUnit - A string specifying the type of latest file
+                to choose. Accepted values:
+                    'absolute' - The latest file, according to this instance's
+                        own timeslot.
+                    'month' - The latest file belonging to the same month as
+                        the instance's own timeslot.
+        Returns:
+
+            A string with the path of the latest file.
+        '''
+
+        latestPath = None
+        # 20 years (in seconds), a large initialization value
+        latestDiff = 60 * 60 * 24 * 365 * 20
+        for path in paths:
+            pTimeslot = utilities.extract_timeslot(path)
+            timeDiff = self.timeslot - pTimeslot
+            absTimeDiff = timeDiff.seconds + (timeDiff.days * 24 * 60 * 60)
+            if timeUnit == 'absolute':
+                if (absTimeDiff <= latestDiff) and (absTimeDiff >= 0):
+                    latestPath = path
+                    latestDiff = absTimeDiff
+            elif timeUnit == 'month':
+                if (pTimeslot.month == self.timeslot.month) and \
+                   (absTimeDiff <= latestDiff):
+                       latestPath = path
+                       latestDiff = absTimeDiff
+        return latestPath
 
     def _return_unique_file_names(self, pathList):
         '''
