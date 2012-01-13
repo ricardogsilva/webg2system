@@ -28,12 +28,6 @@ class GenericPackage(GenericItem):
     def clean_up(self, callback=None):
         raise NotImplementedError
 
-    # FIXME - this method seems to be unnecessary
-    #def ensure_dirs(self, *dirlist):
-    #    for directory in dirlist:
-    #        if not self.host.is_dir(directory):
-    #            self.host.make_dir(directory)
-
     def __unicode__(self):
         return unicode(self.name)
 
@@ -270,9 +264,38 @@ class FetchData(GenericPackage):
         #time.sleep(20)
         return 0
 
-    def run_main(self, callback=None):
-        self.fetch_inputs(useArchive=True)
-        return 0
+    def run_main(self, callback=None, retries=0, interval=10):
+        '''
+        Inputs:
+
+            callback - A function that takes a tuple as argument. It will
+                be dynamically updated with progress information as the
+                package is running.
+
+            retries - How many times should the package try to find its
+                files? If None (the default), only the initial attempt will
+                be performed.
+
+            interval - How many minutes of waiting time between retries?
+                Defaults to 10.
+
+        Returns:
+
+            An integer with the exit code. Zero means success.
+        '''
+
+        allFetched = True
+        currentAttempt = 0
+        while currentAttempt <= retries:
+            fetched = self.fetch_inputs(useArchive=True)
+            for g2f, pathList in fetched.iteritems():
+                if len(pathList) == 0:
+                    allFetched = False
+            if not allFetched:
+                self.logger.info('Retrying in %i minutes...' % interval)
+                time.sleep(60 * interval)
+                currentAttempt += 1
+        return int(not allFetched)
 
     def clean_up(self, compressOutputs=True, callback=None):
         # delete the workingDir (not needed for fetchData class)
@@ -307,6 +330,7 @@ class FetchData(GenericPackage):
             for p in foundDict['paths']:
                 toDecompress.append(p)
         self.host.decompress(toDecompress)
+
 #
 #    #@log_calls
 #    def _create_files(self, fileRole):

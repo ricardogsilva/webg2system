@@ -6,6 +6,9 @@ This module contains some helper functions.
 """
 
 import datetime as dt
+import logging
+
+logger = logging.getLogger(__name__)
 
 def show_status(status, progress):
     '''
@@ -19,13 +22,12 @@ def parse_marked(markedStringObj, obj, markSign='#'):
 
     Inputs:
 
-        markedString - A systemsettings.MarkedString object.
+        markedStringObj - A systemsettings.MarkedString object.
 
         obj - An object where the marks should be searched for.
     '''
 
     newString = markedStringObj.string
-    markSign = '#'
     markList = [i.strip() for i in markedStringObj.marks.split(',')]
     if len(markList) == 1 and markList[0] == '':
         pass
@@ -44,6 +46,8 @@ def convert_marks(markList, obj):
         markValue = None
         if mark == 'source':
             markValue = obj.source.name
+        elif mark == 'area':
+            markValue = obj.source.area
         else:
             try:
                 markValue = eval('obj.%s' % mark)
