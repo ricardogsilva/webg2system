@@ -1,9 +1,0 @@
-{% if latest_package_list %}
-    <ul>
-    {% for package in latest_package_list %}
-    <li><a href='/packages/{{ package.id }}/'>{{ package.name }}</a></li>
-    {% endfor %}
-    </ul>
-{% else %}
-    <p>No packages are available</p>
-{% endif %}
