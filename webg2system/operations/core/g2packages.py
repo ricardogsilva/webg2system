@@ -14,6 +14,9 @@ class GenericPackage(GenericItem):
 
     All GenericPackages must inherit from GenericItem and provide concrete
     implementations for the method stubs defined here.
+
+    The private methods (the ones indicated with '_' before their name) are
+    concrete implementations that should not need to be reimplented
     '''
 
     name = ''
@@ -64,37 +67,6 @@ class GenericPackage(GenericItem):
                     objects.append(newObject)
         return objects
 
-
-class FetchData(GenericPackage):
-    '''
-    This class uses:
-
-        - outputDir
-    '''
-
-    def __init__(self, settings, timeslot, area, host):
-        '''
-        Inputs:
-
-            settings - A systemsettings.models.Package object
-
-            timeslot - A datetime.datetime object
-
-            area - A systemsettings.models.Area object
-
-            host - A systemsettings.models.Host object
-        '''
-
-        super(FetchData, self).__init__(timeslot, area.name, host)
-        self.rawSettings = settings
-        self.name = settings.name
-        relativeOutDir = utilities.parse_marked(
-                settings.packagepath_set.get(name='outputDir'), 
-                self)
-        self.outputDir = os.path.join(self.host.basePath, relativeOutDir)
-        self.inputs = self._create_files('input', settings.packageInput_systemsettings_packageinput_related.all())
-        self.outputs = self._create_files('output', settings.packageOutput_systemsettings_packageoutput_related.all())
-
     def _find_files(self, g2files, useArchive):
         '''
         Inputs:
@@ -123,33 +95,6 @@ class FetchData(GenericPackage):
                 self.logger.info('Looking for %s...' % g2f.name)
                 result[g2f] = g2f.find(useArchive)
         return result
-
-    def find_inputs(self, useArchive=False):
-        '''
-        IMPORTANT: In order for this method to work correctly, the 
-        searchPatterns of both the inputs and outputs must match!
-        '''
-
-        self.logger.debug('Looking for %s\'s inputs...' % self.name)
-        if useArchive:
-            # the fetchData is special because the inputs and outputs are 
-            # actually the same files. So we can search for the outputs in the
-            # archive and return them as if they were the inputs.
-            found = self.find_outputs(useArchive)
-            result = dict()
-            for inp in self.inputs:
-                for outp, foundDict in found.iteritems():
-                    if outp.searchPatterns == inp.searchPatterns:
-                        result[inp] = foundDict.copy()
-                if result.get(inp) is None:
-                    result[inp] = {'host' : inp.host, 'paths' : []}
-        else:
-            result = self._find_files(self.inputs, useArchive)
-        return result
-
-    def find_outputs(self, useArchive=False):
-        self.logger.debug('Looking for %s\'s outputs...' % self.name)
-        return self._find_files(self.outputs, useArchive)
 
     def _fetch_files(self, g2files, relTargetDir, useArchive, 
                      decompress=False):
@@ -195,30 +140,27 @@ class FetchData(GenericPackage):
                 result[g2f] = localPathList
         return result
 
-    def fetch_inputs(self, useArchive=False):
-        '''
-        Copy and decompress the available inputs to the outputDir.
 
-        IMPORTANT: In order for this method to work correctly when using
-        the useArchive flag, the searchPatterns of both the inputs and 
-        outputs must match!
+class ProcessingPackage(GenericPackage):
+
+    def __init__(self, settings, timeslot, area, host):
         '''
+        This class inherits all the extra variables and has the 'normal'
+        implementation for find_inputs, find_outputs, fetch_inputs and
         
-        if useArchive:
-            result = dict()
-            # the fetchData class is special because the inputs and outputs are
-            # actually the same files. So we can search for the outputs in the
-            # archive and return them as if they were the inputs.
-            for inp in self.inputs:
-                for outp in self.outputs:
-                    if outp.searchPatterns == inp.searchPatterns:
-                        result[inp] = outp.fetch(self.outputDir, useArchive,
-                                                 decompress=True)
-        else:
-            # use the default _fetch_files method
-            result = self._fetch_files(self.inputs, self.outputDir, useArchive,
-                                       decompress=True)
-        return result
+        '''
+
+        super(ProcessingPackage, self).__init__(timeslot, area.name, host)
+        for extraInfo in settings.packageextrainfo_set.all():
+            exec('self.%s = "%s"' % (extraInfo.name, extraInfo.string))
+
+    def find_inputs(self, useArchive=False):
+        self.logger.debug('Looking for %s\'s inputs...' % self.name)
+        return self._find_files(self.inputs, useArchive)
+
+    def find_outputs(self, useArchive=False):
+        self.logger.debug('Looking for %s\'s outputs...' % self.name)
+        return self._find_files(self.outputs, useArchive)
 
     def outputs_available(self):
         '''
@@ -253,6 +195,119 @@ class FetchData(GenericPackage):
         foundInputs = self.find_inputs(useArchive=False)
         for g2f, foundDict in foundInputs.iteritems():
             foundDict['host'].delete_files(foundDict['paths'])
+
+    def fetch_inputs(self, useArchive=False):
+        '''
+        '''
+        
+        result = self._fetch_files(self.inputs, self.outputDir, useArchive,
+                                   decompress=True)
+        return result
+
+    def compress_outputs(self):
+        '''
+        Compress the outputs of this package with bzip2.
+        '''
+
+        self.logger.info('Compressing %s outputs...' % self.name)
+        foundOutputs = self.find_outputs(useArchive=False)
+        toCompress = []
+        for g2f, foundDict in foundOutputs.iteritems():
+            for p in foundDict['paths']:
+                toCompress.append(p)
+        self.host.compress(toCompress)
+
+    def decompress_outputs(self):
+        '''
+        Decompress the outputs of this package with bunzip2.
+        '''
+
+        self.logger.info('Decompressing %s outputs...' % self.name)
+        foundOutputs = self.find_outputs(useArchive=False)
+        toDecompress = []
+        for g2f, foundDict in foundOutputs.iteritems():
+            for p in foundDict['paths']:
+                toDecompress.append(p)
+        self.host.decompress(toDecompress)
+
+
+class FetchData(ProcessingPackage):
+    '''
+    This class uses:
+
+        - outputDir
+    '''
+
+    def __init__(self, settings, timeslot, area, host):
+        '''
+        Inputs:
+
+            settings - A systemsettings.models.Package object
+
+            timeslot - A datetime.datetime object
+
+            area - A systemsettings.models.Area object
+
+            host - A systemsettings.models.Host object
+        '''
+
+        super(ProcessingPackage, self).__init__(timeslot, area.name, host)
+        self.rawSettings = settings
+        self.name = settings.name
+        relativeOutDir = utilities.parse_marked(
+                settings.packagepath_set.get(name='outputDir'), 
+                self)
+        self.outputDir = os.path.join(self.host.basePath, relativeOutDir)
+        self.inputs = self._create_files('input', settings.packageInput_systemsettings_packageinput_related.all())
+        self.outputs = self._create_files('output', settings.packageOutput_systemsettings_packageoutput_related.all())
+
+    def find_inputs(self, useArchive=False):
+        '''
+        IMPORTANT: In order for this method to work correctly, the 
+        searchPatterns of both the inputs and outputs must match!
+        '''
+
+        self.logger.debug('Looking for %s\'s inputs...' % self.name)
+        if useArchive:
+            # the fetchData is special because the inputs and outputs are 
+            # actually the same files. So we can search for the outputs in the
+            # archive and return them as if they were the inputs.
+            found = self.find_outputs(useArchive)
+            result = dict()
+            for inp in self.inputs:
+                for outp, foundDict in found.iteritems():
+                    if outp.searchPatterns == inp.searchPatterns:
+                        result[inp] = foundDict.copy()
+                if result.get(inp) is None:
+                    result[inp] = {'host' : inp.host, 'paths' : []}
+        else:
+            result = self._find_files(self.inputs, useArchive)
+        return result
+
+    def fetch_inputs(self, useArchive=False):
+        '''
+        Copy and decompress the available inputs to the outputDir.
+
+        IMPORTANT: In order for this method to work correctly when using
+        the useArchive flag, the searchPatterns of both the inputs and 
+        outputs must match!
+        '''
+        
+        if useArchive:
+            result = dict()
+            # the fetchData class is special because the inputs and outputs are
+            # actually the same files. So we can search for the outputs in the
+            # archive and return them as if they were the inputs.
+            for inp in self.inputs:
+                for outp in self.outputs:
+                    if outp.searchPatterns == inp.searchPatterns:
+                        result[inp] = outp.fetch(self.outputDir, useArchive,
+                                                 decompress=True)
+        else:
+            # use the default _fetch_files method
+            result = self._fetch_files(self.inputs, self.outputDir, useArchive,
+                                       decompress=True)
+        return result
 
     def prepare(self, callback=None):
         '''
@@ -307,34 +362,8 @@ class FetchData(GenericPackage):
             self.compress_outputs()
         return 0
 
-    def compress_outputs(self):
-        '''
-        Compress the outputs of this package with bzip2.
-        '''
 
-        self.logger.info('Compressing %s outputs...' % self.name)
-        foundOutputs = self.find_outputs(useArchive=False)
-        toCompress = []
-        for g2f, foundDict in foundOutputs.iteritems():
-            for p in foundDict['paths']:
-                toCompress.append(p)
-        self.host.compress(toCompress)
-
-    def decompress_outputs(self):
-        '''
-        Decompress the outputs of this package with bunzip2.
-        '''
-
-        self.logger.info('Decompressing %s outputs...' % self.name)
-        foundOutputs = self.find_outputs(useArchive=False)
-        toDecompress = []
-        for g2f, foundDict in foundOutputs.iteritems():
-            for p in foundDict['paths']:
-                toDecompress.append(p)
-        self.host.decompress(toDecompress)
-
-
-class DataFusion(GenericPackage):
+class DataFusion(ProcessingPackage):
     '''
     This class runs the NGP2GRID_g2 external package.
     It requires the following settings:
@@ -361,7 +390,7 @@ class DataFusion(GenericPackage):
             host - A systemsettings.models.Host object
         '''
 
-        super(DataFusion, self).__init__(timeslot, area.name, host)
+        super(DataFusion, self).__init__(settings, timeslot, area, host)
         self.rawSettings = settings
         self.name = settings.name
         # a random number for generating unique working dirs
@@ -380,6 +409,46 @@ class DataFusion(GenericPackage):
         self.workingDir = os.path.join(self.host.basePath, relativeWorkDir)
         self.inputs = self._create_files('input', settings.packageInput_systemsettings_packageinput_related.all())
         self.outputs = self._create_files('output', settings.packageOutput_systemsettings_packageoutput_related.all())
+
+
+class WebDisseminator(ProcessingPackage):
+    '''
+    This class takes care of creating quickviews, WMS and CSW integration.
+    '''
+
+    def __init__(self, settings, timeslot, area, host):
+        '''
+        Inputs:
+
+            settings - A systemsettings.models.Package object
+
+            timeslot - A datetime.datetime object
+
+            area - A systemsettings.models.Area object
+
+            host - A systemsettings.models.Host object
+        '''
+
+        super(WebDisseminator, self).__init__(settings, timeslot, area, host)
+        self.rawSettings = settings
+        self.name = settings.name
+        # a random number for generating unique working dirs
+        self.random = randint(0, 100)
+        relativeQuickDir = utilities.parse_marked(
+                settings.packagepath_set.get(name='quickviewOutDir'), 
+                self)
+        relativeWorkDir = utilities.parse_marked(
+                settings.packagepath_set.get(name='workingDir'), 
+                self)
+        relativeXmlTemplateDir = utilities.parse_marked(
+                settings.packagepath_set.get(name='xmlTemplateDir'), 
+                self)
+        self.quickviewOutDir = os.path.join(self.host.basePath, 
+                                            relativeQuickDir)
+        self.workingDir = os.path.join(self.host.basePath, relativeWorkDir)
+        self.xmlTemplateDir = os.path.join(self.host.basePath, 
+                                           relativeXmlTemplateDir)
+        self.inputs = self._create_files('input', settings.packageInput_systemsettings_packageinput_related.all())
 
 #
 #    #@log_calls
