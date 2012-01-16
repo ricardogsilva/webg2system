@@ -1,5 +1,6 @@
 import os
 import time
+from random import randint
 
 import systemsettings
 
@@ -32,37 +33,6 @@ class GenericPackage(GenericItem):
     def __unicode__(self):
         return unicode(self.name)
 
-
-class FetchData(GenericPackage):
-    '''
-    This class uses:
-
-        - outputDir
-    '''
-
-    def __init__(self, settings, timeslot, area, host):
-        '''
-        Inputs:
-
-            settings - A systemsettings.models.Package object
-
-            timeslot - A datetime.datetime object
-
-            area - A systemsettings.models.Area object
-
-            host - A systemsettings.models.Host object
-        '''
-
-        super(FetchData, self).__init__(timeslot, area.name, host)
-        self.rawSettings = settings
-        self.name = settings.name
-        relativeOutDir = utilities.parse_marked(
-                settings.packagepath_set.get(name='outputDir'), 
-                self)
-        self.outputDir = os.path.join(self.host.basePath, relativeOutDir)
-        self.inputs = self._create_files('input', settings.packageInput_systemsettings_packageinput_related.all())
-        self.outputs = self._create_files('output', settings.packageOutput_systemsettings_packageoutput_related.all())
-
     def _create_files(self, fileRole, filesSettings):
         '''
         Inputs:
@@ -93,6 +63,37 @@ class FetchData(GenericPackage):
                                        parent=self)
                     objects.append(newObject)
         return objects
+
+
+class FetchData(GenericPackage):
+    '''
+    This class uses:
+
+        - outputDir
+    '''
+
+    def __init__(self, settings, timeslot, area, host):
+        '''
+        Inputs:
+
+            settings - A systemsettings.models.Package object
+
+            timeslot - A datetime.datetime object
+
+            area - A systemsettings.models.Area object
+
+            host - A systemsettings.models.Host object
+        '''
+
+        super(FetchData, self).__init__(timeslot, area.name, host)
+        self.rawSettings = settings
+        self.name = settings.name
+        relativeOutDir = utilities.parse_marked(
+                settings.packagepath_set.get(name='outputDir'), 
+                self)
+        self.outputDir = os.path.join(self.host.basePath, relativeOutDir)
+        self.inputs = self._create_files('input', settings.packageInput_systemsettings_packageinput_related.all())
+        self.outputs = self._create_files('output', settings.packageOutput_systemsettings_packageoutput_related.all())
 
     def _find_files(self, g2files, useArchive):
         '''
@@ -331,6 +332,54 @@ class FetchData(GenericPackage):
             for p in foundDict['paths']:
                 toDecompress.append(p)
         self.host.decompress(toDecompress)
+
+
+class DataFusion(GenericPackage):
+    '''
+    This class runs the NGP2GRID_g2 external package.
+    It requires the following settings:
+        
+        Package paths:
+            outputDir
+            workingDir
+            codeDir
+
+        Extra infos:
+            version
+    '''
+
+    def __init__(self, settings, timeslot, area, host):
+        '''
+        Inputs:
+
+            settings - A systemsettings.models.Package object
+
+            timeslot - A datetime.datetime object
+
+            area - A systemsettings.models.Area object
+
+            host - A systemsettings.models.Host object
+        '''
+
+        super(DataFusion, self).__init__(timeslot, area.name, host)
+        self.rawSettings = settings
+        self.name = settings.name
+        # a random number for generating unique working dirs
+        self.random = randint(0, 100)
+        relativeOutDir = utilities.parse_marked(
+                settings.packagepath_set.get(name='outputDir'), 
+                self)
+        relativeCodeDir = utilities.parse_marked(
+                settings.packagepath_set.get(name='codeDir'), 
+                self)
+        relativeWorkDir = utilities.parse_marked(
+                settings.packagepath_set.get(name='workingDir'), 
+                self)
+        self.outputDir = os.path.join(self.host.basePath, relativeOutDir)
+        self.codeDir = os.path.join(self.host.basePath, relativeCodeDir)
+        self.workingDir = os.path.join(self.host.basePath, relativeWorkDir)
+        self.inputs = self._create_files('input', settings.packageInput_systemsettings_packageinput_related.all())
+        self.outputs = self._create_files('output', settings.packageOutput_systemsettings_packageoutput_related.all())
 
 #
 #    #@log_calls
