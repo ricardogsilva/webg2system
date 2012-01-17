@@ -43,25 +43,8 @@ class RunningPackage(models.Model):
         the run() and create_package() methods.
         '''
 
-        theClass = self.settings.codeClass
-        mapserverOK = True
-        cswserverOK = True
-        problem = None
-        if theClass.needsMapserver and not self.host.hasMapserver:
-            mapserverOK = False
-            problem = 'Mapserver settings - %s class: %s \t%s host:%s' % \
-                      (theClass.className, theClass.needsMapserver,
-                        self.host.name, self.host.hasMapserver)
-        elif theClass.needsCSWserver and not self.host.hasCSWserver:
-            cswserverOK = False
-            problem = 'CSW server settings - %s class: %s \t%s host:%s' % \
-                      (theClass.className, theClass.needsCSWserver,
-                        self.host.name, self.host.hasCSWserver)
-        if mapserverOK and cswserverOK:
-            packClass = eval('g2packages.%s' % self.settings.codeClass.className)
-            pack = packClass(self.settings, self.timeslot, self.area, self.host)
-        else:
-            self.logger.error('Cannot create %s class.\n%s' % problem)
+        packClass = eval('g2packages.%s' % self.settings.codeClass.className)
+        pack = packClass(self.settings, self.timeslot, self.area, self.host)
         return pack
 
     def create_package(self):

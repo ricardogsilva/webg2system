@@ -17,7 +17,7 @@ class GenericPackage(GenericItem):
     implementations for the method stubs defined here.
 
     The private methods (the ones indicated with '_' before their name) are
-    concrete implementations that should not need to be reimplented
+    concrete implementations that should not need to be reimplemented.
     '''
 
     name = ''
@@ -366,6 +366,8 @@ class FetchData(ProcessingPackage):
 
 class DataFusion(ProcessingPackage):
     '''
+    !This class is not finished yet!
+
     This class runs the NGP2GRID_g2 external package.
     It requires the following settings:
         
@@ -478,7 +480,7 @@ class WebDisseminator(ProcessingPackage):
             A string with the full path to the newly generated mapfile.
         '''
 
-        globalProduct = self.mapper.create_global_product(fmt='gtif')
+        globalProduct = self.mapper.create_global_product()
         mapFile = mapper.create_mapfile(globalProduct)
         return mapFile
 

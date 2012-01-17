@@ -11,15 +11,6 @@ class Host(models.Model):
     ip = models.IPAddressField()
     username = models.CharField(max_length=50)
     password = models.CharField(max_length=50)
-    isArchive = models.BooleanField(default=False, help_text='Should this '\
-                                    'host be used when searching the '\
-                                    'archives?', verbose_name='Is archive?')
-    hasSMS = models.BooleanField(default=False, help_text='Can this host'\
-                                 ' be used for running SMS suites?', 
-                                 verbose_name='Has SMS?')
-    hasMapserver = models.BooleanField(default=False, help_text='Does this '\
-                                 'host have the Mapserver software installed?',
-                                 verbose_name='Has Mapserver?')
 
     def __unicode__(self):
         return self.name
@@ -88,6 +79,7 @@ class File(Item):
                                               'blank if you want to search '\
                                               'all the archives.', 
                                               verbose_name='Specific archives')
+    product = models.ForeignKey('Product', null=True)
 
     def get_except_hours(self):
         return ', '.join([str(h.hour) for h in self.exceptHours.all()])
@@ -191,16 +183,30 @@ class TimeslotDisplacer(models.Model):
 class CodeClass(models.Model):
     className = models.CharField(max_length=100, verbose_name='Class')
     description = models.TextField(null=True, blank=True)
-    needsMapserver = models.BooleanField(default=False, help_text='Does this'\
-                                         ' class require a host with '\
-                                         'Mapserver installed in order to'\
-                                         ' work?', verbose_name='Needs '\
-                                         'Mapserver?')
-    needsCSWserver = models.BooleanField(default=False, help_text='Does this'\
-                                         ' class require a host with '\
-                                         'CSW server installed in order to'\
-                                         ' work?', verbose_name='Needs '\
-                                         'CSW server?')
 
     def __unicode__(self):
         return self.className
+
+class Product(models.Model):
+    name = models.CharField(max_length=100)
+    shortName = models.CharField(max_length=20, verbose_name='Short name')
+    description = models.TextField(null=True, blank=True)
+    nRows = models.IntegerField(default=0, verbose_name='Number of rows')
+    nCols = models.IntegerField(default=0, verbose_name='Number of columns')
+    pixelSize = models.DecimalField(max_digits=4, decimal_places=2, default=0,
+                                    verbose_name='Pixel size')
+
+    def __unicode__(self):
+        return self.shortName
+
+class Dataset(models.Model):
+    name = models.CharField(max_length=100)
+    description = models.TextField(null=True, blank=True)
+    unit = models.CharField(max_length=20, blank=True)
+    isMainDataset = models.BooleanField(default=False)
+    product = models.ForeignKey(Product)
+    scalingFactor = models.IntegerField()
+    missingValue = models.IntegerField()
+
+    def __unicode__(self):
+        return self.name

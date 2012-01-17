@@ -34,8 +34,14 @@ class Mapper(object):
             'SWI' : 'SWI_01'
             }
 
-    def create_global_product(self, fmt, fileList, outDir, outName, host):
-        raise NotImplementedError
+    def __init__(self, host):
+        '''
+        Inputs:
+
+            host - A operations.core.g2hosts.G2host object.
+        '''
+
+        self.host = host
 
     def create_global_tiff(self, fileList, outDir, outName):
         raise NotImplementedError
@@ -56,11 +62,26 @@ class SWIMapper(Mapper):
 class NGPMapper(Mapper): #crappy name
 
     def create_global_tiff(self, fileList, outDir, outName):
+        '''
+         Create a global file from all the inputs in fileList.
+
+         Inputs:
+
+            fileList - A list of file paths to use to create the global
+                file.
+
+            outDir - The relative directory (relative to the host's basepath)
+                for storing the global file.
+
+            outName - The name for the global file.
+         '''
+
         params = self._get_parameters(fileList)
         tilePaths = self.create_geotiffs(fileList, outDir, params)
         tempTif = self.merge_tiles(tilePaths, params['missingValue'], 
                                       'temp_nodata.tif', outDir)
-        globalTiff = self._fix_nodata(tempTif, outName, params['missingValue'])
+        globalTiff = self._fix_nodata(tempTif, outName, 
+                                      params['missingValue'])
         ovrFile = self.build_overviews(globalTiff, 6)
         temps = tilePaths + [tempTif]
         self.remove_temps(temps)
@@ -201,7 +222,7 @@ class NGPMapper(Mapper): #crappy name
 
     def _get_parameters(self, fileList):
         '''
-        Open the relevant tiles and extract parameters for VRT creation.
+        Open the relevant tiles and extract parameters needed for global file.
         '''
 
         minH, maxH, minV, maxV = self._get_extreme_tile_numbers(fileList)
@@ -247,6 +268,7 @@ class NGPMapper(Mapper): #crappy name
             h = int(reObj.group(1))
             v = int(reObj.group(2))
         return h, v
+
 
 if __name__ == '__main__':
     import sys

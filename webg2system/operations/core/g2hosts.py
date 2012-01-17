@@ -24,6 +24,8 @@ from pexpect import spawn
 #import glob
 #import fnmatch
 
+import tables
+
 # specific imports
 import systemsettings.models as ss
 from sshproxy import SSHProxy
@@ -539,6 +541,42 @@ class G2LocalHost(G2Host):
         fh.close()
         return fullPath
 
+    def get_hdf5_params(self, latFile, lonFile):
+        '''
+        Open and retrieve interesting information from the input HDF5 tiles.
+
+        Inputs:
+
+            latFile - Full path to the HDF5 file that has the minimum 
+                'V' coordinate. 'V' refers to the Geoland-2 tile grid.
+            lonFile - Full path to the HDF5 file that has the minimum 
+                'H' coordinate. 'H' refers to the Geoland-2 tile grid.
+        '''
+
+        latDS = tables.openFile(latFile)
+        nRows = int(latDS.root._v_attrs.NL) # verify the name of this attribute
+        nCols = int(latDS.root._v_attrs.NC) # verify the name of this attribute
+        pixelPatt = re.compile(r'\d+\.\d+')
+        pixSize = latDS.root._v_attrs["PIXEL_SIZE"]
+        gxsize, gysize = [float(n) for n in pixelPatt.findall(pixSize)]
+        ullat = latDS.root._v_attrs.FIRST_LAT * 1.0 + gysize / 2.0
+        dataset = self.get_dataset_name(minVFile) # <-
+        scalingFactor = eval("latDS.root.%s.getAttr('SCALING_FACTOR')" % dataset)
+        missingValue = int(eval("latDS.root.%s.getAttr('MISSING_VALUE')" % dataset))
+        latDS.close()
+        lonDS = tables.openFile(minHFile)
+        ullon = lonDS.root._v_attrs.FIRST_LON * 1.0 - gxsize / 2.0
+        lonDS.close()
+        params = {
+                'minH' : minH, 'maxH' : maxH, 'minV' : minV, 'maxV' : maxV,
+                'nRows' : nRows, 'nCols' : nCols, 
+                'gxsize' : gxsize, 'gysize' : gysize,
+                'ullat' : ullat, 'ullon' : ullon,
+                'scalingFactor' : scalingFactor,
+                'missingValue' : missingValue,
+                'dataset' : dataset
+                }
+        return params
 
 class G2RemoteHost(G2Host):
     '''

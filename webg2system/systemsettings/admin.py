@@ -2,8 +2,7 @@ from models import *
 from django.contrib import admin
 
 class HostAdmin(admin.ModelAdmin):
-    list_display = ('name', 'basePath', 'ip', 'isArchive', 'hasSMS', 
-                    'hasMapserver')
+    list_display = ('name', 'basePath', 'ip')
 
 class SpecificSourceInline(admin.StackedInline):
     model = SpecificSource
@@ -44,8 +43,7 @@ class PackageExtraInfoInline(admin.StackedInline):
     extra = 0
 
 class CodeClassAdmin(admin.ModelAdmin):
-    model = CodeClass
-    list_display = ('className', 'needsMapserver', 'needsCSWserver', 'description')
+    pass
 
 class FileAdmin(admin.ModelAdmin):
     inlines = [FilePathInline, FilePatternInline]
@@ -65,6 +63,14 @@ class SourceAdmin(admin.ModelAdmin):
     inlines = [AreaInline, SpecificSourceInline, SourceExtraInfoInline]
     list_display = ('name', 'areas', 'specific_names')
 
+class DatasetInline(admin.StackedInline):
+    model = Dataset
+    extra = 0
+
+class ProductAdmin(admin.ModelAdmin):
+    inlines = [DatasetInline]
+    list_display = ('shortName', 'name')
+
 #admin.site.register(ExceptHour)
 admin.site.register(TimeslotDisplacer)
 admin.site.register(CodeClass, CodeClassAdmin)
@@ -72,3 +78,4 @@ admin.site.register(Host, HostAdmin)
 admin.site.register(Package, PackageAdmin)
 admin.site.register(File, FileAdmin)
 admin.site.register(Source, SourceAdmin)
+admin.site.register(Product, ProductAdmin)
