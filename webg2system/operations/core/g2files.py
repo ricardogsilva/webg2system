@@ -301,13 +301,60 @@ class G2File(GenericItem):
         
         if markedString.string == 'fromOriginator':
             dirName = markedString.name
-            fullPath = eval('self.parent.%s' % dirName)
-            # trimming the first character in order to eliminate the '/'
-            relativePath = fullPath.replace(self.parent.host.basePath, '')[1:]
-            thePath = relativePath
+            thePath = None
+            if hasattr(self.parent, 'outputs'):
+                parentSettings = ss.Package.objects.get(name=self.parent.name)
+                outpSetts = parentSettings.packageOutput_systemsettings_packageoutput_related.all()
+                if self.name in [p.outputItem.name for p in outpSetts]:
+                    # the parent is this file's originator
+                    fullPath = eval('self.parent.%s' % dirName)
+                    # trimming the first character in order to eliminate the '/'
+                    relativePath = fullPath.replace(self.parent.host.basePath, '')[1:]
+                    thePath = relativePath
+            if thePath is None:
+                # find out who is the parent
+                for pSetts in ss.Package.objects.all():
+                    outpSetts = pSetts.packageOutput_systemsettings_packageoutput_related.all()
+                    for packOut in outpSetts:
+                        if packOut.outputItem.name == self.name:
+                            self.logger.info('%s\'s parent is %s' % 
+                                             (self.name, pSetts.name))
+                            originator = self._create_originator_pack(packOut)
+                            self.logger.info('originator pack: %s' % originator)
+
+                thePath = '' # dummy
+
         else:
             thePath = utilities.parse_marked(markedString, obj)
         return thePath
+
+    def _create_originator_pack(self, outputSettings):
+        '''
+        Return the package from where this instance is an output.
+        '''
+
+        packSettings = outputSettings.package
+        specificTimeslots = outputSettings.specificTimeslots.all()
+        if len(specificTimeslots) == 0:
+            # the package's timeslot is the same as the output's
+            theTimeslot = self.timeslot
+        else:
+            specTimeslot = specificTimeslots[0]
+            theTimeslot = utilities.recover_timeslot(self.timeslot, 
+                                                      specTimeslot)
+        specificAreas = outputSettings.specificAreas.all()
+        if len(specificAreas) == 0:
+            # the package's area is the same as the output's
+            areaName = self.source.area
+            theArea = ss.Area.objects.get(name=areaName)
+        else:
+            # get the default area
+            theArea = ss.Area.objects.get(name='.*')
+        theClass = packSettings.codeClass.className
+        theHost = ss.Host.objects.get(name=self.host.name)
+        pack = eval('g2p.%s(packSettings, theTimeslot, theArea, theHost)' % 
+                    theClass)
+        return pack
 
     def __repr__(self):
         return self.name

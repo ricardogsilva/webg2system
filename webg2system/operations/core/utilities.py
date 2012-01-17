@@ -80,6 +80,31 @@ def displace_timeslot(timeslot, displacementObj):
         displacedTimeslots.append(newTimeslot)
     return displacedTimeslots
 
+def recover_timeslot(fileTimeslot, displacementObj):
+    '''
+    Recover the original timeslot for the package.
+    '''
+
+    if displacementObj.unit == 'minute':
+        displacementUnit = 60 # measured in seconds
+    else:
+        raise NotImplementedError
+    if displacementObj.endValue > displacementObj.startValue:
+        first = displacementObj.startValue
+        last = displacementObj.endValue
+    else:
+        first = displacementObj.endValue
+        last = displacementObj.startValue
+    firstTS = fileTimeslot + dt.timedelta(seconds=first * displacementUnit)
+    lastTS = fileTimeslot + dt.timedelta(seconds=last * displacementUnit)
+    if firstTS == lastTS:
+        packTimeslot = firstTS
+    else:
+        # the timeslots don't match so there is not a way to get the original
+        # package's timeslot
+        raise
+    return packTimeslot
+
 def extract_timeslot(filePath):
     '''
     Try to extract a timeslot from the input filePath.
