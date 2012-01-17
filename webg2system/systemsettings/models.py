@@ -191,6 +191,16 @@ class TimeslotDisplacer(models.Model):
 class CodeClass(models.Model):
     className = models.CharField(max_length=100, verbose_name='Class')
     description = models.TextField(null=True, blank=True)
+    needsMapserver = models.BooleanField(default=False, help_text='Does this'\
+                                         ' class require a host with '\
+                                         'Mapserver installed in order to'\
+                                         ' work?', verbose_name='Needs '\
+                                         'Mapserver?')
+    needsCSWserver = models.BooleanField(default=False, help_text='Does this'\
+                                         ' class require a host with '\
+                                         'CSW server installed in order to'\
+                                         ' work?', verbose_name='Needs '\
+                                         'CSW server?')
 
     def __unicode__(self):
         return self.className

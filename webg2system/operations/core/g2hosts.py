@@ -71,8 +71,6 @@ class HostFactory(object):
                 theClass = G2RemoteHost
             hostObj = theClass(hostSettings)
             self._hosts[name] = hostObj
-        else:
-            self.logger.debug('%s host already exists.' % hostSettings.name)
         return self._hosts.get(name)
 
 

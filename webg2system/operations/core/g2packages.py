@@ -6,6 +6,7 @@ import systemsettings
 
 from g2item import GenericItem
 from g2files import G2File
+import mappers
 import utilities
 
 class GenericPackage(GenericItem):
@@ -200,7 +201,7 @@ class ProcessingPackage(GenericPackage):
         '''
         '''
         
-        result = self._fetch_files(self.inputs, self.outputDir, useArchive,
+        result = self._fetch_files(self.inputs, self.workingDir, useArchive,
                                    decompress=True)
         return result
 
@@ -434,6 +435,7 @@ class WebDisseminator(ProcessingPackage):
         self.name = settings.name
         # a random number for generating unique working dirs
         self.random = randint(0, 100)
+        self.mapper = NGPMapper()
         relativeQuickDir = utilities.parse_marked(
                 settings.packagepath_set.get(name='quickviewOutDir'), 
                 self)
@@ -449,6 +451,49 @@ class WebDisseminator(ProcessingPackage):
         self.xmlTemplateDir = os.path.join(self.host.basePath, 
                                            relativeXmlTemplateDir)
         self.inputs = self._create_files('input', settings.packageInput_systemsettings_packageinput_related.all())
+
+    #def prepare(self, callback=None):
+    #    fetched = self.fetch_inputs(useArchive=True)
+    #    fileList = []
+    #    for g2f, pathList in fetched.iteritems():
+    #        fileList += pathList
+    #    mapFile = self.generate_mapfile(fileList)
+
+    #def run_main(self, callback=None):
+    #    quicklooks = self.generate_quicklooks(mapFile, fileList)
+    #    xmlMetadata = self.generate_xml_metadata(fileList)
+    #    self.populate_csw_server(xmlMetadata)
+
+    def generate_mapfile(self, fileList):
+        '''
+        Generate mapfile.
+
+        Inputs:
+
+            fileList - A list of file paths with the files to be included in 
+                the mapfiles.
+
+        Returns:
+
+            A string with the full path to the newly generated mapfile.
+        '''
+
+        globalProduct = self.mapper.create_global_product(fmt='gtif')
+        mapFile = mapper.create_mapfile(globalProduct)
+        return mapFile
+
+    def generate_quicklooks(self, mapfile):
+
+        raise NotImplementedError
+
+    def generate_xml_metadata(self):
+
+        raise NotImplementedError
+
+    def populate_csw_server(self):
+
+        raise NotImplementedError
+
 
 #
 #    #@log_calls

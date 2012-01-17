@@ -43,6 +43,10 @@ class PackageExtraInfoInline(admin.StackedInline):
     model = PackageExtraInfo
     extra = 0
 
+class CodeClassAdmin(admin.ModelAdmin):
+    model = CodeClass
+    list_display = ('className', 'needsMapserver', 'needsCSWserver', 'description')
+
 class FileAdmin(admin.ModelAdmin):
     inlines = [FilePathInline, FilePatternInline]
     list_display = ('name', 'frequency', 'toCopy', 'toCompress', 'toArchive',
@@ -63,7 +67,7 @@ class SourceAdmin(admin.ModelAdmin):
 
 #admin.site.register(ExceptHour)
 admin.site.register(TimeslotDisplacer)
-admin.site.register(CodeClass)
+admin.site.register(CodeClass, CodeClassAdmin)
 admin.site.register(Host, HostAdmin)
 admin.site.register(Package, PackageAdmin)
 admin.site.register(File, FileAdmin)

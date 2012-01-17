@@ -24,6 +24,7 @@ import g2packages as g2p
 #
 
 class G2File(GenericItem):
+    _originatorPackages = []
 
     def __init__(self, fileSettings, timeslot, areaSettings, hostSettings, 
                  optional=False, parent=None):
@@ -287,9 +288,6 @@ class G2File(GenericItem):
                 uniqueExtensions.append(ext)
         return uniquePathList
 
-    # FIXME
-    # This method only works when the file being processed is output to its 
-    # parent package. 
     def get_path(self, markedString, obj):
         '''
         Return a path that has been specified via the markedString mechanism.
@@ -301,29 +299,27 @@ class G2File(GenericItem):
         
         if markedString.string == 'fromOriginator':
             dirName = markedString.name
-            thePath = None
-            if hasattr(self.parent, 'outputs'):
-                parentSettings = ss.Package.objects.get(name=self.parent.name)
-                outpSetts = parentSettings.packageOutput_systemsettings_packageoutput_related.all()
-                if self.name in [p.outputItem.name for p in outpSetts]:
-                    # the parent is this file's originator
-                    fullPath = eval('self.parent.%s' % dirName)
-                    # trimming the first character in order to eliminate the '/'
-                    relativePath = fullPath.replace(self.parent.host.basePath, '')[1:]
-                    thePath = relativePath
-            if thePath is None:
-                # find out who is the parent
+            parentPackObj = None
+            parent = ss.Package.objects.get(name=self.parent.name)
+            packOutsSettings = parent.packageOutput_systemsettings_packageoutput_related.all()
+            if len(packOutsSettings) > 0: # the parent package has outputs
+                if self.name in [po.outputItem.name for po in packOutsSettings]:
+                    # this instance is an output of its own parent package
+                    parentPackObj = self.parent
+            if parentPackObj is None:
+                # haven't been able to find out the package that originated 
+                # this instance yet
                 for pSetts in ss.Package.objects.all():
                     outpSetts = pSetts.packageOutput_systemsettings_packageoutput_related.all()
-                    for packOut in outpSetts:
-                        if packOut.outputItem.name == self.name:
-                            self.logger.info('%s\'s parent is %s' % 
-                                             (self.name, pSetts.name))
-                            originator = self._create_originator_pack(packOut)
-                            self.logger.info('originator pack: %s' % originator)
-
-                thePath = '' # dummy
-
+                    for pOut in outpSetts:
+                        if pOut.outputItem.name == self.name:
+                            #self.logger.info('%s\'s parent is %s' % 
+                            #                 (self.name, pSetts.name))
+                            parentPackObj = self._create_originator_pack(pOut)
+            fullPath = eval('parentPackObj.%s' % dirName)
+            # trimming the first character in order to eliminate the '/'
+            relativePath = fullPath.replace(self.parent.host.basePath, '')[1:]
+            thePath = relativePath
         else:
             thePath = utilities.parse_marked(markedString, obj)
         return thePath
@@ -352,8 +348,18 @@ class G2File(GenericItem):
             theArea = ss.Area.objects.get(name='.*')
         theClass = packSettings.codeClass.className
         theHost = ss.Host.objects.get(name=self.host.name)
-        pack = eval('g2p.%s(packSettings, theTimeslot, theArea, theHost)' % 
-                    theClass)
+
+        pack = None
+        # lets see if the package has been created before already
+        for aPack in self._originatorPackages:
+            if aPack.source.area == theArea.name and \
+                    aPack.timeslot == theTimeslot and \
+                    aPack.__class__.__name__ == theClass:
+                        pack = aPack
+        if pack is None:
+            pack = eval('g2p.%s(packSettings, theTimeslot, theArea, theHost)' % 
+                        theClass)
+            self._originatorPackages.append(pack)
         return pack
 
     def __repr__(self):
