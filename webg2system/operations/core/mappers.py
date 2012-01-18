@@ -7,10 +7,11 @@ Script's doctring goes here.
 
 import re
 import os
-import tables
+import logging
+from subprocess import Popen, PIPE
+
 from osgeo import gdal
 from osgeo import osr
-from subprocess import Popen, PIPE
 
 # FIXME
 #   - Mix this file with some of the code used in the lsasaf georeferencer
@@ -24,33 +25,19 @@ class Mapper(object):
     blockXSize = 200
     blockYSize = 200
 
-    # maps the name found on the filename with the name of the main dataset 
-    # inside the HDF5
-    datasets = {
-            'DSSF' : 'DSSF',
-            'DSLF' : 'DSLF',
-            'LST' : 'LST',
-            'ALBEDO' : 'ALBEDO',
-            'SWI' : 'SWI_01'
-            }
-
-    def __init__(self, host):
+    def __init__(self, g2File):
         '''
         Inputs:
 
-            host - A operations.core.g2hosts.G2host object.
+            g2File - A operations.core.g2files.G2File object.
         '''
 
-        self.host = host
-
-    def create_global_tiff(self, fileList, outDir, outName):
-        raise NotImplementedError
-
-    def create_mapfile(self, geotif, outputPath):
-        raise NotImplementedError
-
-
-class SWIMapper(Mapper):
+        self.logger = logging.getLogger(
+                '.'.join((__name__, self.__class__.__name__)))
+        self.nLines = int(g2File.extraSettings.get(name='nLines').string)
+        self.nCols = int(g2File.extraSettings.get(name='nCols').string)
+        self.product = g2File.productSettings
+        self.host = g2File.host
 
     def create_global_tiff(self, fileList, outDir, outName):
         raise NotImplementedError
@@ -61,74 +48,106 @@ class SWIMapper(Mapper):
 
 class NGPMapper(Mapper): #crappy name
 
-    def create_global_tiff(self, fileList, outDir, outName):
+    # FIXME - Move IO operations to the G2Host classes
+    def create_global_tiff(self, fileList, outDir, outName, dataset=None):
         '''
-         Create a global file from all the inputs in fileList.
+        Inputs
 
-         Inputs:
+            fileList
 
-            fileList - A list of file paths to use to create the global
-                file.
+            outDir
 
-            outDir - The relative directory (relative to the host's basepath)
-                for storing the global file.
+            outName
 
-            outName - The name for the global file.
-         '''
+            dataset - The name of the dataset to use for creating the global 
+                tiff file. If None (the default) the main dataset will be 
+                used.
+        '''
 
-        params = self._get_parameters(fileList)
-        tilePaths = self.create_geotiffs(fileList, outDir, params)
-        tempTif = self.merge_tiles(tilePaths, params['missingValue'], 
-                                      'temp_nodata.tif', outDir)
-        globalTiff = self._fix_nodata(tempTif, outName, 
-                                      params['missingValue'])
+        if dataset is None:
+            ds = self.product.dataset_set.filter(isMainDataset=True)[0]
+        else:
+            ds = self.product.dataset_set.get(name=dataset)
+        missingValue = int(ds.missingValue)
+        scalingFactor = int(ds.scalingFactor)
+        tilePaths = self.create_geotiffs(fileList, outDir, ds, missingValue, 
+                                         scalingFactor)
+        tempTif = self.merge_tiles(tilePaths, missingValue, 'temp_nodata.tif',
+                                   outDir)
+        globalTiff = self._fix_nodata(tempTif, outName, missingValue)
         ovrFile = self.build_overviews(globalTiff, 6)
         temps = tilePaths + [tempTif]
         self.remove_temps(temps)
+
+    def _get_corner_coordinates(self, filePath, tileXLength, tileYLength):
+        h, v = self.get_h_v(filePath)
+        if h is None:
+            # this is a continental tile
+            raise NotImplementedError
+        else:
+            # this is a small tile
+            firstLat = -v * tileYLength + 90
+            firstLon = tileXLength * h - 180
+        return firstLat, firstLon
 
     def remove_temps(self, paths):
         for path in paths:
             os.remove(path)
 
-    def create_geotiffs(self, fileList, outputDir, params=None):
-        tiles = []
-        if params is None:
-            params = self._get_parameters(fileList)
-        for path in fileList:
-            tiles.append(self._create_tile_geotiff(path, outputDir, params))
-        return tiles
-
-    def _create_tile_geotiff(self, filepath, outputDir, params, tolerance=0.1):
+    def create_geotiffs(self, fileList, outputDir, dataset, missingValue, 
+                        scalingFactor, tolerance=0.1):
         '''
-        Creates a geotiff for an input G2tile HDF5 file.
+        Creates geotiffs from a list of G2File HDF5 filepaths.
+
+        Inputs:
+
+            fileList - A list of files
+
+            outputDir - 
+
+            dataset - A systemsettings.models.Dataset object
+
+            missingValue - An integer
+
+            scalingFactor - 
+
+            tolerance - 
         '''
 
-        fileName = os.path.basename(filepath) + '.tif'
-        outputPath = os.path.join(outputDir, fileName)
-        outDriver = gdal.GetDriverByName('GTiff')
-        inDs = gdal.Open('HDF5:"%s"://%s' % (filepath, params['dataset']))
-        la = inDs.GetRasterBand(1).ReadAsArray()
-        mv = params['missingValue']
-        # dealing with the missing value and scaling factor
-        la[abs(la - mv) > tolerance] = la[abs(la - mv) > tolerance] / params['scalingFactor']
-        la[abs(la - mv) <= tolerance] = mv
-        outDs = outDriver.Create(str(outputPath), params['nCols'], 
-                                 params['nRows'], 1, self.dataType[0])
-        outBand = outDs.GetRasterBand(1)
-        outBand.WriteArray(la, 0, 0)
-        h, v = self.get_h_v(filepath)
-        firstLon, firstLat = self.get_first_coords(h, v)
-        ullon = firstLon * 1.0 - 0.05 / 2.0
-        ullat = firstLat * 1.0 + 0.05 / 2.0
-        outDs.SetGeoTransform([ullon, 0.05, 0, ullat, 0, -0.05])
-        srs = osr.SpatialReference()
-        srs.SetWellKnownGeogCS("WGS84")
-        outDs.SetProjection(srs.ExportToWkt())
-        outBand.SetNoDataValue(params['missingValue'])
-        outBand.FlushCache()
-        inDs = None
-        outDs = None
-        return outputPath
+        outputPaths = []
+
+        for fNum, path in enumerate(fileList):
+            self.logger.debug('(%i/%i) - Converting HDF5 to GeoTiff...' % (fNum+1, len(fileList)))
+            fileName = os.path.basename(path) + '.tif'
+            outputPath = os.path.join(outputDir, fileName)
+            outDriver = gdal.GetDriverByName('GTiff')
+            inDs = gdal.Open('HDF5:"%s"://%s' % (path, dataset.name))
+            la = inDs.GetRasterBand(1).ReadAsArray()
+            # dealing with the missing value and scaling factor
+            la[abs(la - missingValue) > tolerance] = la[abs(la - missingValue) > tolerance] / scalingFactor
+            la[abs(la - missingValue) <= tolerance] = missingValue
+            outDs = outDriver.Create(str(outputPath), self.nCols, self.nLines,
+                                     1, self.dataType[0])
+            outBand = outDs.GetRasterBand(1)
+            outBand.WriteArray(la, 0, 0)
+            # BEWARE: self.pixelSize is measured in degrees
+            tileXLength = self.nCols * float(self.product.pixelSize)
+            tileYLength = self.nLines * float(self.product.pixelSize)
+            firstLat, firstLon = self._get_corner_coordinates(path, 
+                                                              tileXLength, 
+                                                              tileYLength)
+            ullon = firstLon * 1.0 - 0.05 / 2.0
+            ullat = firstLat * 1.0 + 0.05 / 2.0
+            outDs.SetGeoTransform([ullon, 0.05, 0, ullat, 0, -0.05])
+            srs = osr.SpatialReference()
+            srs.SetWellKnownGeogCS("WGS84")
+            outDs.SetProjection(srs.ExportToWkt())
+            outBand.SetNoDataValue(missingValue)
+            outBand.FlushCache()
+            inDs = None
+            outDs = None
+            outputPaths.append(outputPath)
+        return outputPaths
 
     def _fix_nodata(self, filePath, outputName, noData):
         '''
@@ -199,18 +218,8 @@ class NGPMapper(Mapper): #crappy name
         stdout,stderr = newProcess.communicate()
         return newProcess.returncode
 
-
     def create_mapfile(self, geotif, outputPath):
         raise NotImplementedError
-
-    def get_first_coords(self, h, v, tileLength=10):
-        '''
-        Infer the firstLat and firstLon attribute from files tiled according
-        to the Geoland-2 grid without having to open them.
-        '''
-        firstLon = -180 + tileLength * h
-        firstLat = 90 - tileLength * v
-        return firstLon, firstLat
 
     def get_dataset_name(self, filePath):
         dataset = None
@@ -219,40 +228,6 @@ class NGPMapper(Mapper): #crappy name
                 dataset = self.datasets.get(fName)
                 break
         return dataset
-
-    def _get_parameters(self, fileList):
-        '''
-        Open the relevant tiles and extract parameters needed for global file.
-        '''
-
-        minH, maxH, minV, maxV = self._get_extreme_tile_numbers(fileList)
-        minHFile = [i for i in fileList if self.get_h_v(i)[0] == minH][0]
-        minVFile = [i for i in fileList if self.get_h_v(i)[1] == minV][0]
-        latDS = tables.openFile(minVFile)
-        nRows = int(latDS.root._v_attrs.NL) # verify the name of this attribute
-        nCols = int(latDS.root._v_attrs.NC) # verify the name of this attribute
-        pixelPatt = re.compile(r'\d+\.\d+')
-        pixSize = latDS.root._v_attrs["PIXEL_SIZE"]
-        gxsize, gysize = [float(n) for n in pixelPatt.findall(pixSize)]
-        ullat = latDS.root._v_attrs.FIRST_LAT * 1.0 + gysize / 2.0
-        dataset = self.get_dataset_name(minVFile)
-        scalingFactor = eval("latDS.root.%s.getAttr('SCALING_FACTOR')" % dataset)
-        #missingValue = int(eval("latDS.root.%s.getAttr('MISSING_VALUE')" % dataset)) / scalingFactor # why the division?
-        missingValue = int(eval("latDS.root.%s.getAttr('MISSING_VALUE')" % dataset))
-        latDS.close()
-        lonDS = tables.openFile(minHFile)
-        ullon = lonDS.root._v_attrs.FIRST_LON * 1.0 - gxsize / 2.0
-        lonDS.close()
-        params = {
-                'minH' : minH, 'maxH' : maxH, 'minV' : minV, 'maxV' : maxV,
-                'nRows' : nRows, 'nCols' : nCols, 
-                'gxsize' : gxsize, 'gysize' : gysize,
-                'ullat' : ullat, 'ullon' : ullon,
-                'scalingFactor' : scalingFactor,
-                'missingValue' : missingValue,
-                'dataset' : dataset
-                }
-        return params
 
     def _get_extreme_tile_numbers(self, fileList):
         hs = [self.get_h_v(f)[0] for f in fileList]
@@ -267,6 +242,9 @@ class NGPMapper(Mapper): #crappy name
         if reObj is not None:
             h = int(reObj.group(1))
             v = int(reObj.group(2))
+        else:
+            h = None
+            v = None
         return h, v
 
 

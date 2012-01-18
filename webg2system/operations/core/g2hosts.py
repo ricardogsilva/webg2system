@@ -112,9 +112,6 @@ class G2Host(object):
         self.host = settings.ip
         self.user = settings.username
         self.password = settings.password
-        self.isArchive = settings.isArchive
-        self.hasSMS = settings.hasSMS
-        self.hasMapserver = settings.hasMapserver
 
     def __repr__(self):
         return self.name
@@ -480,40 +477,36 @@ class G2LocalHost(G2Host):
     def change_dir(self, destination):
         os.chdir(destination)
 
-    #FIXME - Does this method ever get called with relative paths?
     def make_dir(self, directory):
         '''Recursively make every directory needed to ensure relativeDirPath.'''
 
-        if directory.startswith('/'):
-            fullPath = directory
-        else:
-            fullPath = os.path.join(self.basePath, relativeDirPath)
+        fullPath = os.path.join(self.basePath, directory)
         os.makedirs(fullPath)
 
-    #FIXME - To be reviewed
-    def remove_dir(self, relativeDirPath):
+    def remove_dir(self, directory):
         '''
         Remove directory along with any content it may have.
+        
+        Also removes any empty parent directories.
         '''
 
-        fullPath = os.path.join(self.basePath, relativeDirPath)
-        shutil.rmtree(fullPath)
+        if self.is_dir(directory):
+            fullPath = os.path.join(self.basePath, directory)
+            shutil.rmtree(fullPath)
+            parentDir = fullPath.rpartition(os.path.sep)[0]
+            self.clean_dirs(parentDir)
 
-    def clean_dirs(self, relativeDirPath):
+    def clean_dirs(self, directory):
         '''Remove the directory if it is empty. Also remove empty parents.'''
 
-        fullPath = os.path.join(self.basePath, relativeDirPath)
+        fullPath = os.path.join(self.basePath, directory)
         try:
             os.removedirs(fullPath)
         except OSError:
             pass
 
-    #FIXME - Does this method ever get called with relative paths?
     def is_dir(self, directory):
-        if directory.startswith('/'):
-            fullPath = directory
-        else:
-            fullPath = os.path.join(self.basePath, relativeDirPath)
+        fullPath = os.path.join(self.basePath, directory)
         return os.path.isdir(fullPath)
 
     #FIXME - To be reviewed

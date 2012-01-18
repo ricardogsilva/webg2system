@@ -102,6 +102,10 @@ class File(Item):
         return ', '.join([pi.package.name for pi in packInputs])
     get_package_inputs.short_description = 'Input to packages'
 
+class FileExtraInfo(MarkedString):
+    theFile = models.ForeignKey(File)
+
+
 class PackageInput(models.Model):
     package = models.ForeignKey(Package, help_text='A package '\
             'that will be the parent of this setting type.', 
@@ -191,8 +195,8 @@ class Product(models.Model):
     name = models.CharField(max_length=100)
     shortName = models.CharField(max_length=20, verbose_name='Short name')
     description = models.TextField(null=True, blank=True)
-    nRows = models.IntegerField(default=0, verbose_name='Number of rows')
-    nCols = models.IntegerField(default=0, verbose_name='Number of columns')
+    #nRows = models.IntegerField(default=0, verbose_name='Number of rows')
+    #nCols = models.IntegerField(default=0, verbose_name='Number of columns')
     pixelSize = models.DecimalField(max_digits=4, decimal_places=2, default=0,
                                     verbose_name='Pixel size')
 

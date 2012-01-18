@@ -53,6 +53,8 @@ class G2File(GenericItem):
         self.toCompress = fileSettings.toCompress
         self.toArchive = fileSettings.toArchive
         self.toDisseminate = fileSettings.toDisseminate
+        self.extraSettings = fileSettings.fileextrainfo_set.all()
+        self.productSettings = fileSettings.product
         self.numFiles = fileSettings.numFiles
         self.exceptHours = [eh.hour for eh in fileSettings.exceptHours.all()]
         self.fileType = fileSettings.fileType

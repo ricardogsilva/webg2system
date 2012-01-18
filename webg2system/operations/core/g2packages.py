@@ -141,6 +141,16 @@ class GenericPackage(GenericItem):
                 result[g2f] = localPathList
         return result
 
+    def _delete_directories(self, dirPaths):
+        '''
+        Delete the directories specified and any contents they may have.
+
+        Also deletes any parent directories that may become empty.
+        '''
+
+        for dirPath in dirPaths:
+            self.host.remove_dir(dirPath)
+
 
 class ProcessingPackage(GenericPackage):
 
@@ -437,7 +447,6 @@ class WebDisseminator(ProcessingPackage):
         self.name = settings.name
         # a random number for generating unique working dirs
         self.random = randint(0, 100)
-        self.mapper = NGPMapper()
         relativeQuickDir = utilities.parse_marked(
                 settings.packagepath_set.get(name='quickviewOutDir'), 
                 self)
@@ -453,18 +462,24 @@ class WebDisseminator(ProcessingPackage):
         self.xmlTemplateDir = os.path.join(self.host.basePath, 
                                            relativeXmlTemplateDir)
         self.inputs = self._create_files('input', settings.packageInput_systemsettings_packageinput_related.all())
+        self.mapper = mappers.NGPMapper(self.inputs[0]) # <- badly defined
 
-    #def prepare(self, callback=None):
-    #    fetched = self.fetch_inputs(useArchive=True)
-    #    fileList = []
-    #    for g2f, pathList in fetched.iteritems():
-    #        fileList += pathList
-    #    mapFile = self.generate_mapfile(fileList)
+    def clean_up(self, callback=None):
+        self._delete_directories([self.workingDir, self.quickviewOutDir])
+        return 0
 
-    #def run_main(self, callback=None):
-    #    quicklooks = self.generate_quicklooks(mapFile, fileList)
-    #    xmlMetadata = self.generate_xml_metadata(fileList)
-    #    self.populate_csw_server(xmlMetadata)
+    def prepare(self, callback=None):
+        pass
+
+    def run_main(self, callback=None):
+        fetched = self.fetch_inputs(useArchive=True)
+        fileList = []
+        for g2f, pathList in fetched.iteritems():
+            fileList += pathList
+        mapFile = self.generate_mapfile(fileList)
+        #quicklooks = self.generate_quicklooks(mapFile, fileList)
+        #xmlMetadata = self.generate_xml_metadata(fileList)
+        #self.populate_csw_server(xmlMetadata)
 
     def generate_mapfile(self, fileList):
         '''
@@ -480,9 +495,13 @@ class WebDisseminator(ProcessingPackage):
             A string with the full path to the newly generated mapfile.
         '''
 
-        globalProduct = self.mapper.create_global_product()
-        mapFile = mapper.create_mapfile(globalProduct)
-        return mapFile
+        self.logger.debug('running generate_mapfile method...')
+        self.logger.debug('locals: %s' % locals())
+        globalTifName = 'teste_global.tif'
+        globalProd = self.mapper.create_global_tiff(fileList, self.workingDir,
+                                                    globalTifName)
+        #mapFile = self.mapper.create_mapfile(globalProduct)
+        #return mapFile
 
     def generate_quicklooks(self, mapfile):
 

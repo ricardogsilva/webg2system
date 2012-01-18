@@ -42,11 +42,15 @@ class PackageExtraInfoInline(admin.StackedInline):
     model = PackageExtraInfo
     extra = 0
 
+class FileExtraInfoInline(admin.StackedInline):
+    model = FileExtraInfo
+    extra = 0
+
 class CodeClassAdmin(admin.ModelAdmin):
     pass
 
 class FileAdmin(admin.ModelAdmin):
-    inlines = [FilePathInline, FilePatternInline]
+    inlines = [FilePathInline, FilePatternInline, FileExtraInfoInline]
     list_display = ('name', 'frequency', 'toCopy', 'toCompress', 'toArchive',
                     'toDisseminate', 'get_except_hours', 'get_search_paths',
                     'get_search_patterns', 'get_package_output', 
