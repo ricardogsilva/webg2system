@@ -12,6 +12,7 @@ from subprocess import Popen, PIPE
 
 from osgeo import gdal
 from osgeo import osr
+import mapscript
 
 # FIXME
 #   - Mix this file with some of the code used in the lsasaf georeferencer
@@ -42,7 +43,7 @@ class Mapper(object):
     def create_global_tiff(self, fileList, outDir, outName):
         raise NotImplementedError
 
-    def create_mapfile(self, geotif, outputPath):
+    def create_mapfile(self, geotifPath, outputPath, template):
         raise NotImplementedError
 
 
@@ -78,6 +79,7 @@ class NGPMapper(Mapper): #crappy name
         ovrFile = self.build_overviews(globalTiff, 6)
         temps = tilePaths + [tempTif]
         self.remove_temps(temps)
+        return globalTiff
 
     def _get_corner_coordinates(self, filePath, tileXLength, tileYLength):
         h, v = self.get_h_v(filePath)
@@ -115,7 +117,6 @@ class NGPMapper(Mapper): #crappy name
         '''
 
         outputPaths = []
-
         for fNum, path in enumerate(fileList):
             self.logger.debug('(%i/%i) - Converting HDF5 to GeoTiff...' % (fNum+1, len(fileList)))
             fileName = os.path.basename(path) + '.tif'
@@ -246,6 +247,31 @@ class NGPMapper(Mapper): #crappy name
             h = None
             v = None
         return h, v
+
+    def create_mapfile(self, geotifPath, outputPath, template):
+        '''
+        Create a new mapfile for UMN Mapserver based on the template.
+
+        Inputs:
+
+            geotifPath - The full path to the geotif that is to be served
+                by the mapfile.
+
+            outputPath - The full path of the new mapfile.
+
+            template - The full path to the template mapfile to use.
+        '''
+
+        self.logger.debug('locals: %s' % locals())
+        dataPath, tifName = os.path.split(geotifPath)
+        templateMap = mapscript.mapObj(template)
+        mapfile = templateMap.clone()
+        mapfile.shapepath = dataPath
+        layerObj = mapfile.getLayerByName(self.product.shortName)
+        layerObj.data = tifName
+        layerObj.status = mapscript.MS_ON
+        mapfile.save(outputPath)
+        return mapfile
 
 
 if __name__ == '__main__':

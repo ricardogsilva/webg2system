@@ -447,25 +447,40 @@ class WebDisseminator(ProcessingPackage):
         self.name = settings.name
         # a random number for generating unique working dirs
         self.random = randint(0, 100)
-        relativeQuickDir = utilities.parse_marked(
-                settings.packagepath_set.get(name='quickviewOutDir'), 
-                self)
-        relativeWorkDir = utilities.parse_marked(
-                settings.packagepath_set.get(name='workingDir'), 
-                self)
-        relativeXmlTemplateDir = utilities.parse_marked(
-                settings.packagepath_set.get(name='xmlTemplateDir'), 
-                self)
-        self.quickviewOutDir = os.path.join(self.host.basePath, 
-                                            relativeQuickDir)
-        self.workingDir = os.path.join(self.host.basePath, relativeWorkDir)
+        relCodeDir = utilities.parse_marked(
+                settings.packagepath_set.get(name='codeDir'), self)
+        self.codeDir = os.path.join(self.host.basePath, relCodeDir)
+        relQuickDir = utilities.parse_marked(
+                settings.packagepath_set.get(name='quickviewOutDir'), self)
+        relWorkDir = utilities.parse_marked(
+                settings.packagepath_set.get(name='workingDir'), self)
+        relXmlTemplateDir = utilities.parse_marked(
+                settings.packagepath_set.get(name='xmlTemplateDir'), self)
+        relMapfileOutDir = utilities.parse_marked(
+                settings.packagepath_set.get(name='mapfileOutDir'), self)
+        relMapfileTemplateDir = utilities.parse_marked(
+                settings.packagepath_set.get(name='mapfileTemplateDir'), self)
+        relGeotifOutDir = utilities.parse_marked(
+                settings.packagepath_set.get(name='geotifOutDir'), self)
+        self.quickviewOutDir = os.path.join(self.host.basePath, relQuickDir)
+        self.workingDir = os.path.join(self.host.basePath, relWorkDir)
         self.xmlTemplateDir = os.path.join(self.host.basePath, 
-                                           relativeXmlTemplateDir)
-        self.inputs = self._create_files('input', settings.packageInput_systemsettings_packageinput_related.all())
+                                           relXmlTemplateDir)
+        self.mapfileOutDir = os.path.join(self.host.basePath, 
+                                          relMapfileOutDir)
+        self.mapfileTemplateDir = os.path.join(self.host.basePath, 
+                                               relMapfileTemplateDir)
+        self.geotifOutDir = os.path.join(self.host.basePath, 
+                                         relGeotifOutDir)
+        self.inputs = self._create_files(
+            'input', 
+            settings.packageInput_systemsettings_packageinput_related.all()
+        )
         self.mapper = mappers.NGPMapper(self.inputs[0]) # <- badly defined
 
     def clean_up(self, callback=None):
         self._delete_directories([self.workingDir, self.quickviewOutDir])
+        self.host.clean_dirs(self.mapfileOutDir)
         return 0
 
     def prepare(self, callback=None):
@@ -476,7 +491,8 @@ class WebDisseminator(ProcessingPackage):
         fileList = []
         for g2f, pathList in fetched.iteritems():
             fileList += pathList
-        mapFile = self.generate_mapfile(fileList)
+        mapfile = self.generate_mapfile(fileList)
+        return mapfile
         #quicklooks = self.generate_quicklooks(mapFile, fileList)
         #xmlMetadata = self.generate_xml_metadata(fileList)
         #self.populate_csw_server(xmlMetadata)
@@ -495,13 +511,17 @@ class WebDisseminator(ProcessingPackage):
             A string with the full path to the newly generated mapfile.
         '''
 
-        self.logger.debug('running generate_mapfile method...')
-        self.logger.debug('locals: %s' % locals())
         globalTifName = 'teste_global.tif'
-        globalProd = self.mapper.create_global_tiff(fileList, self.workingDir,
+        self.host.make_dir(self.geotifOutDir)
+        globalProd = self.mapper.create_global_tiff(fileList, self.geotifOutDir,
                                                     globalTifName)
-        #mapFile = self.mapper.create_mapfile(globalProduct)
-        #return mapFile
+        templateName = 'template_quicklooks.map'
+        template = os.path.join(self.mapfileTemplateDir, templateName)
+        mapfileName = 'quicklooks.map'
+        mapfilePath = os.path.join(self.mapfileOutDir, mapfileName)
+        self.host.make_dir(self.mapfileOutDir)
+        mapfile = self.mapper.create_mapfile(globalProd, mapfilePath, template)
+        return mapfile
 
     def generate_quicklooks(self, mapfile):
 
