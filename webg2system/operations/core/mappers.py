@@ -22,7 +22,8 @@ import mapscript
 class Mapper(object):
 
     # gdal settings
-    dataType = (gdal.GDT_Float32, 'Float32')
+    #dataType = (gdal.GDT_Float32, 'Float32')
+    dataType = gdal.GDT_Int16
     blockXSize = 200
     blockYSize = 200
 
@@ -128,7 +129,7 @@ class NGPMapper(Mapper): #crappy name
             la[abs(la - missingValue) > tolerance] = la[abs(la - missingValue) > tolerance] / scalingFactor
             la[abs(la - missingValue) <= tolerance] = missingValue
             outDs = outDriver.Create(str(outputPath), self.nCols, self.nLines,
-                                     1, self.dataType[0])
+                                     1, self.dataType)
             outBand = outDs.GetRasterBand(1)
             outBand.WriteArray(la, 0, 0)
             # BEWARE: self.pixelSize is measured in degrees
@@ -219,9 +220,6 @@ class NGPMapper(Mapper): #crappy name
         stdout,stderr = newProcess.communicate()
         return newProcess.returncode
 
-    def create_mapfile(self, geotif, outputPath):
-        raise NotImplementedError
-
     def get_dataset_name(self, filePath):
         dataset = None
         for fName in self.datasets.keys():
@@ -267,9 +265,17 @@ class NGPMapper(Mapper): #crappy name
         templateMap = mapscript.mapObj(template)
         mapfile = templateMap.clone()
         mapfile.shapepath = dataPath
-        layerObj = mapfile.getLayerByName(self.product.shortName)
-        layerObj.data = tifName
-        layerObj.status = mapscript.MS_ON
+        mapfile.name = 'quicklooks'
+        mapWMSMetadata = mapfile.web.metadata
+        mapWMSMetadata.set('wms_title', 'quicklooks')
+        mapWMSMetadata.set('wms_onlineresource', 
+                        'http://%s/cgi-bin/mapserv?map=%s&' \
+                        % (self.host.host, outputPath))
+        layer = mapfile.getLayerByName(self.product.shortName)
+        layer.data = tifName
+        layer.status = mapscript.MS_ON
+        layerWMSMetadata = layer.metadata
+        layerWMSMetadata.set('wms_title', self.product.shortName)
         mapfile.save(outputPath)
         return mapfile
 
