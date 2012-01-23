@@ -9,6 +9,10 @@ import re
 import os
 import logging
 from subprocess import Popen, PIPE
+import numpy as np
+import Image as img
+import ImageFont as imgFont
+import ImageDraw as imgDraw
 
 from osgeo import gdal
 from osgeo import osr
@@ -74,6 +78,7 @@ class NGPMapper(Mapper): #crappy name
         scalingFactor = int(ds.scalingFactor)
         tilePaths = self.create_geotiffs(fileList, outDir, ds, missingValue, 
                                          scalingFactor)
+        self.logger.debug('Merging individual tiles into a global tiff...')
         tempTif = self.merge_tiles(tilePaths, missingValue, 'temp_nodata.tif',
                                    outDir)
         globalTiff = self._fix_nodata(tempTif, outName, missingValue)
@@ -260,7 +265,6 @@ class NGPMapper(Mapper): #crappy name
             template - The full path to the template mapfile to use.
         '''
 
-        self.logger.debug('locals: %s' % locals())
         dataPath, tifName = os.path.split(geotifPath)
         templateMap = mapscript.mapObj(template)
         mapfile = templateMap.clone()
@@ -277,8 +281,129 @@ class NGPMapper(Mapper): #crappy name
         layerWMSMetadata = layer.metadata
         layerWMSMetadata.set('wms_title', self.product.shortName)
         mapfile.save(outputPath)
-        return mapfile
+        return outputPath
 
+    def generate_quicklooks(self, outputPath, mapfile, fileList):
+        '''
+        Generate the quicklook files.
+
+        Inputs:
+
+            mapfile - Full path to the mapfile to be used when generating 
+                the quicklooks.
+
+            fileList - A list of paths with the files to create quicklooks
+                to.
+
+        Returns:
+            
+            A list of full paths to the newly created quicklooks.
+        '''
+
+        quickLooks = []
+        tileXLength = self.nCols * float(self.product.pixelSize)
+        tileYLength = self.nLines * float(self.product.pixelSize)
+        legendPath = os.path.join(outputPath, 'legend.png')
+        legendCommand = 'legend %s %s' % (mapfile, legendPath)
+        mapfileDir = os.path.dirname(mapfile)
+        self.host.run_program(legendCommand, mapfileDir)
+        for fNum, path in enumerate(fileList):
+            self.logger.debug('(%i/%i) - Creating quicklook...' % 
+                              (fNum+1, len(fileList)))
+            dirPath, fname = os.path.split(path)
+            firstLat, firstLon = self._get_corner_coordinates(path, 
+                                                              tileXLength, 
+                                                              tileYLength)
+            minx = firstLon
+            miny = firstLat + tileYLength
+            maxx = firstLon + tileXLength
+            maxy = firstLat
+            rawQuickPath = os.path.join(outputPath, 'rawquicklook_%s.png' % fname)
+            command = 'shp2img -m %s -o %s -e %i %i %i %i -s '\
+                      '400 400 -l %s' % (mapfile, rawQuickPath, minx, miny, 
+                                         maxx, maxy, self.product.shortName)
+            self.host.run_program(command)
+            outPath = self._complete_quicklook(rawQuickPath, legendPath)
+            quickLooks.append(outPath)
+            self.remove_temps([rawQuickPath])
+        self.remove_temps([legendPath])
+        return quickLooks
+
+    def _complete_quicklook(self, filePath, legendPath, title=None, 
+                            cleanRaw=True):
+        '''
+        Create the final quicklook file by incorporating the extra elements.
+
+        Inputs:
+
+            filePath - Full path to the raw quicklook.
+
+            legendPath - Full path to the legend image.
+
+            title - Title for the quicklook.
+        '''
+
+        rawPatt = re.compile(r'rawquicklook_')
+        if title is None:
+            fname = os.path.basename(filePath).rpartition('.')[0]
+            title = rawPatt.sub('', fname).replace('_', ' ')
+        quicklook = self._stitch_images([img.open(p) for p in filePath, \
+                                        legendPath])
+        quicklook = self._expand_image(quicklook, 0, 30, keep='bl')
+        quicklook = self._expand_image(quicklook, 20, 20, keep='middle')
+        self._write_text(quicklook, title, position=(quicklook.size[0]/2, 20))
+        outPath = rawPatt.sub('', filePath)
+        quicklook.save(outPath)
+        return outPath
+
+    def _stitch_images(self, ims):
+        sizes = np.asarray([i.size for i in ims])
+        newRows = np.max(sizes[:,1])
+        newCols = np.sum(sizes[:,0])
+        final = np.ones((newRows, newCols, 3)) * 255
+        accumRIndex = 0
+        accumCIndex = 0
+        for i in ims:
+            arr = np.asarray(i)
+            endRow = accumRIndex + arr.shape[0]
+            endCol = accumCIndex + arr.shape[1]
+            final[accumRIndex: endRow, accumCIndex:endCol] = arr
+            accumCIndex = endCol
+        return img.fromarray(final.astype(arr.dtype))
+
+    def _expand_image(self, im, width=0, height=0, keep='ul', padValue=255):
+        n1 = np.asarray(im)
+        oldHeight, oldWidth, bands = n1.shape
+        newHeight = oldHeight + height
+        newWidth = oldWidth + width
+        n2 = np.ones((newHeight, newWidth, bands)) * padValue
+        if keep == 'ul':
+            n2[:oldHeight, :oldWidth] = n1
+        elif keep == 'ur':
+            n2[:oldHeight, newWidth-oldWidth:] = n1
+        elif keep == 'bl':
+            n2[newHeight-oldHeight:, :oldWidth] = n1
+        elif keep == 'br':
+            n2[newHeight-oldHeight:, newWidth-oldWidth:] = n1
+        elif keep == 'middle':
+            startHeight = (newHeight - oldHeight) / 2
+            endHeight = startHeight + oldHeight
+            startWidth = (newWidth - oldWidth) / 2
+            endWidth = startWidth + oldWidth
+            n2[startHeight:endHeight, startWidth:endWidth] = n1
+        newIm = img.fromarray(n2.astype(n1.dtype))
+        return newIm
+
+    def _write_text(self, im, txt, fontSize=16, position=(0,0)):
+        #font = imgFont.load_default()
+        fontFile = '/usr/share/fonts/truetype/freefont/FreeSans.ttf'
+        font = imgFont.truetype(fontFile, fontSize)
+        imgText = img.new('L', font.getsize(txt), 255)
+        drawText = imgDraw.Draw(imgText)
+        drawText.text((0, 0), txt, font=font, fill=0)
+        posX = position[0] - font.getsize(txt)[0] / 2
+        posY = position[1] - font.getsize(txt)[1] / 2
+        im.paste(imgText, (posX, posY))
 
 if __name__ == '__main__':
     import sys

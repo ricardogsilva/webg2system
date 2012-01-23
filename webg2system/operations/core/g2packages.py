@@ -492,8 +492,8 @@ class WebDisseminator(ProcessingPackage):
         for g2f, pathList in fetched.iteritems():
             fileList += pathList
         mapfile = self.generate_mapfile(fileList)
-        return mapfile
-        #quicklooks = self.generate_quicklooks(mapFile, fileList)
+        quicklooks = self.generate_quicklooks(mapfile, fileList)
+        return quicklooks
         #xmlMetadata = self.generate_xml_metadata(fileList)
         #self.populate_csw_server(xmlMetadata)
 
@@ -523,9 +523,12 @@ class WebDisseminator(ProcessingPackage):
         mapfile = self.mapper.create_mapfile(globalProd, mapfilePath, template)
         return mapfile
 
-    def generate_quicklooks(self, mapfile):
+    def generate_quicklooks(self, mapfile, fileList):
 
-        raise NotImplementedError
+        self.host.make_dir(self.quickviewOutDir)
+        quicklooks = self.mapper.generate_quicklooks(self.quickviewOutDir, 
+                                                     mapfile, fileList)
+        return quicklooks
 
     def generate_xml_metadata(self):
 
