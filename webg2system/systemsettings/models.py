@@ -7,7 +7,11 @@ from django.db import models
 
 class Host(models.Model):
     name = models.CharField(max_length=100)
-    basePath = models.CharField(max_length=255)
+    dataPath = models.CharField(max_length=255, help_text='Full path to'\
+                                ' the parent directory that holds the data.')
+    codePath = models.CharField(max_length=255, null=True, blank=True, 
+                                help_text='Full path to the parent directory'\
+                                'that holds for the external code.')
     ip = models.IPAddressField()
     username = models.CharField(max_length=50)
     password = models.CharField(max_length=50)
@@ -104,7 +108,6 @@ class File(Item):
 
 class FileExtraInfo(MarkedString):
     theFile = models.ForeignKey(File)
-
 
 class PackageInput(models.Model):
     package = models.ForeignKey(Package, help_text='A package '\

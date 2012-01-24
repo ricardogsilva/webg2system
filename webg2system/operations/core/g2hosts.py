@@ -108,7 +108,11 @@ class G2Host(object):
         self.logger = logging.getLogger('.'.join((__name__, self.__class__.__name__)))
         self.name = settings.name
         self.connections = dict()
-        self.basePath = settings.basePath
+        self.dataPath = settings.dataPath
+        if settings.codePath is None or settings.codePath == '':
+            self.codePath = None
+        else:
+            self.codePath = settings.codePath
         self.host = settings.ip
         self.user = settings.username
         self.password = settings.password
@@ -188,7 +192,7 @@ class G2LocalHost(G2Host):
             if path.startswith(os.path.sep):
                 fullSearchPath = path
             else:
-                fullSearchPath = os.path.join(self.basePath, path)
+                fullSearchPath = os.path.join(self.dataPath, path)
             searchDir, searchPattern = os.path.split(fullSearchPath)
             patt = re.compile(searchPattern)
             dirExists = os.path.isdir(searchDir)
@@ -212,7 +216,7 @@ class G2LocalHost(G2Host):
             relativeDestinationDir - The directory on the local host where
                 the files will be copied to. It will be created in case it
                 doens't exist. This directory is relative to the host's
-                "basepath" attribute.
+                "dataPath" attribute.
             
             sourceHost - A G2host instance representing the host where the
                 files will be copied from.
@@ -234,7 +238,7 @@ class G2LocalHost(G2Host):
     def _fetch_from_local(self, fullPaths, directory):
 
         fullDestPaths = []
-        outputDir = os.path.join(self.basePath, directory)
+        outputDir = os.path.join(self.dataPath, directory)
         if not self.is_dir(outputDir):
                 self.make_dir(outputDir)
         for path in fullPaths:
@@ -261,7 +265,7 @@ class G2LocalHost(G2Host):
         '''
         
         connection = self._get_connection(sourceHost, 'ftp')
-        outputDir = os.path.join(self.basePath, directory)
+        outputDir = os.path.join(self.dataPath, directory)
         newPaths = connection.fetch(fullPaths, outputDir)
         return newPaths
 
@@ -358,9 +362,9 @@ class G2LocalHost(G2Host):
         if compress:
             fullPaths = self.compress(relativePaths)
         else:
-            fullPaths = [os.path.join(self.basePath, p) \
+            fullPaths = [os.path.join(self.dataPath, p) \
                          for p in relativePaths]
-        fullDestPath = os.path.join(destHost.basePath, destPath)
+        fullDestPath = os.path.join(destHost.dataPath, destPath)
         result = []
         for path in fullPaths:
             shutil.copy(path, fullDestPath)
@@ -386,7 +390,7 @@ class G2LocalHost(G2Host):
             if path.startswith(os.path.sep):
                 thePath = path
             else:
-                thePath = os.path.join(self.basePath, path)
+                thePath = os.path.join(self.dataPath, path)
             if thePath.endswith('.bz2'):
                 newPaths.append(thePath)
             else:
@@ -461,7 +465,7 @@ class G2LocalHost(G2Host):
         '''
 
         for relPath in relativePathList:
-            fullPath = os.path.join(self.basePath, relPath)
+            fullPath = os.path.join(self.dataPath, relPath)
             try:
                 self.logger.debug('Deleting %s...' % fullPath)
                 os.remove(fullPath)
@@ -477,21 +481,29 @@ class G2LocalHost(G2Host):
     def change_dir(self, destination):
         os.chdir(destination)
 
-    def make_dir(self, directory):
+    def make_dir(self, directory, relativeTo='data'):
         '''Recursively make every directory needed to ensure relativeDirPath.'''
 
-        fullPath = os.path.join(self.basePath, directory)
+        if relativeTo == 'data':
+            basePath = self.dataPath
+        else:
+            basePath = self.codePath
+        fullPath = os.path.join(basePath, directory)
         os.makedirs(fullPath)
 
-    def remove_dir(self, directory):
+    def remove_dir(self, directory, relativeTo='data'):
         '''
         Remove directory along with any content it may have.
         
         Also removes any empty parent directories.
         '''
 
+        if relativeTo == 'data':
+            basePath = self.dataPath
+        else:
+            basePath = self.codePath
         if self.is_dir(directory):
-            fullPath = os.path.join(self.basePath, directory)
+            fullPath = os.path.join(basePath, directory)
             shutil.rmtree(fullPath)
             parentDir = fullPath.rpartition(os.path.sep)[0]
             self.clean_dirs(parentDir)
@@ -499,15 +511,28 @@ class G2LocalHost(G2Host):
     def clean_dirs(self, directory):
         '''Remove the directory if it is empty. Also remove empty parents.'''
 
-        fullPath = os.path.join(self.basePath, directory)
+        fullPath = os.path.join(self.dataPath, directory)
         try:
             os.removedirs(fullPath)
         except OSError:
             pass
 
-    def is_dir(self, directory):
-        fullPath = os.path.join(self.basePath, directory)
+    def is_dir(self, directory, relativeTo='data'):
+        if relativeTo == 'data':
+            basePath = self.dataPath
+        else:
+            basePath = self.codePath
+        fullPath = os.path.join(basePath, directory)
         return os.path.isdir(fullPath)
+
+    def is_file(self, directory, relativeTo='data'):
+        if relativeTo == 'data':
+            basePath = self.dataPath
+        else:
+            basePath = self.codePath
+        fullPath = os.path.join(basePath, directory)
+        return os.path.isfile(fullPath)
+
 
     #FIXME - To be reviewed
     def create_file(self, relativePath, fileContents):
@@ -526,7 +551,7 @@ class G2LocalHost(G2Host):
             A string with the full path to the newly written file.
         '''
 
-        fullPath = os.path.join(self.basePath, relativePath)
+        fullPath = os.path.join(self.dataPath, relativePath)
         # use a try block
         fh = open(fullPath, 'w')
         for line in fileContents:
@@ -637,7 +662,7 @@ class G2RemoteHost(G2Host):
                 if path.startswith(os.path.sep):
                     fullSearchPaths.append(path)
                 else:
-                    fullSearchPaths.append(os.path.join(self.basePath, path))
+                    fullSearchPaths.append(os.path.join(self.dataPath, path))
             foundFiles = self._localConnection['ftp'].find(fullSearchPaths)
         else:
             raise NotImplementedError

@@ -11,11 +11,11 @@ class RunningPackage(models.Model):
                              '(or regular expression) for the area.')
     host = models.ForeignKey(Host)
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, 
-                              default='stopped')
+                              default='stopped', editable=False)
     force = models.BooleanField(default=False, help_text='Should the package'\
                                 ' run even if its outputs are already '\
                                 'available?')
-    result = models.BooleanField(default=False)
+    result = models.BooleanField(default=False, editable=False)
 
     def __unicode__(self):
         #return '%s (%s, %s)' % (self.timeslot, self.settings, self.source)

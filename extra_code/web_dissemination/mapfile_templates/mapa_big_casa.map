@@ -1,0 +1,340 @@
+# Mapfile tutorial
+
+MAP
+    SHAPEPATH '/home/ricardo/Desktop'
+    NAME 'testing'
+    PROJECTION
+        'init=epsg:4326'
+    END
+    WEB
+        METADATA
+            'wms_title' 'testing wms'
+            'wms_onlineresource' 'http://localhost/cgi-bin/mapserv?map=/home/ricardo/Desktop/mapa_big_casa.map&'
+            'wms_srs' 'EPSG:4326'
+            'wms_enable_request' '*'
+        END
+    END
+    IMAGETYPE PNG
+    EXTENT -180 -90 180 90
+    SIZE 800 600
+    IMAGECOLOR 0 255 255
+    
+    LAYER
+        NAME 'DSLF'
+        STATUS OFF
+        TEMPLATE 'templates/blank.html'
+        DUMP TRUE
+        PROJECTION
+            'init=epsg:4326'
+        END
+        METADATA
+            'wms_title' 'DSLF'
+            'wms_srs' 'EPSG:4326'
+            'wms_include_items' 'all'
+            'gml_include_items' 'all'
+        END
+        DATA 'dslf.tif'
+
+        TYPE RASTER
+        CLASSITEM '[pixel]'
+        
+        PROCESSING 'SCALE=100,481'
+        PROCESSING 'SCALE_BUCKETS=12'
+        CLASS
+            EXPRESSION([pixel] < 100)
+            STYLE
+                COLOR 255 255 255
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] >=100 AND [PIXEL] < 131)
+            STYLE
+                COLOR 85 98 112
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] >=131 AND [PIXEL] < 162)
+            STYLE
+                COLOR 82 131 138
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] >=162 AND [PIXEL] < 193)
+            STYLE
+                COLOR 80 166 166
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] >=193 AND [PIXEL] < 224)
+            STYLE
+                COLOR 78 202 193
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] >=224 AND [PIXEL] < 255)
+            STYLE
+                COLOR 114 216 167
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] >=255 AND [PIXEL] < 286)
+            STYLE
+                COLOR 154 229 135
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] >=286 AND [PIXEL] < 317)
+            STYLE
+                COLOR 194 242 103
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] >=317 AND [PIXEL] < 348)
+            STYLE
+                COLOR 215 204 102
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] >=348 AND [PIXEL] < 379)
+            STYLE
+                COLOR 233 159 104
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] >=379 AND [PIXEL] < 410)
+            STYLE
+                COLOR 251 116 106
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] >=410 AND [PIXEL] < 441)
+            STYLE
+                COLOR 239 99 102
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] >=441 AND [PIXEL] < 480)
+            STYLE
+                COLOR 196 77 88
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] >= 480)
+            STYLE
+                COLOR 255 0 0
+            END
+        END
+    END
+    LAYER
+        NAME 'DSSF'
+        STATUS OFF
+        TEMPLATE 'templates/blank.html'
+        DUMP TRUE
+        PROJECTION
+            'init=epsg:4326'
+        END
+        METADATA
+            'wms_title' 'DSSF'
+            'wms_srs' 'EPSG:4326'
+            'wms_include_items' 'all'
+            'gml_include_items' 'all'
+        END
+        DATA 'dssf.tif'
+
+        TYPE RASTER
+        CLASSITEM '[pixel]'
+
+        PROCESSING 'SCALE=0,1101'
+        PROCESSING 'SCALE_BUCKETS=12'
+        CLASS
+            EXPRESSION([pixel] < 0)
+            STYLE
+                COLOR 255 255 255
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] >=0 AND [PIXEL] < 91)
+            STYLE
+                COLOR 89 79 79
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] >=91 AND [PIXEL] < 182)
+            STYLE
+                COLOR 87 92 95
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] >=182 AND [PIXEL] < 273)
+            STYLE
+                COLOR 85 106 111
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] >=273 AND [PIXEL] < 364)
+            STYLE
+                COLOR 84 120 127
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] >=364 AND [PIXEL] < 455)
+            STYLE
+                COLOR 79 137 140
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] >=455 AND [PIXEL] < 546)
+            STYLE
+                COLOR 74 154 153
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] >=546 AND [PIXEL] < 637)
+            STYLE
+                COLOR 69 172 167
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] >=637 AND [PIXEL] < 728)
+            STYLE
+                COLOR 97 189 169
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] >=728 AND [PIXEL] < 819)
+            STYLE
+                COLOR 126 206 171
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] >=819 AND [PIXEL] < 910)
+            STYLE
+                COLOR 155 223 172
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] >=910 AND [PIXEL] < 1001)
+            STYLE
+                COLOR 179 232 179
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] >=1001 AND [PIXEL] < 1100)
+            STYLE
+                COLOR 229 252 194
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] >= 1100)
+            STYLE
+                COLOR 255 0 0
+            END
+        END
+    END
+    LAYER
+        NAME 'LST'
+        STATUS OFF
+        TEMPLATE 'templates/blank.html'
+        DUMP TRUE
+        PROJECTION
+            'init=epsg:4326'
+        END
+        METADATA
+            'wms_title' 'Land Surface Temperature'
+            'wms_srs' 'EPSG:4326'
+            'wms_include_items' 'all'
+            'gml_include_items' 'all'
+        END
+        DATA 'lst.tif'
+
+        TYPE RASTER
+        CLASSITEM '[pixel]'
+        
+        PROCESSING 'SCALE=-130,101'
+        PROCESSING 'SCALE_BUCKETS=12'
+        CLASS
+            EXPRESSION([pixel] < -130)
+            STYLE
+                COLOR 255 255 255
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] >=-130 AND [PIXEL] < -111)
+            STYLE
+                COLOR 105 210 231
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] >=-111 AND [PIXEL] < -92)
+            STYLE
+                COLOR 125 212 226
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] >=-92 AND [PIXEL] < -73)
+            STYLE
+                COLOR 145 215 221
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] >=-73 AND [PIXEL] < -54)
+            STYLE
+                COLOR 166 218 216
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] >=-54 AND [PIXEL] < -35)
+            STYLE
+                COLOR 185 221 212
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] >=-35 AND [PIXEL] < -16)
+            STYLE
+                COLOR 203 224 208
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] >=-16 AND [PIXEL] < 3)
+            STYLE
+                COLOR 222 227 204
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] >=3 AND [PIXEL] < 22)
+            STYLE
+                COLOR 230 197 153
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] >=22 AND [PIXEL] < 41)
+            STYLE
+                COLOR 236 166 102
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] >=41 AND [PIXEL] < 60)
+            STYLE
+                COLOR 242 135 51
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] >=60 AND [PIXEL] < 79)
+            STYLE
+                COLOR 245 125 33
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] >=79 AND [PIXEL] < 100)
+            STYLE
+                COLOR 250 105 0
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] >= 100)
+            STYLE
+                COLOR 255 0 0
+            END
+        END
+    END
+END

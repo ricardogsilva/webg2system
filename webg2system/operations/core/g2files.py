@@ -320,7 +320,7 @@ class G2File(GenericItem):
                             parentPackObj = self._create_originator_pack(pOut)
             fullPath = eval('parentPackObj.%s' % dirName)
             # trimming the first character in order to eliminate the '/'
-            relativePath = fullPath.replace(self.parent.host.basePath, '')[1:]
+            relativePath = fullPath.replace(self.parent.host.dataPath, '')[1:]
             thePath = relativePath
         else:
             thePath = utilities.parse_marked(markedString, obj)

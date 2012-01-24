@@ -1,0 +1,119 @@
+# Mapfile tutorial
+
+MAP
+    SHAPEPATH '/home/geo2/test_data'
+    NAME 'testing'
+    PROJECTION
+        'init=epsg:4326'
+    END
+    WEB
+        METADATA
+            'wms_title' 'testing wms'
+            'wms_onlineresource' 'http://localhost/cgi-bin/mapserv?map=/home/geo2/dev/mapfiles/mapa_big.map&'
+            'wms_srs' 'EPSG:4326'
+            'wms_enable_request' '*'
+        END
+    END
+    IMAGETYPE PNG
+    EXTENT -180 -90 180 90
+    SIZE 800 600
+    IMAGECOLOR 0 255 255
+    
+    LAYER
+        NAME 'test_DSLF com big file'
+        STATUS OFF
+        TEMPLATE 'templates/blank.html'
+        DUMP TRUE
+        PROJECTION
+            'init=epsg:4326'
+        END
+        METADATA
+            'wms_title' 'DSLF experiences'
+            'wms_srs' 'EPSG:4326'
+            'wms_include_items' 'all'
+            'gml_include_items' 'all'
+        END
+        DATA 'big.tif'
+
+        TYPE RASTER
+        
+        PROCESSING 'SCALE=0,500'
+        PROCESSING 'SCALE_BUCKETS=12'
+        CLASSITEM '[pixel]'
+        CLASS
+            EXPRESSION ([pixel] < 100)
+            STYLE
+                COLOR 255 255 255
+            END
+        END
+        CLASS
+            EXPRESSION ([pixel] >= 100 AND [pixel] < 138)
+            STYLE
+                COLOR 0 176 167
+            END
+        END
+        CLASS
+            EXPRESSION ([pixel] >= 138 AND [pixel] < 176)
+            STYLE
+                COLOR 30 255 245
+            END
+        END
+        CLASS
+            EXPRESSION ([pixel] >= 176 AND [pixel] < 214)
+            STYLE
+                COLOR 138 241 201
+            END
+        END
+        CLASS
+            EXPRESSION ([pixel] >= 214 AND [pixel] < 252)
+            STYLE
+                COLOR 64 252 102
+            END
+        END
+        CLASS
+            EXPRESSION ([pixel] >= 252 AND [pixel] < 290)
+            STYLE
+                COLOR 253 255 53
+            END
+        END
+
+        CLASS
+            EXPRESSION ([pixel] >= 290 AND [pixel] < 328)
+            STYLE
+                COLOR 255 210 61
+            END
+        END
+        CLASS
+            EXPRESSION ([pixel] >= 328 AND [pixel] < 366)
+            STYLE
+                COLOR 213 182 78
+            END
+        END
+        CLASS
+            EXPRESSION ([pixel] >= 366 AND [pixel] < 404)
+            STYLE
+                COLOR 213 127 78
+            END
+        END
+        CLASS
+            EXPRESSION ([pixel] >= 404 AND [pixel] < 442)
+            STYLE
+                COLOR 213 78 88
+            END
+        END
+
+        CLASS
+            EXPRESSION ([pixel] >= 442 AND [pixel] < 480)
+            STYLE
+                COLOR 213 78 156
+            END
+        END
+        CLASS
+            EXPRESSION ([pixel] >= 480)
+            STYLE
+                COLOR 141 78 213
+            END
+        END
+    END
+
+END

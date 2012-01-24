@@ -251,24 +251,31 @@ class NGPMapper(Mapper): #crappy name
             v = None
         return h, v
 
-    def create_mapfile(self, geotifPath, outputPath, template):
+    def create_mapfile(self, geotifRelativePath, geotifCommonDir, outputPath, template):
         '''
         Create a new mapfile for UMN Mapserver based on the template.
 
         Inputs:
 
-            geotifPath - The full path to the geotif that is to be served
-                by the mapfile.
+            geotifRelativePath - The relative path to the geotif file.
+                This path is relative to 'geotifCommonDir'.
+
+            geotifCommonDir - A common directory that is parent to all the
+                generated geotiffs, so that mapserver can find the
+                files that belong to different layers.
 
             outputPath - The full path of the new mapfile.
 
             template - The full path to the template mapfile to use.
         '''
 
-        dataPath, tifName = os.path.split(geotifPath)
         templateMap = mapscript.mapObj(template)
-        mapfile = templateMap.clone()
-        mapfile.shapepath = dataPath
+        # look for the file, it may already be there
+        if self.host.is_file(outputPath):
+            mapfile = mapscript.mapObj(outputPath)
+        else:
+            mapfile = templateMap.clone()
+        mapfile.shapepath = geotifCommonDir
         mapfile.name = 'quicklooks'
         mapWMSMetadata = mapfile.web.metadata
         mapWMSMetadata.set('wms_title', 'quicklooks')
@@ -276,14 +283,18 @@ class NGPMapper(Mapper): #crappy name
                         'http://%s/cgi-bin/mapserv?map=%s&' \
                         % (self.host.host, outputPath))
         layer = mapfile.getLayerByName(self.product.shortName)
-        layer.data = tifName
+        layer.data = geotifRelativePath
         layer.status = mapscript.MS_ON
         layerWMSMetadata = layer.metadata
         layerWMSMetadata.set('wms_title', self.product.shortName)
+        for i in range(mapfile.numlayers):
+            otherLayer = mapfile.getLayer(i)
+            if otherLayer.name != layer.name:
+                otherLayer.status = mapscript.MS_OFF
         mapfile.save(outputPath)
         return outputPath
 
-    def generate_quicklooks(self, outputPath, mapfile, fileList):
+    def generate_quicklooks(self, outputDir, mapfile, fileList):
         '''
         Generate the quicklook files.
 
@@ -303,7 +314,7 @@ class NGPMapper(Mapper): #crappy name
         quickLooks = []
         tileXLength = self.nCols * float(self.product.pixelSize)
         tileYLength = self.nLines * float(self.product.pixelSize)
-        legendPath = os.path.join(outputPath, 'legend.png')
+        legendPath = os.path.join(outputDir, 'legend.png')
         legendCommand = 'legend %s %s' % (mapfile, legendPath)
         mapfileDir = os.path.dirname(mapfile)
         self.host.run_program(legendCommand, mapfileDir)
@@ -315,14 +326,14 @@ class NGPMapper(Mapper): #crappy name
                                                               tileXLength, 
                                                               tileYLength)
             minx = firstLon
-            miny = firstLat + tileYLength
+            miny = firstLat - tileYLength
             maxx = firstLon + tileXLength
             maxy = firstLat
-            rawQuickPath = os.path.join(outputPath, 'rawquicklook_%s.png' % fname)
+            rawQuickPath = os.path.join(outputDir, 'rawquicklook_%s.png' % fname)
             command = 'shp2img -m %s -o %s -e %i %i %i %i -s '\
                       '400 400 -l %s' % (mapfile, rawQuickPath, minx, miny, 
                                          maxx, maxy, self.product.shortName)
-            self.host.run_program(command)
+            stdout, stderr, retcode = self.host.run_program(command)
             outPath = self._complete_quicklook(rawQuickPath, legendPath)
             quickLooks.append(outPath)
             self.remove_temps([rawQuickPath])
