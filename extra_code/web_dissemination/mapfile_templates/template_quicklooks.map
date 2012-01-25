@@ -313,7 +313,7 @@ MAP
             EXPRESSION([pixel] > 70)
             NAME "> 70 C"
             STYLE
-                COLOR 255 0 0
+                COLOR 0 100 0
             END
         END
     END

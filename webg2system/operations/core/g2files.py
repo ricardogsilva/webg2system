@@ -354,7 +354,8 @@ class G2File(GenericItem):
         pack = None
         # lets see if the package has been created before already
         for aPack in self._originatorPackages:
-            if aPack.source.area == theArea.name and \
+            if aPack.name == packSettings.name and \
+                    aPack.source.area == theArea.name and \
                     aPack.timeslot == theTimeslot and \
                     aPack.__class__.__name__ == theClass:
                         pack = aPack

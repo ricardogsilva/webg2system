@@ -283,6 +283,10 @@ class NGPMapper(Mapper): #crappy name
                         'http://%s/cgi-bin/mapserv?map=%s&' \
                         % (self.host.host, outputPath))
         layer = mapfile.getLayerByName(self.product.shortName)
+        if layer is None:
+            layerIndex = mapfile.insertLayer(templateMap.getLayerByName(
+                                             self.product.shortName))
+            layer = mapfile.getLayer(layerIndex)
         layer.data = geotifRelativePath
         layer.status = mapscript.MS_ON
         layerWMSMetadata = layer.metadata
@@ -294,6 +298,9 @@ class NGPMapper(Mapper): #crappy name
         mapfile.save(outputPath)
         return outputPath
 
+    # FIXME
+    # - Use mapscript.imageObj to generate the quicklooks instead of
+    #   launching the shp2img external process       
     def generate_quicklooks(self, outputDir, mapfile, fileList):
         '''
         Generate the quicklook files.

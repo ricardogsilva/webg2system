@@ -52,12 +52,14 @@ class GenericPackage(GenericItem):
         for specificSettings in filesSettings:
             timeslots = []
             for tsDisplacement in specificSettings.specificTimeslots.all():
-                timeslots += utilities.displace_timeslot(self.timeslot, tsDisplacement)
+                timeslots += utilities.displace_timeslot(self.timeslot, 
+                                                         tsDisplacement)
             if len(timeslots) == 0:
                 timeslots.append(self.timeslot)
             specificAreas = [a for a in specificSettings.specificAreas.all()]
             if len(specificAreas) == 0:
-                specificAreas = systemsettings.models.Source.objects.get(name=self.source.generalName).area_set.all()
+                specificAreas = systemsettings.models.Source.objects.get(\
+                                name=self.source.generalName).area_set.all()
             for spArea in specificAreas:
                 for spTimeslot in timeslots:
                     # create a new input
@@ -165,6 +167,8 @@ class ProcessingPackage(GenericPackage):
         super(ProcessingPackage, self).__init__(timeslot, area.name, host)
         for extraInfo in settings.packageextrainfo_set.all():
             exec('self.%s = "%s"' % (extraInfo.name, extraInfo.string))
+        # a random number for generating unique working dirs
+        self.random = randint(0, 100)
 
     def find_inputs(self, useArchive=False):
         self.logger.debug('Looking for %s\'s inputs...' % self.name)
@@ -263,7 +267,7 @@ class FetchData(ProcessingPackage):
             host - A systemsettings.models.Host object
         '''
 
-        super(ProcessingPackage, self).__init__(timeslot, area.name, host)
+        super(FetchData, self).__init__(settings, timeslot, area, host)
         self.rawSettings = settings
         self.name = settings.name
         relativeOutDir = utilities.parse_marked(
@@ -375,6 +379,50 @@ class FetchData(ProcessingPackage):
         return 0
 
 
+class LRITPreprocessor(ProcessingPackage):
+    '''
+    !This class is not finished yet!
+    '''
+
+    def __init__(self, settings, timeslot, area, host):
+        super(LRITPreprocessor, self).__init__(settings, timeslot, area, host)
+        self.rawSettings = settings
+        self.name = settings.name
+        relOutDir = utilities.parse_marked(
+                settings.packagepath_set.get(name='outputDir'), 
+                self)
+        self.outputDir = os.path.join(self.host.dataPath, relOutDir)
+        relStaticOutDir = utilities.parse_marked(
+                settings.packagepath_set.get(name='staticOutputDir'), 
+                self)
+        self.staticOutputDir = os.path.join(self.host.dataPath, relStaticOutDir)
+        relWorkingDir = utilities.parse_marked(
+                settings.packagepath_set.get(name='workingDir'), 
+                self)
+        self.workingDir = os.path.join(self.host.dataPath, relWorkingDir)
+        relCodeDir = utilities.parse_marked(
+                settings.packagepath_set.get(name='codeDir'), 
+                self)
+        self.codeDir = os.path.join(self.host.dataPath, relCodeDir)
+        self.inputs = self._create_files('input', settings.packageInput_\
+                                         systemsettings_packageinput_\
+                                         related.all())
+        self.outputs = self._create_files('output', settings.packageInput_\
+                                          systemsettings_packageinput_\
+                                          related.all())
+
+
+class GRIBPreprocessor(ProcessingPackage):
+    '''
+    !This class is not finished yet!
+    '''
+
+    def __init__(self, settings, timeslot, area, host):
+        super(LRITPreprocessor, self).__init__(settings, timeslot, area, host)
+        self.rawSettings = settings
+        self.name = settings.name
+
+
 class DataFusion(ProcessingPackage):
     '''
     !This class is not finished yet!
@@ -407,8 +455,6 @@ class DataFusion(ProcessingPackage):
         super(DataFusion, self).__init__(settings, timeslot, area, host)
         self.rawSettings = settings
         self.name = settings.name
-        # a random number for generating unique working dirs
-        self.random = randint(0, 100)
         relativeOutDir = utilities.parse_marked(
                 settings.packagepath_set.get(name='outputDir'), 
                 self)
@@ -446,8 +492,6 @@ class WebDisseminator(ProcessingPackage):
         super(WebDisseminator, self).__init__(settings, timeslot, area, host)
         self.rawSettings = settings
         self.name = settings.name
-        # a random number for generating unique working dirs
-        self.random = randint(0, 100)
         relCodeDir = utilities.parse_marked(
                 settings.packagepath_set.get(name='codeDir'), self)
         self.codeDir = os.path.join(self.host.codePath, relCodeDir)
@@ -484,8 +528,9 @@ class WebDisseminator(ProcessingPackage):
         self.mapper = mappers.NGPMapper(self.inputs[0]) # <- badly defined
 
     def clean_up(self, callback=None):
-        self._delete_directories([self.workingDir, self.quickviewOutDir])
+        self._delete_directories([self.workingDir])
         self.host.clean_dirs(self.mapfileOutDir)
+        self.host.clean_dirs(self.quickviewOutDir)
         return 0
 
     def prepare(self, callback=None):

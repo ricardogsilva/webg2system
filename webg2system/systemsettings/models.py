@@ -83,7 +83,7 @@ class File(Item):
                                               'blank if you want to search '\
                                               'all the archives.', 
                                               verbose_name='Specific archives')
-    product = models.ForeignKey('Product', null=True)
+    product = models.ForeignKey('Product', null=True, blank=True)
 
     def get_except_hours(self):
         return ', '.join([str(h.hour) for h in self.exceptHours.all()])
