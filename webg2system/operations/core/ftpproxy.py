@@ -60,7 +60,7 @@ class FTPProxy(object):
 
         result = False
         if self._test_for_connection():
-            self.logger.debug('The connection already exists')
+            #self.logger.debug('The connection already exists')
             try:
                 #check for timeouts
                 self.connection.pwd()
@@ -204,7 +204,6 @@ class FTPProxy(object):
             if not False in [i == 226.0 for i in results]:
                 # 226 is the FTP return code that indicates a successful transfer
                 endResult = 0
-            self.logger.debug("send method exiting.")
         return endResult
 
     # FIXME

@@ -403,14 +403,67 @@ class LRITPreprocessor(ProcessingPackage):
         relCodeDir = utilities.parse_marked(
                 settings.packagepath_set.get(name='codeDir'), 
                 self)
-        self.codeDir = os.path.join(self.host.dataPath, relCodeDir)
-        self.inputs = self._create_files('input', settings.packageInput_\
-                                         systemsettings_packageinput_\
-                                         related.all())
-        self.outputs = self._create_files('output', settings.packageInput_\
-                                          systemsettings_packageinput_\
-                                          related.all())
+        self.codeDir = os.path.join(self.host.codePath, relCodeDir)
+        self.inputs = self._create_files('input', settings.packageInput_systemsettings_packageinput_related.all())
+        self.outputs = self._create_files('output', settings.packageOutput_systemsettings_packageoutput_related.all())
 
+    def write_pcf(self, availableDict):
+        '''
+        Write the product configuration file.
+
+        Inputs:
+
+            availableDict - A dictionary with G2File objects as keys and
+                lists with the full paths to the respective files as values.
+
+        Returns:
+
+            The full path to the newly-written product configuration file.
+        '''
+
+        pcfPath = os.path.join(self.workingDir, 
+                               'preProcessorConfigurationFile.txt')
+        fileContents = "" 
+        for g2f, pathList in availableDict.iteritems():
+          for path in pathList:
+              fileContents += "%s\n" % path 
+        self.host.create_file(pcfPath, fileContents)
+        return pcfPath
+
+    def execute_external_algorithm(self, pcfPath):
+        '''
+        Run the external algorithm.
+
+        Inputs:
+
+            pcfPath - The full path to the product configuration file
+        '''
+
+        numInputs = self.host.count_file_lines(pcfPath)
+        command = './wrapper_g2.exe %s %s %s %i %s' % (self.source.area,
+                                                       self.staticOutputDir,
+                                                       self.outputDir,
+                                                       numInputs,
+                                                       pcfPath)
+        self.logger.info('external command:\n\t%s' % command)
+        runningDir = os.path.join(self.codeDir, '%s_v%s' % (self.codeName, 
+                                                            self.version))
+        self.logger.info('runningDir:\n\t%s' % runningDir)
+        return self.host.run_program(command, workingDir=runningDir)
+
+    def run_main(self, callback=None):
+        fetched = self.fetch_inputs(useArchive=True)
+        pcfPath = self.write_pcf(fetched)
+        stdout, stderr, retCode = self.execute_external_algorithm(pcfPath)
+        return retCode
+
+    def clean_up(self, compressOutputs=True, callback=None):
+        self._delete_directories([self.workingDir])
+        self.host.clean_dirs(self.outputDir)
+        self.host.clean_dirs(self.staticOutputDir)
+        if compressOutputs:
+            self.compress_outputs()
+        return 0
 
 class GRIBPreprocessor(ProcessingPackage):
     '''

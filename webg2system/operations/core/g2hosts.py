@@ -139,6 +139,9 @@ class G2Host(object):
     def create_file(self):
         raise NotImplementedError
 
+    def count_file_lines(self, filePath):
+        raise NotImplementedError
+
     def delete_files(self):
         raise NotImplementedError
 
@@ -285,8 +288,8 @@ class G2LocalHost(G2Host):
         if hostConnections is not None:
             connection = hostConnections.get(protocol)
             if connection is not None:
-                self.logger.debug('Reusing previously opened connection to %s.'\
-                                 % host.name)
+                #self.logger.debug('Reusing previously opened connection to %s.'\
+                #                 % host.name)
                 result = connection
             else:
                 self.logger.debug('Creating connection to %s with protocol %s' % 
@@ -535,13 +538,13 @@ class G2LocalHost(G2Host):
 
 
     #FIXME - To be reviewed
-    def create_file(self, relativePath, fileContents):
+    def create_file(self, filePath, fileContents):
         '''
         Create a new text file.
 
         Inputs:
 
-            relativePath - A string with the relative path to the new file.
+            filePath - A string with the path to the new file.
 
             fileContents - A list of strings with the lines of text that the
                 new file should contain.
@@ -551,13 +554,26 @@ class G2LocalHost(G2Host):
             A string with the full path to the newly written file.
         '''
 
-        fullPath = os.path.join(self.dataPath, relativePath)
+        fullPath = os.path.join(self.dataPath, filePath)
         # use a try block
         fh = open(fullPath, 'w')
         for line in fileContents:
             fh.write(line)
         fh.close()
         return fullPath
+
+    def count_file_lines(self, filePath):
+        '''
+        Return the number of lines that exist in the input file.
+        '''
+
+        fullPath = os.path.join(self.dataPath, filePath)
+        numLines = 0
+        fh = open(fullPath)
+        for line in fh:
+            numLines += 1
+        fh.close()
+        return numLines
 
     def get_hdf5_params(self, latFile, lonFile):
         '''
