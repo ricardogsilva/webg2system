@@ -120,7 +120,7 @@ class G2Host(object):
     def __repr__(self):
         return self.name
 
-    # method stubs
+    # method stubs to be implemented by subclasses
     def find(self, pathList):
         raise NotImplementedError
 
@@ -148,6 +148,9 @@ class G2Host(object):
     def get_cwd(self):
         raise NotImplementedError
 
+    def list_dir(self):
+        raise NotImplementedError
+
     def change_dir(self):
         raise NotImplementedError
 
@@ -170,6 +173,10 @@ class G2LocalHost(G2Host):
     """
     This class has the implementation of the local file IO operations.
     """
+
+    def list_dir(self, directory):
+        fullPath = os.path.join(self.dataPath, directory)
+        return [os.path.join(fullPath, p) for p in os.listdir(fullPath)]
 
     def find(self, pathList):
         '''
@@ -325,8 +332,7 @@ class G2LocalHost(G2Host):
                                                               remoteHost=host)
         return self.connections[host.name][protocol]
 
-    #FIXME - To be reviewed
-    def send(self, relativePaths, destPath, destHost, compress):
+    def send(self, relativePaths, destDir, destHost):
         '''
         Copy files to another directory, located on a G2Host machine.
 
@@ -334,48 +340,40 @@ class G2LocalHost(G2Host):
             
             fullPaths - A list with the relative paths of the files to send.
 
-            destPath - A string with the relative path on the destination
+            destDir - A string with the relative path on the destination
                 host where the files are to be sent to.
 
             destHost - A G2Host instance, specifying the machine that will
                 receive the files. A value of None (which is also the default)
                 is interpreted as meaning a local host.
 
-            compress - A boolean indicating if the files should be compressed.
-
         Returns:
         '''
 
-        if destHost.isLocal:
-            result = self._send_to_local(relativePaths, destPath, destHost)
+        if destHost is self:
+            result = self._send_to_local(relativePaths, destDir, destHost)
         else:
-            result = self._send_to_remote(relativePaths, destPath, destHost)
+            result = self._send_to_remote(relativePaths, destDir, destHost)
         return result
 
-    #FIXME - To be reviewed
-    def _send_to_local(self, relativePaths, destPath, destHost, compress):
+    def _send_to_local(self, paths, destDir):
         '''
-        Perform a local copy operation with an optional compression step.
+        Perform a local copy operation.
 
         Returns:
 
             A list of full paths to the newly sent files' location.
         '''
 
-        if compress:
-            fullPaths = self.compress(relativePaths)
-        else:
-            fullPaths = [os.path.join(self.dataPath, p) \
-                         for p in relativePaths]
-        fullDestPath = os.path.join(destHost.dataPath, destPath)
+        fullDestDir = os.path.join(destHost.dataPath, destDir)
         result = []
-        for path in fullPaths:
-            shutil.copy(path, fullDestPath)
-            result.append(os.path.join(fullDestPath, os.path.basename(path)))
+        for path in paths:
+            fullPath = os.path.join(self.dataPath, path)
+            shutil.copy(path, fullDestDir)
+            result.append(os.path.join(fullDestDir, os.path.basename(path)))
         return result
 
-    #FIXME - To be reviewed
-    def _send_to_remote(self, relativePaths, destPath, destHost, compress):
+    def _send_to_remote(self, relativePaths, destPath, destHost):
         raise NotImplementedError
 
     def compress(self, paths):
@@ -435,7 +433,6 @@ class G2LocalHost(G2Host):
                 raise Exception
         return newPaths
 
-    #FIXME - To be reviewed
     def run_program(self, command, workingDir=None):
         '''
         Run an external program.
@@ -536,8 +533,6 @@ class G2LocalHost(G2Host):
         fullPath = os.path.join(basePath, directory)
         return os.path.isfile(fullPath)
 
-
-    #FIXME - To be reviewed
     def create_file(self, filePath, fileContents):
         '''
         Create a new text file.

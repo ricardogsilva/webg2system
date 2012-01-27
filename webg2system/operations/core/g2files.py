@@ -6,6 +6,7 @@
 """
 
 import os
+import re
 
 from systemsettings import models as ss
 
@@ -188,7 +189,6 @@ class G2File(GenericItem):
             fetched.
         '''
 
-        self.logger.info('Fetching %s %s...' % (self.name, self.source.area))
         found = self.find(useArchive)
         result = found['paths']
         if self.toCopy:
@@ -319,12 +319,19 @@ class G2File(GenericItem):
                             #                 (self.name, pSetts.name))
                             parentPackObj = self._create_originator_pack(pOut)
             fullPath = eval('parentPackObj.%s' % dirName)
+            correctedDateDirs = self._correct_date_directories(fullPath)
             # trimming the first character in order to eliminate the '/'
-            relativePath = fullPath.replace(self.parent.host.dataPath, '')[1:]
+            relativePath = correctedDateDirs.replace(self.parent.host.dataPath, '')[1:]
             thePath = relativePath
         else:
             thePath = utilities.parse_marked(markedString, obj)
         return thePath
+
+    def _correct_date_directories(self, path):
+        dateDirPatt = re.compile(r'\d{4}/\d{2}/\d{2}')
+        correctDateDir = self.timeslot.strftime('%Y/%m/%d')
+        return dateDirPatt.sub(correctDateDir, path)
+
 
     def _create_originator_pack(self, outputSettings):
         '''
@@ -337,9 +344,14 @@ class G2File(GenericItem):
             # the package's timeslot is the same as the output's
             theTimeslot = self.timeslot
         else:
+            # find this g2f in the outputs, take its displacement and create
+            # a new timeslot simmetrically displaced
             specTimeslot = specificTimeslots[0]
             theTimeslot = utilities.recover_timeslot(self.timeslot, 
                                                       specTimeslot)
+            self.logger.debug('self.timeslot: %s\t%s package\'s timeslot: %s' \
+                              % (self.name, self.timeslot, packSettings.name, 
+                                 theTimeslot))
         specificAreas = outputSettings.specificAreas.all()
         if len(specificAreas) == 0:
             # the package's area is the same as the output's

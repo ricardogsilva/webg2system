@@ -183,29 +183,44 @@ class ProcessingPackage(GenericPackage):
         Return a boolean indicating if the outputs are already available.
 
         The outputs are searched only in the defined host and NOT in the
-        archives.
+        archives. If there are optional outputs that cannot be found, a
+        warning message is thrown.
         '''
 
         allAvailable = True
         found = self.find_outputs(useArchive=False)
         for g2f, foundDict in found.iteritems():
             if len(foundDict['paths']) == 0:
-                allAvailable = False
-                break
+                if not g2f.optional:
+                    allAvailable = False
+                    break
+                else:
+                    self.logger.warning('Couldn\'t find %s, but it is marked'\
+                                        ' as \'Optional\' in the settings, '\
+                                        'so continuing.' % g2f.name)
         return allAvailable
 
-    def delete_outputs(self, callback=None):
+    def delete_outputs(self, callback=None, deleteStatics=False):
         '''
         Delete the package's output files.
+
+        Inputs:
+
+            deleteStatics - A boolean indicating if the static outputs should
+                be deleted (if there are any).
         '''
 
         foundOutputs = self.find_outputs(useArchive=False)
         for g2f, foundDict in foundOutputs.iteritems():
-            foundDict['host'].delete_files(foundDict['paths'])
+            if not (g2f.frequency == 'static' and deleteStatics):
+                foundDict['host'].delete_files(foundDict['paths'])
 
     def _delete_inputs(self):
         '''
         Delete the package's input files from their original location.
+
+        BEWARE: This method should be used with care, because it can potentially
+        delete important files.
         '''
 
         foundInputs = self.find_inputs(useArchive=False)
@@ -225,12 +240,16 @@ class ProcessingPackage(GenericPackage):
         Compress the outputs of this package with bzip2.
         '''
 
-        self.logger.info('Compressing %s outputs...' % self.name)
         foundOutputs = self.find_outputs(useArchive=False)
         toCompress = []
         for g2f, foundDict in foundOutputs.iteritems():
-            for p in foundDict['paths']:
-                toCompress.append(p)
+            if g2f.toCompress:
+                for p in foundDict['paths']:
+                    toCompress.append(p)
+            else:
+                self.logger.debug('%s is not marked as \'Compress\' in the '\
+                                  'settings, skipping...' % g2f.name)
+        self.logger.info('Compressing %s outputs...' % self.name)
         self.host.compress(toCompress)
 
     def decompress_outputs(self):
@@ -378,10 +397,38 @@ class FetchData(ProcessingPackage):
             self.compress_outputs()
         return 0
 
+class PreProcessor(ProcessingPackage):
 
-class LRITPreprocessor(ProcessingPackage):
+    def write_pcf(self, availableDict):
+        '''
+        Write the product configuration file.
+
+        Inputs:
+
+            availableDict - A dictionary with G2File objects as keys and
+                lists with the full paths to the respective files as values.
+
+        Returns:
+
+            The full path to the newly-written product configuration file.
+        '''
+
+        pcfPath = os.path.join(self.workingDir, 
+                               'preProcessorConfigurationFile.txt')
+        fileContents = "" 
+        for g2f, pathList in availableDict.iteritems():
+          for path in pathList:
+              fileContents += "%s\n" % path 
+        self.host.create_file(pcfPath, fileContents)
+        return pcfPath
+
+
+class LRITPreprocessor(PreProcessor):
     '''
-    !This class is not finished yet!
+    This class is parent to the more specialized pre processing classes
+    for the GRIB and LRIT inputs.
+
+    It provides some common methods.
     '''
 
     def __init__(self, settings, timeslot, area, host):
@@ -407,29 +454,8 @@ class LRITPreprocessor(ProcessingPackage):
         self.inputs = self._create_files('input', settings.packageInput_systemsettings_packageinput_related.all())
         self.outputs = self._create_files('output', settings.packageOutput_systemsettings_packageoutput_related.all())
 
-    def write_pcf(self, availableDict):
-        '''
-        Write the product configuration file.
-
-        Inputs:
-
-            availableDict - A dictionary with G2File objects as keys and
-                lists with the full paths to the respective files as values.
-
-        Returns:
-
-            The full path to the newly-written product configuration file.
-        '''
-
-        pcfPath = os.path.join(self.workingDir, 
-                               'preProcessorConfigurationFile.txt')
-        fileContents = "" 
-        for g2f, pathList in availableDict.iteritems():
-          for path in pathList:
-              fileContents += "%s\n" % path 
-        self.host.create_file(pcfPath, fileContents)
-        return pcfPath
-
+    # FIXME
+    # Add real-time logging of the FORTRAN output
     def execute_external_algorithm(self, pcfPath):
         '''
         Run the external algorithm.
@@ -440,20 +466,25 @@ class LRITPreprocessor(ProcessingPackage):
         '''
 
         numInputs = self.host.count_file_lines(pcfPath)
+        if not self.host.is_dir(self.outputDir):
+            self.host.make_dir(self.outputDir)
+        if not self.host.is_dir(self.staticOutputDir):
+            self.host.make_dir(self.staticOutputDir)
         command = './wrapper_g2.exe %s %s %s %i %s' % (self.source.area,
                                                        self.staticOutputDir,
                                                        self.outputDir,
                                                        numInputs,
                                                        pcfPath)
-        self.logger.info('external command:\n\t%s' % command)
         runningDir = os.path.join(self.codeDir, '%s_v%s' % (self.codeName, 
                                                             self.version))
-        self.logger.info('runningDir:\n\t%s' % runningDir)
+        #self.logger.info('external command:\n\t%s' % command)
+        #self.logger.info('runningDir:\n\t%s' % runningDir)
         return self.host.run_program(command, workingDir=runningDir)
 
     def run_main(self, callback=None):
         fetched = self.fetch_inputs(useArchive=True)
         pcfPath = self.write_pcf(fetched)
+        self.logger.info('Running FORTRAN code...')
         stdout, stderr, retCode = self.execute_external_algorithm(pcfPath)
         return retCode
 
@@ -465,15 +496,88 @@ class LRITPreprocessor(ProcessingPackage):
             self.compress_outputs()
         return 0
 
-class GRIBPreprocessor(ProcessingPackage):
+
+class GRIBPreprocessor(PreProcessor):
     '''
     !This class is not finished yet!
     '''
 
     def __init__(self, settings, timeslot, area, host):
-        super(LRITPreprocessor, self).__init__(settings, timeslot, area, host)
+        super(GRIBPreprocessor, self).__init__(settings, timeslot, area, host)
         self.rawSettings = settings
         self.name = settings.name
+        relOutDir = utilities.parse_marked(
+                settings.packagepath_set.get(name='outputDir'), 
+                self)
+        self.outputDir = os.path.join(self.host.dataPath, relOutDir)
+        relWorkingDir = utilities.parse_marked(
+                settings.packagepath_set.get(name='workingDir'), 
+                self)
+        self.workingDir = os.path.join(self.host.dataPath, relWorkingDir)
+        relCodeDir = utilities.parse_marked(
+                settings.packagepath_set.get(name='codeDir'), 
+                self)
+        self.codeDir = os.path.join(self.host.codePath, relCodeDir)
+        self.tempOutputDir = os.path.join(self.workingDir, 'tempOutput')
+        self.inputs = self._create_files('input', settings.packageInput_systemsettings_packageinput_related.all())
+        self.outputs = self._create_files('output', settings.packageOutput_systemsettings_packageoutput_related.all())
+
+    def clean_up(self, compressOutputs=True, callback=None):
+        self._delete_directories([self.workingDir])
+        self.host.clean_dirs(self.outputDir)
+        if compressOutputs:
+            self.compress_outputs()
+        return 0
+
+    def execute_external_algorithm(self, pcfPath):
+        '''
+        Run the external algorithm.
+
+        Inputs:
+
+            pcfPath - The full path to the product configuration file
+        '''
+
+        numInputs = self.host.count_file_lines(pcfPath)
+        if not self.host.is_dir(self.tempOutputDir):
+            self.host.make_dir(self.tempOutputDir)
+        command = './wrapper_g2.exe %s "" %s %i %s' % (self.source.area,
+                                                    self.tempOutputDir, 
+                                                    numInputs,
+                                                    pcfPath)
+        runningDir = os.path.join(self.codeDir, '%s_v%s' % (self.codeName, 
+                                                            self.version))
+        #self.logger.info('external command:\n\t%s' % command)
+        #self.logger.info('runningDir:\n\t%s' % runningDir)
+        return self.host.run_program(command, workingDir=runningDir)
+
+    def run_main(self, callback=None):
+        fetched = self.fetch_inputs(useArchive=True)
+        pcfPath = self.write_pcf(fetched)
+        self.logger.info('Running FORTRAN code...')
+        stdout, stderr, retCode = self.execute_external_algorithm(pcfPath)
+        self.logger.info('Moving outputs to their final destination...')
+        self._move_outputs_to_final_dir()
+        return retCode
+
+    # not tested yet!
+    def _move_outputs_to_final_dir(self):
+        '''
+        Move the outputs from the external algorithm to their final dir.
+
+        Since the external FORTRAN code will generate multiple outputs for
+        several timeslots, it is necessary to adjust the outputDir.
+        '''
+
+        for filePath in self.host.list_dir(self.tempOutputDir):
+            for g2f in self.outputs:
+                for patt in g2f.searchPatterns:
+                    if re.search(patt, filePath) is not None:
+                        finalDir = g2f.searchPaths[0]
+                        if not self.host.is_dir(finalDir):
+                            self.host.make_dir(finalDir)
+                        self.host.send(filePath, finalDir, self.host)
+        
 
 
 class DataFusion(ProcessingPackage):
