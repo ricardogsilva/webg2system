@@ -226,7 +226,7 @@ class G2LocalHost(G2Host):
             relativeDestinationDir - The directory on the local host where
                 the files will be copied to. It will be created in case it
                 doens't exist. This directory is relative to the host's
-                "dataPath" attribute.
+                codePath or dataPath attribute (see the 'relativeTo' input).
             
             sourceHost - A G2host instance representing the host where the
                 files will be copied from.
@@ -351,7 +351,7 @@ class G2LocalHost(G2Host):
         '''
 
         if destHost is self:
-            result = self._send_to_local(relativePaths, destDir, destHost)
+            result = self._send_to_local(relativePaths, destDir)
         else:
             result = self._send_to_remote(relativePaths, destDir, destHost)
         return result
@@ -365,7 +365,7 @@ class G2LocalHost(G2Host):
             A list of full paths to the newly sent files' location.
         '''
 
-        fullDestDir = os.path.join(destHost.dataPath, destDir)
+        fullDestDir = os.path.join(self.dataPath, destDir)
         result = []
         for path in paths:
             fullPath = os.path.join(self.dataPath, path)
@@ -376,6 +376,9 @@ class G2LocalHost(G2Host):
     def _send_to_remote(self, relativePaths, destPath, destHost):
         raise NotImplementedError
 
+    # FIXME
+    # launch several subprocesses simultaneously in order to speed up
+    # this method's running time
     def compress(self, paths):
         '''
         Compress the files and leave them in the same directory.
@@ -606,6 +609,7 @@ class G2LocalHost(G2Host):
                 'dataset' : dataset
                 }
         return params
+
 
 class G2RemoteHost(G2Host):
     '''
