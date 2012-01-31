@@ -17,16 +17,20 @@ class MetadataGenerator(object):
         # entry has to be deleted
         del self.ns[None] 
         self.changeableElements = {
+                'Resource title' : self.tree.xpath('gmd:identificationInfo[1]'\
+                        '/*/gmd:citation/gmd:CI_Citation', namespaces=self.ns)[0],
+                'Resource abstract' : self.tree.xpath('gmd:identificationInfo[1]'\
+                        '/*/gmd:abstract/gco:CharacterString', namespaces=self.ns)[0],
                 'fileIdentifier' : self.tree.xpath(
                     'gmd:fileIdentifier/gco:CharacterString', 
-                    namespaces=self.ns), # the XML uuid
+                    namespaces=self.ns)[0], # the XML uuid
                 'uuid' : self.tree.xpath(
                     'gmd:identificationInfo/gmd:MD_DataIdentification',
-                    namespaces=self.ns), # the XML uuid
+                    namespaces=self.ns)[0], # the XML uuid
                 'idCode' : self.tree.xpath(
                     'gmd:identificationInfo/*/gmd:citation/*/gmd:identifier/'\
                             '*/gmd:code/gco:CharacterString', 
-                    namespaces=self.ns),# the XML uuid
+                    namespaces=self.ns)[0],# the XML uuid
                 'hierarchyLevel' : self.tree.xpath(
                     'gmd:hierarchyLevel/gmd:MD_ScopeCode', 
                     namespaces=self.ns),
@@ -44,15 +48,15 @@ class MetadataGenerator(object):
                 'westLongitude' : self.tree.xpath(
                     'gmd:identificationInfo/*/gmd:extent/*/*/*/'\
                             'gmd:westBoundLongitude/gco:Decimal',
-                    namespaces=self.ns),
+                    namespaces=self.ns)[0],
                 'eastLongitude' : self.tree.xpath(
                     'gmd:identificationInfo/*/gmd:extent/*/*/*/'\
                             'gmd:eastBoundLongitude/gco:Decimal',
-                    namespaces=self.ns),
+                    namespaces=self.ns)[0],
                 'southLatitude' : self.tree.xpath(
                     'gmd:identificationInfo/*/gmd:extent/*/*/*/'\
                             'gmd:southBoundLatitude/gco:Decimal',
-                    namespaces=self.ns),
+                    namespaces=self.ns)[0],
                 'northLatitude' : self.tree.xpath(
                     'gmd:identificationInfo/*/gmd:extent/*/*/*/'\
                             'gmd:northBoundLatitude/gco:Decimal',
@@ -86,6 +90,6 @@ class MetadataGenerator(object):
         el.text = value
         return el
 
-    # use lxml's ability to output directly to an url
+    # use owslib
     def send_to_csw(self):
         raise NotImplementedError

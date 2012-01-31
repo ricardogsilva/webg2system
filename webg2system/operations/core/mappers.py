@@ -319,8 +319,6 @@ class NGPMapper(Mapper): #crappy name
         '''
 
         quickLooks = []
-        tileXLength = self.nCols * float(self.product.pixelSize)
-        tileYLength = self.nLines * float(self.product.pixelSize)
         legendPath = os.path.join(outputDir, 'legend.png')
         legendCommand = 'legend %s %s' % (mapfile, legendPath)
         mapfileDir = os.path.dirname(mapfile)
@@ -329,13 +327,7 @@ class NGPMapper(Mapper): #crappy name
             self.logger.debug('(%i/%i) - Creating quicklook...' % 
                               (fNum+1, len(fileList)))
             dirPath, fname = os.path.split(path)
-            firstLat, firstLon = self._get_corner_coordinates(path, 
-                                                              tileXLength, 
-                                                              tileYLength)
-            minx = firstLon
-            miny = firstLat - tileYLength
-            maxx = firstLon + tileXLength
-            maxy = firstLat
+            minx, miny, maxx, maxy = self.get_bounds(path)
             rawQuickPath = os.path.join(outputDir, 'rawquicklook_%s.png' % fname)
             command = 'shp2img -m %s -o %s -e %i %i %i %i -s '\
                       '400 400 -l %s' % (mapfile, rawQuickPath, minx, miny, 
@@ -346,6 +338,19 @@ class NGPMapper(Mapper): #crappy name
             self.remove_temps([rawQuickPath])
         self.remove_temps([legendPath])
         return quickLooks
+
+    def get_bounds(self, path):
+        '''Return a 4-element tuple with minx, miny, maxx, maxy.'''
+
+        tileXLength = self.nCols * float(self.product.pixelSize)
+        tileYLength = self.nLines * float(self.product.pixelSize)
+        firstLat, firstLon = self._get_corner_coordinates(path, tileXLength,
+                                                          tileYLength)
+        minx = firstLon
+        miny = firstLat - tileYLength
+        maxx = firstLon + tileXLength
+        maxy = firstLat
+        return minx, miny, maxx, maxy
 
     def _complete_quicklook(self, filePath, legendPath, title=None, 
                             cleanRaw=True):

@@ -2,12 +2,14 @@ import os
 import time
 import re
 from random import randint
+from uuid import uuid1
 
 import systemsettings
 
 from g2item import GenericItem
 from g2files import G2File
 import mappers
+import metadatas
 import utilities
 
 class GenericPackage(GenericItem):
@@ -783,28 +785,30 @@ class WebDisseminator(ProcessingPackage):
         self.codeDir = os.path.join(self.host.codePath, relCodeDir)
         relQuickDir = utilities.parse_marked(
                 settings.packagepath_set.get(name='quickviewOutDir'), self)
+        self.quickviewOutDir = os.path.join(self.host.dataPath, relQuickDir)
         relWorkDir = utilities.parse_marked(
                 settings.packagepath_set.get(name='workingDir'), self)
+        self.workingDir = os.path.join(self.host.dataPath, relWorkDir)
         relXmlTemplateDir = utilities.parse_marked(
                 settings.packagepath_set.get(name='xmlTemplateDir'), self)
+        #self.xmlTemplateDir = os.path.join(self.host.codePath, # <- not needed
+        #                                   relXmlTemplateDir)
+        self.xmlTemplate = os.path.join(self.host.codePath, relXmlTemplateDir,
+                                        self.xmlTemplate)
         relMapfileOutDir = utilities.parse_marked(
                 settings.packagepath_set.get(name='mapfileOutDir'), self)
+        self.mapfileOutDir = os.path.join(self.host.dataPath, 
+                                          relMapfileOutDir)
         relMapfileTemplateDir = utilities.parse_marked(
                 settings.packagepath_set.get(name='mapfileTemplateDir'), self)
+        self.mapfileTemplateDir = os.path.join(self.host.codePath, 
+                                               relMapfileTemplateDir)
         relCommonGeotifDir = utilities.parse_marked(
                 settings.packagepath_set.get(name='commonGeotifDir'), self)
         self.commonGeotifDir = os.path.join(self.host.dataPath, 
                                             relCommonGeotifDir)
         relGeotifOutDir = utilities.parse_marked(
                 settings.packagepath_set.get(name='geotifOutDir'), self)
-        self.quickviewOutDir = os.path.join(self.host.dataPath, relQuickDir)
-        self.workingDir = os.path.join(self.host.dataPath, relWorkDir)
-        self.xmlTemplateDir = os.path.join(self.host.codePath, 
-                                           relXmlTemplateDir)
-        self.mapfileOutDir = os.path.join(self.host.dataPath, 
-                                          relMapfileOutDir)
-        self.mapfileTemplateDir = os.path.join(self.host.codePath, 
-                                               relMapfileTemplateDir)
         self.geotifOutDir = os.path.join(self.host.dataPath, 
                                          relGeotifOutDir)
         self.inputs = self._create_files(
@@ -812,6 +816,7 @@ class WebDisseminator(ProcessingPackage):
             settings.packageInput_systemsettings_packageinput_related.all()
         )
         self.mapper = mappers.NGPMapper(self.inputs[0]) # <- badly defined
+        self.mdGenerator = metadatas.MetadataGenerator(self.xmlTemplate)
 
     def clean_up(self, callback=None):
         self._delete_directories([self.workingDir])
@@ -876,9 +881,24 @@ class WebDisseminator(ProcessingPackage):
                                                      mapfile, fileList)
         return quicklooks
 
-    def generate_xml_metadata(self):
+    def generate_xml_metadata(self, fileList):
 
-        raise NotImplementedError
+        for path in fileList:
+            fs = utilities.get_file_settings(path)
+            if fs is not None:
+                self.mdGenerator.update_element('Resource title', 
+                                                fs.product.iResourceTitle)
+                self.mdGenerator.update_element('Resource abstract', 
+                                                fs.product.iResourceAbstract)
+            minx, maxx, miny, maxy = self.mapper.get_bounds(path)
+            self.mdGenerator.update_element('westLongitude', '%.2f' % minx)
+            self.mdGenerator.update_element('eastLongitude', '%.2f' % maxx)
+            self.mdGenerator.update_element('southLatitude', '%.2f' % miny)
+            self.mdGenerator.update_element('northLatitude', '%.2f' % maxy)
+            uuid = uuid1()
+            self.mdGenerator.update_element('fileIdentifier', str(uuid))
+            self.mdGenerator.update_element('uuid', str(uuid))
+            self.mdGenerator.update_element('idCode', str(uuid))
 
     def populate_csw_server(self):
 

@@ -72,6 +72,22 @@ class DatasetInline(admin.StackedInline):
     extra = 0
 
 class ProductAdmin(admin.ModelAdmin):
+    radio_fields = {'iResourceType' : admin.HORIZONTAL}
+    fieldsets = [
+            (
+                None, 
+                {'fields' : ['name', 'shortName', 'pixelSize']}
+            ),
+            (
+                'INSPIRE metadata', 
+                {'fields' : [
+                        'iResourceTitle', 
+                        'iResourceAbstract', 
+                        'iResourceType'
+                        ],
+                    'classes' : ['collapse']}
+            ),
+    ]
     inlines = [DatasetInline]
     list_display = ('shortName', 'name')
 

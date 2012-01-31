@@ -195,13 +195,29 @@ class CodeClass(models.Model):
         return self.className
 
 class Product(models.Model):
+    RESOURCE_TYPE_CHOICES = (('dataset', 'dataset'), 
+                             ('series', 'series'), 
+                             ('service', 'service'))
     name = models.CharField(max_length=100)
     shortName = models.CharField(max_length=20, verbose_name='Short name')
-    description = models.TextField(null=True, blank=True)
+    #description = models.TextField(null=True, blank=True)
     #nRows = models.IntegerField(default=0, verbose_name='Number of rows')
     #nCols = models.IntegerField(default=0, verbose_name='Number of columns')
     pixelSize = models.DecimalField(max_digits=4, decimal_places=2, default=0,
                                     verbose_name='Pixel size')
+    iResourceTitle = models.CharField(max_length=255, 
+                                      verbose_name='Resource title',
+                                      help_text='INSPIRE metadata element: '\
+                                      'Name by which the cited resource is '\
+                                      'known.')
+    iResourceAbstract = models.TextField(verbose_name='Resource abstract', 
+                                      help_text='INSPIRE metadata element: '\
+                                      'Brief narrative summary of the '\
+                                      'contents of the resource(s).')
+    iResourceType = models.CharField(max_length=20, verbose_name='Resource type', 
+                                      help_text='INSPIRE metadata element: '\
+                                      'Scope to which metadata applies.',
+                                      choices=RESOURCE_TYPE_CHOICES)
 
     def __unicode__(self):
         return self.shortName

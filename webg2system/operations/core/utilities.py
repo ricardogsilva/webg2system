@@ -10,6 +10,8 @@ import logging
 import re
 import os
 
+import systemsettings.models as ss
+
 logger = logging.getLogger(__name__)
 
 def show_status(status, progress):
@@ -134,3 +136,27 @@ def extract_timeslot(filePath):
                 else:
                     raise
     return timeslot
+
+def get_file_settings(filePath):
+    '''
+    Scan the file path and retrieve the relevant G2File settings.
+    '''
+
+    possibleSettings = []
+    for fileSettings in ss.File.objects.all():
+        searchPatterns = [p.string for p in fileSettings.filepattern_set.all()]
+        for sp in searchPatterns:
+            pattern = sp.replace('#', '.*')
+            reObj = re.search(pattern, filePath)
+            if reObj is not None:
+                possibleSettings.append(fileSettings)
+    if len(possibleSettings) == 1:
+        result = possibleSettings[0]
+    elif len(possibleSettings) > 1:
+        logger.warning('Found more than one possible file settings (%s). '\
+                       'Returning the first one...' % possibleSettings)
+        result = possibleSettings[0]
+    else:
+        logger.warning('Couldn\'t find any file settings for the supplied path.')
+        result = None
+    return result
