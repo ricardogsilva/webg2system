@@ -886,10 +886,13 @@ class WebDisseminator(ProcessingPackage):
         for path in fileList:
             fs = utilities.get_file_settings(path)
             if fs is not None:
+                # enhance with  area and timeslot information
                 self.mdGenerator.update_element('Resource title', 
                                                 fs.product.iResourceTitle)
                 self.mdGenerator.update_element('Resource abstract', 
                                                 fs.product.iResourceAbstract)
+                self.mdGenerator.update_element('Resource type', 
+                                                fs.product.iResourceType)
             minx, maxx, miny, maxy = self.mapper.get_bounds(path)
             self.mdGenerator.update_element('westLongitude', '%.2f' % minx)
             self.mdGenerator.update_element('eastLongitude', '%.2f' % maxx)

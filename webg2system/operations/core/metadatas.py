@@ -17,13 +17,64 @@ class MetadataGenerator(object):
         # entry has to be deleted
         del self.ns[None] 
         self.changeableElements = {
-                'Resource title' : self.tree.xpath('gmd:identificationInfo[1]'\
-                        '/*/gmd:citation/gmd:CI_Citation', namespaces=self.ns)[0],
-                'Resource abstract' : self.tree.xpath('gmd:identificationInfo[1]'\
-                        '/*/gmd:abstract/gco:CharacterString', namespaces=self.ns)[0],
+                #01 - MD_Metadata
+                #02 - fileIdentifier
                 'fileIdentifier' : self.tree.xpath(
                     'gmd:fileIdentifier/gco:CharacterString', 
                     namespaces=self.ns)[0], # the XML uuid
+                #03 - language (language used in the metadata)
+                    # english, no need to change anything
+                #04 - characterSet
+                    # utf8, no need to change anything
+                #05 - parentIdentifier
+                'parentIdentifier' : self.tree.xpath('gmd:parentIdentifier'\
+                    '/gco:CharacterString', namespaces=self.ns)[0],
+                #06 - hierarchyLevel
+                'hierarchyLevel' : self.tree.xpath(
+                    'gmd:hierarchyLevel/gmd:MD_ScopeCode', 
+                    namespaces=self.ns),
+                #07 - contact (Metadata on Metadata)
+                #   This section deals with who is responsible for the 
+                #   metadata.
+                #       
+                #   Consider adding (or removing) the rest of the tags used 
+                #   in the global template. 
+                #   The 'role' elment is to left as pointOfContact, as is in 
+                #   the template.
+                'organisationName' : self.tree.xpath('gmd:contact/*'\
+                    '/gmd:organisationName/gco:CharacterString', 
+                    namespaces=self.ns)[0],
+                'electronicMailAddress' : self.tree.xpath('gmd:contact/*'\
+                    'gmd:contactInfo/*/gmd:address/*/gmd:'\
+                    'electronicMailAddress/gco:CharacterString', 
+                    namespaces=self.ns)[0],
+                #08 - dateStamp (date stamp for when the metadata was created)
+                'dateStamp' : self.tree.xpath('gmd:dateStamp/gco:Date', 
+                    namespaces=self.ns)[0],
+                #09 - metadataStandardName
+                    # untouched, no need to change anything
+                #10 - metadataStandardVersion
+                    # untouched, no need to change anything
+                #11 - spatialRepresentationInfo
+                #12 - referenceSystemInfo
+                #13 - referenceSystemInfo
+                #14 - identificationInfo
+                #15 - contentInfo
+                #16 - contentInfo
+                #17 - contentInfo
+                #18 - contentInfo
+                #19 - contentInfo
+                #20 - contentInfo
+                #21 - distributionInfo
+                #22 - dataQualityInfo
+                #23 - metadataMaintenance
+                'Resource title' : self.tree.xpath('gmd:identificationInfo[1]'\
+                        '/*/gmd:citation/gmd:CI_Citation/gmd:title'\
+                        '/gco:CharacterString', namespaces=self.ns)[0],
+                'Resource abstract' : self.tree.xpath('gmd:identificationInfo[1]'\
+                        '/*/gmd:abstract/gco:CharacterString', namespaces=self.ns)[0],
+                'Resource type' : self.tree.xpath('gmd:hierarchyLevel'\
+                        '/gmd:MD_ScopeCode', namespaces=self.ns)[0],
                 'uuid' : self.tree.xpath(
                     'gmd:identificationInfo/gmd:MD_DataIdentification',
                     namespaces=self.ns)[0], # the XML uuid
@@ -31,12 +82,6 @@ class MetadataGenerator(object):
                     'gmd:identificationInfo/*/gmd:citation/*/gmd:identifier/'\
                             '*/gmd:code/gco:CharacterString', 
                     namespaces=self.ns)[0],# the XML uuid
-                'hierarchyLevel' : self.tree.xpath(
-                    'gmd:hierarchyLevel/gmd:MD_ScopeCode', 
-                    namespaces=self.ns),
-                'hierarchyLevelName' : self.tree.xpath(
-                    'gmd:hierarchyLevelName/gco:CharacterString',
-                    namespaces=self.ns),
                 'idTitle' : self.tree.xpath(
                     'gmd:identificationInfo/*/gmd:citation/*/gmd:title/'\
                             'gco:CharacterString',
