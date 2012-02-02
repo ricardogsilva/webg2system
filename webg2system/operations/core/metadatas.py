@@ -45,7 +45,7 @@ class MetadataGenerator(object):
                     '/gmd:organisationName/gco:CharacterString', 
                     namespaces=self.ns)[0],
                 'electronicMailAddress' : self.tree.xpath('gmd:contact/*'\
-                    'gmd:contactInfo/*/gmd:address/*/gmd:'\
+                    '/gmd:contactInfo/*/gmd:address/*/gmd:'\
                     'electronicMailAddress/gco:CharacterString', 
                     namespaces=self.ns)[0],
                 #08 - dateStamp (date stamp for when the metadata was created)
@@ -56,6 +56,22 @@ class MetadataGenerator(object):
                 #10 - metadataStandardVersion
                     # untouched, no need to change anything
                 #11 - spatialRepresentationInfo
+                'rowSize' : self.tree.xpath('gmd:spatialRepresentationInfo/*'\
+                    '/gmd:axisDimensionProperties[1]/*/gmd:dimensionSize'\
+                    '/gco:Integer', namespaces=self.ns)[0],
+                'rowResolution' : self.tree.xpath('gmd:spatialRepresentation'\
+                    'Info/*/gmd:axisDimensionProperties[1]/*/gmd:resolution'\
+                    '/gco:Angle', namespaces=self.ns)[0],
+
+                'colSize' : self.tree.xpath('gmd:spatialRepresentationInfo/*'\
+                    '/gmd:axisDimensionProperties[2]/*/gmd:dimensionSize'\
+                    '/gco:Integer', namespaces=self.ns)[0],
+                'colResolution' : self.tree.xpath('gmd:spatialRepresentation'\
+                    'Info/*/gmd:axisDimensionProperties[2]/*/gmd:resolution'\
+                    '/gco:Angle', namespaces=self.ns)[0],
+                'cellGeometry' : self.tree.xpath('gmd:spatialRepresentation'\
+                    'Info/*/gmd:cellGeometry/gmd:MD_CellGeometryCode', 
+                    namespaces=self.ns)[0],
                 #12 - referenceSystemInfo
                 #13 - referenceSystemInfo
                 #14 - identificationInfo
