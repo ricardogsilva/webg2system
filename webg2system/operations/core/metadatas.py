@@ -69,12 +69,62 @@ class MetadataGenerator(object):
                 'colResolution' : self.tree.xpath('gmd:spatialRepresentation'\
                     'Info/*/gmd:axisDimensionProperties[2]/*/gmd:resolution'\
                     '/gco:Angle', namespaces=self.ns)[0],
-                'cellGeometry' : self.tree.xpath('gmd:spatialRepresentation'\
-                    'Info/*/gmd:cellGeometry/gmd:MD_CellGeometryCode', 
-                    namespaces=self.ns)[0],
+                    # cell geometry does not need any modification
+                    # transformationParameterAvailability does not need any 
+                    #    modification
+                    # checkPointAvailability does not need any modification
+                    # checkPointDescription does not need any modification
+                'cornerPoint' : self.tree.xpath('gmd:spatialRepresentation'\
+                        'Info/*/gmd:cornerPoints/gml:Point/gml:pos', 
+                        namespaces=self.ns)[0],
+                    # pointInPixel does not need any modification
                 #12 - referenceSystemInfo
-                #13 - referenceSystemInfo
+                # EPSG code
+                'referenceSystemIdentifier' : self.tree.xpath('gmd:reference'\
+                    'SystemInfo[1]/*/gmd:referenceSystemIdentifier'\
+                    '/gmd:RS_Identifier/gmd:code/gco:CharacterString', 
+                    namespaces=self.ns)[0],
+                    # the codeSpace tag does not need changing
+                #13 - referenceSystemInfo <- TO BE REMOVED FROM THE TEMPLATE
                 #14 - identificationInfo
+                    # citation
+                'title' : self.tree.xpath('gmd:identificationInfo[1]'\
+                        '/*/gmd:citation/gmd:CI_Citation/gmd:title'\
+                        '/gco:CharacterString', namespaces=self.ns)[0],
+                    # abstract
+                'abstract' : self.tree.xpath('gmd:identificationInfo[1]'\
+                        '/*/gmd:abstract/gco:CharacterString', 
+                        namespaces=self.ns)[0],
+                    # purpose
+                    # credit
+                    # status
+                    # pointOfContact
+                    # pointOfContact
+                    # resourceMaintenance
+                    # graphicOverview
+                    # resourceFormat
+                    # descriptiveKeywords
+                    # descriptiveKeywords
+                    # descriptiveKeywords
+                    # descriptiveKeywords
+                    # descriptiveKeywords
+                    # resourceconstraints
+                    # resourceconstraints
+                    # resourceconstraints
+                    # aggregationInfo
+                    # aggregationInfo
+                    # aggregationInfo
+                    # spatialRepresentationType
+                    # spatialResolution
+                    # language
+                    # characterSet
+                    # topicCategory
+                    # topicCategory
+                    # topicCategory
+                    # topicCategory
+                    # extent
+                    # extent
+                    # supplementalInformation
                 #15 - contentInfo
                 #16 - contentInfo
                 #17 - contentInfo
@@ -84,11 +134,6 @@ class MetadataGenerator(object):
                 #21 - distributionInfo
                 #22 - dataQualityInfo
                 #23 - metadataMaintenance
-                'Resource title' : self.tree.xpath('gmd:identificationInfo[1]'\
-                        '/*/gmd:citation/gmd:CI_Citation/gmd:title'\
-                        '/gco:CharacterString', namespaces=self.ns)[0],
-                'Resource abstract' : self.tree.xpath('gmd:identificationInfo[1]'\
-                        '/*/gmd:abstract/gco:CharacterString', namespaces=self.ns)[0],
                 'Resource type' : self.tree.xpath('gmd:hierarchyLevel'\
                         '/gmd:MD_ScopeCode', namespaces=self.ns)[0],
                 'uuid' : self.tree.xpath(
