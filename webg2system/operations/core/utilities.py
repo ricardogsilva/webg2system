@@ -89,6 +89,10 @@ def recover_timeslot(fileTimeslot, displacementObj):
 
     if displacementObj.unit == 'minute':
         displacementUnit = 60 # measured in seconds
+    elif displacementObj.unit == 'hour':
+        displacementUnit = 60 * 60 # measured in seconds
+    elif displacementObj.unit == 'day':
+        displacementUnit = 60 * 60 * 24 # measured in seconds
     else:
         raise NotImplementedError
     if displacementObj.endValue > displacementObj.startValue:
