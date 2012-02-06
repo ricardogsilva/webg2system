@@ -580,6 +580,42 @@ class GRIBPreprocessor(PreProcessor):
 
 class Processor(ProcessingPackage):
 
+    def __init__(self, settings, timeslot, area, host):
+        '''
+        Inputs:
+
+            settings - A systemsettings.models.Package object
+
+            timeslot - A datetime.datetime object
+
+            area - A systemsettings.models.Area object
+
+            host - A systemsettings.models.Host object
+        '''
+
+        super(Processor, self).__init__(settings, timeslot, 
+                                                   area, host)
+        self.rawSettings = settings
+        self.name = settings.name
+        relOutDir = utilities.parse_marked(
+                settings.packagepath_set.get(name='outputDir'), 
+                self)
+        self.outputDir = os.path.join(self.host.dataPath, relOutDir)
+        relCodeDir = utilities.parse_marked(
+                settings.packagepath_set.get(name='codeDir'), 
+                self)
+        self.codeDir = os.path.join(self.host.codePath, relCodeDir)
+        relWorkDir = utilities.parse_marked(
+                settings.packagepath_set.get(name='workingDir'), 
+                self)
+        self.workingDir = os.path.join(self.host.dataPath, relWorkDir)
+        relAcfTemplateDir = utilities.parse_marked(
+                settings.packagepath_set.get(name='acfTemplate'), 
+                self)
+        self.acfTemplateDir = os.path.join(self.host.dataPath, relAcfTemplateDir)
+        self.inputs = self._create_files('input', settings.packageInput_systemsettings_packageinput_related.all())
+        self.outputs = self._create_files('output', settings.packageOutput_systemsettings_packageoutput_related.all())
+
     def write_pcf(self, availableDict):
         '''
         Write the product configuration file.
@@ -674,41 +710,22 @@ class Processor(ProcessingPackage):
 
 class SolarAnglesProcessor(Processor):
 
-    def __init__(self, settings, timeslot, area, host):
-        '''
-        Inputs:
+    pass
 
-            settings - A systemsettings.models.Package object
 
-            timeslot - A datetime.datetime object
+class ReflectancesProcessor(Processor):
 
-            area - A systemsettings.models.Area object
+    pass
 
-            host - A systemsettings.models.Host object
-        '''
 
-        super(SolarAnglesProcessor, self).__init__(settings, timeslot, 
-                                                   area, host)
-        self.rawSettings = settings
-        self.name = settings.name
-        relOutDir = utilities.parse_marked(
-                settings.packagepath_set.get(name='outputDir'), 
-                self)
-        self.outputDir = os.path.join(self.host.dataPath, relOutDir)
-        relCodeDir = utilities.parse_marked(
-                settings.packagepath_set.get(name='codeDir'), 
-                self)
-        self.codeDir = os.path.join(self.host.codePath, relCodeDir)
-        relWorkDir = utilities.parse_marked(
-                settings.packagepath_set.get(name='workingDir'), 
-                self)
-        self.workingDir = os.path.join(self.host.dataPath, relWorkDir)
-        relAcfTemplateDir = utilities.parse_marked(
-                settings.packagepath_set.get(name='acfTemplate'), 
-                self)
-        self.acfTemplateDir = os.path.join(self.host.dataPath, relAcfTemplateDir)
-        self.inputs = self._create_files('input', settings.packageInput_systemsettings_packageinput_related.all())
-        self.outputs = self._create_files('output', settings.packageOutput_systemsettings_packageoutput_related.all())
+class StatsProcessor(Processor):
+
+    pass
+
+
+class CloudMaskProcessor(Processor):
+
+    pass
 
 
 class DataFusion(ProcessingPackage):
