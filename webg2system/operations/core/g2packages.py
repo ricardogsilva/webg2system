@@ -67,6 +67,10 @@ class GenericPackage(GenericItem):
                     # create a new input
                     generalFileSettings = eval('specificSettings.%sItem.file' \
                                                % fileRole)
+                    self.logger.debug('Creating file: %s ' % generalFileSettings.name)
+                    self.logger.debug('timeslot: %s' % spTimeslot)
+                    self.logger.debug('area: %s' % spArea) 
+                    self.logger.debug('----------') 
                     newObject = G2File(generalFileSettings, spTimeslot, spArea,
                                        hostSettings, specificSettings.optional,
                                        parent=self)
@@ -276,7 +280,7 @@ class FetchData(ProcessingPackage):
         - outputDir
     '''
 
-    def __init__(self, settings, timeslot, area, host):
+    def __init__(self, settings, timeslot, area, host, create_io=True):
         '''
         Inputs:
 
@@ -287,6 +291,9 @@ class FetchData(ProcessingPackage):
             area - A systemsettings.models.Area object
 
             host - A systemsettings.models.Host object
+
+            create_io - A boolean indicating if the inputs and outputs
+                are to be created. Defaults to True.
         '''
 
         super(FetchData, self).__init__(settings, timeslot, area, host)
@@ -296,8 +303,15 @@ class FetchData(ProcessingPackage):
                 settings.packagepath_set.get(name='outputDir'), 
                 self)
         self.outputDir = os.path.join(self.host.dataPath, relativeOutDir)
-        self.inputs = self._create_files('input', settings.packageInput_systemsettings_packageinput_related.all())
-        self.outputs = self._create_files('output', settings.packageOutput_systemsettings_packageoutput_related.all())
+        if create_io:
+            self.inputs = self._create_files(
+                'input', 
+                settings.packageInput_systemsettings_packageinput_related.all()
+            )
+            self.outputs = self._create_files(
+                'output', 
+                settings.packageOutput_systemsettings_packageoutput_related.all()
+            )
 
     def find_inputs(self, useArchive=False):
         '''
@@ -434,7 +448,7 @@ class PreProcessor(ProcessingPackage):
 
 class LRITPreprocessor(PreProcessor):
 
-    def __init__(self, settings, timeslot, area, host):
+    def __init__(self, settings, timeslot, area, host, create_io=True):
         super(LRITPreprocessor, self).__init__(settings, timeslot, area, host)
         self.rawSettings = settings
         self.name = settings.name
@@ -454,8 +468,15 @@ class LRITPreprocessor(PreProcessor):
                 settings.packagepath_set.get(name='codeDir'), 
                 self)
         self.codeDir = os.path.join(self.host.codePath, relCodeDir)
-        self.inputs = self._create_files('input', settings.packageInput_systemsettings_packageinput_related.all())
-        self.outputs = self._create_files('output', settings.packageOutput_systemsettings_packageoutput_related.all())
+        if create_io:
+            self.inputs = self._create_files(
+                'input', 
+                settings.packageInput_systemsettings_packageinput_related.all()
+            )
+            self.outputs = self._create_files(
+                'output', 
+                settings.packageOutput_systemsettings_packageoutput_related.all()
+            )
 
     # FIXME
     # Add real-time logging of the FORTRAN output
@@ -502,7 +523,7 @@ class LRITPreprocessor(PreProcessor):
 
 class GRIBPreprocessor(PreProcessor):
 
-    def __init__(self, settings, timeslot, area, host):
+    def __init__(self, settings, timeslot, area, host, create_io=True):
         super(GRIBPreprocessor, self).__init__(settings, timeslot, area, host)
         self.rawSettings = settings
         self.name = settings.name
@@ -519,8 +540,15 @@ class GRIBPreprocessor(PreProcessor):
                 self)
         self.codeDir = os.path.join(self.host.codePath, relCodeDir)
         self.tempOutputDir = os.path.join(self.workingDir, 'tempOutput')
-        self.inputs = self._create_files('input', settings.packageInput_systemsettings_packageinput_related.all())
-        self.outputs = self._create_files('output', settings.packageOutput_systemsettings_packageoutput_related.all())
+        if create_io:
+            self.inputs = self._create_files(
+                'input', 
+                settings.packageInput_systemsettings_packageinput_related.all()
+            )
+            self.outputs = self._create_files(
+                'output', 
+                settings.packageOutput_systemsettings_packageoutput_related.all()
+            )
 
     def clean_up(self, compressOutputs=True, callback=None):
         self._delete_directories([self.workingDir])
@@ -580,7 +608,7 @@ class GRIBPreprocessor(PreProcessor):
 
 class Processor(ProcessingPackage):
 
-    def __init__(self, settings, timeslot, area, host):
+    def __init__(self, settings, timeslot, area, host, create_io=True):
         '''
         Inputs:
 
@@ -591,6 +619,9 @@ class Processor(ProcessingPackage):
             area - A systemsettings.models.Area object
 
             host - A systemsettings.models.Host object
+
+            create_io - A boolean indicating if the inputs and outputs
+                are to be created. Defaults to True.
         '''
 
         super(Processor, self).__init__(settings, timeslot, 
@@ -613,8 +644,15 @@ class Processor(ProcessingPackage):
                 settings.packagepath_set.get(name='acfTemplate'), 
                 self)
         self.acfTemplateDir = os.path.join(self.host.dataPath, relAcfTemplateDir)
-        self.inputs = self._create_files('input', settings.packageInput_systemsettings_packageinput_related.all())
-        self.outputs = self._create_files('output', settings.packageOutput_systemsettings_packageoutput_related.all())
+        if create_io:
+            self.inputs = self._create_files(
+                'input', 
+                settings.packageInput_systemsettings_packageinput_related.all()
+            )
+            self.outputs = self._create_files(
+                'output', 
+                settings.packageOutput_systemsettings_packageoutput_related.all()
+            )
 
     def write_pcf(self, availableDict):
         '''
