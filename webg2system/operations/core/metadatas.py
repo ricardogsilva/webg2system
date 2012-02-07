@@ -6,11 +6,14 @@ A module for implementing metadata related functionality for the Geoland-2
 processing system.
 """
 
+import logging
 from lxml import etree
 
 class MetadataGenerator(object):
 
     def __init__(self, template):
+        self.logger = logging.getLogger(
+                '.'.join((__name__, self.__class__.__name__)))
         self.tree = etree.parse(template)
         self.ns = self.tree.getroot().nsmap.copy()
         # in order to use this dictionary for XPATH queries the default 

@@ -87,6 +87,7 @@ def recover_timeslot(fileTimeslot, displacementObj):
     Recover the original timeslot for the package.
     '''
 
+    logger.debug('locals: %s' % locals())
     if displacementObj.unit == 'minute':
         displacementUnit = 60 # measured in seconds
     elif displacementObj.unit == 'hour':
@@ -103,12 +104,16 @@ def recover_timeslot(fileTimeslot, displacementObj):
         last = displacementObj.startValue
     firstTS = fileTimeslot + dt.timedelta(seconds=first * displacementUnit)
     lastTS = fileTimeslot + dt.timedelta(seconds=last * displacementUnit)
-    if firstTS == lastTS:
-        packTimeslot = firstTS
-    else:
-        # the timeslots don't match so there is not a way to get the original
-        # package's timeslot
-        raise
+    logger.debug('firstTS: %s' % firstTS)
+    logger.debug('lastTS: %s' % lastTS)
+
+    #if firstTS == lastTS:
+    #    packTimeslot = firstTS
+    #else:
+    #    # the timeslots don't match so there is not a way to get the original
+    #    # package's timeslot
+    #    raise
+    packTimeslot = lastTS
     return packTimeslot
 
 def extract_timeslot(filePath):

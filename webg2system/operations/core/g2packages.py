@@ -70,10 +70,10 @@ class GenericPackage(GenericItem):
                     self.logger.debug('Creating file: %s ' % generalFileSettings.name)
                     self.logger.debug('timeslot: %s' % spTimeslot)
                     self.logger.debug('area: %s' % spArea) 
-                    self.logger.debug('----------') 
                     newObject = G2File(generalFileSettings, spTimeslot, spArea,
                                        hostSettings, specificSettings.optional,
                                        parent=self)
+                    self.logger.debug('----------') 
                     objects.append(newObject)
         return objects
 
@@ -744,26 +744,6 @@ class Processor(ProcessingPackage):
         self.logger.info('Running FORTRAN code...')
         retCode = self.execute_external_algorithm(pcfPath, acfPath)
         return retCode
-
-
-class SolarAnglesProcessor(Processor):
-
-    pass
-
-
-class ReflectancesProcessor(Processor):
-
-    pass
-
-
-class StatsProcessor(Processor):
-
-    pass
-
-
-class CloudMaskProcessor(Processor):
-
-    pass
 
 
 class DataFusion(ProcessingPackage):

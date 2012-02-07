@@ -339,9 +339,6 @@ class G2File(GenericItem):
             specTimeslot = specificTimeslots[0]
             theTimeslot = utilities.recover_timeslot(self.timeslot, 
                                                       specTimeslot)
-            #self.logger.debug('self.timeslot: %s\t%s package\'s timeslot: %s' \
-            #                  % (self.timeslot, packSettings.name, 
-            #                     theTimeslot))
         specificAreas = outputSettings.specificAreas.all()
         if len(specificAreas) == 0:
             # the package's area is the same as the output's
