@@ -332,7 +332,7 @@ class G2LocalHost(G2Host):
                                                               remoteHost=host)
         return self.connections[host.name][protocol]
 
-    def send(self, relativePaths, destDir, destHost):
+    def send(self, fullPaths, destDir, destHost):
         '''
         Copy files to another directory, located on a G2Host machine.
 
@@ -351,9 +351,11 @@ class G2LocalHost(G2Host):
         '''
 
         if destHost is self:
-            result = self._send_to_local(relativePaths, destDir)
+            self.logger.debug('About to perform a local send...')
+            result = self._send_to_local(fullPaths, destDir)
         else:
-            result = self._send_to_remote(relativePaths, destDir, destHost)
+            self.logger.debug('About to perform a remote send...')
+            result = self._send_to_remote(fullPaths, destDir, destHost)
         return result
 
     def _send_to_local(self, paths, destDir):
@@ -373,7 +375,7 @@ class G2LocalHost(G2Host):
             result.append(os.path.join(fullDestDir, os.path.basename(path)))
         return result
 
-    def _send_to_remote(self, relativePaths, destPath, destHost):
+    def _send_to_remote(self, paths, destDir, destHost):
         raise NotImplementedError
 
     # FIXME
