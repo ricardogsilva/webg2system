@@ -84,13 +84,22 @@ class ProductAdmin(admin.ModelAdmin):
                 {'fields' : [
                         'iResourceTitle', 
                         'iResourceAbstract', 
-                        'iResourceType'
+                        'iResourceType',
+                        'iParentIdentifier',
+                        'ireferenceSystemID',
+                        'iOtherDetails',
+                        'iCredit',
                         ],
-                    'classes' : ['collapse']}
+                 'classes' : ['collapse']}
             ),
     ]
     inlines = [DatasetInline]
     list_display = ('shortName', 'name')
+
+class GeneralMetadataAdmin(admin.ModelAdmin):
+    model = GeneralMetadata
+    extra = 0
+    list_display = ('orgName', 'orgURL', 'contactName', 'contactEmail')
 
 #admin.site.register(ExceptHour)
 admin.site.register(TimeslotDisplacer)
@@ -100,3 +109,4 @@ admin.site.register(Package, PackageAdmin)
 admin.site.register(File, FileAdmin)
 admin.site.register(Source, SourceAdmin)
 admin.site.register(Product, ProductAdmin)
+admin.site.register(GeneralMetadata, GeneralMetadataAdmin)

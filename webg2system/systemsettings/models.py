@@ -218,6 +218,21 @@ class Product(models.Model):
                                       help_text='INSPIRE metadata element: '\
                                       'Scope to which metadata applies.',
                                       choices=RESOURCE_TYPE_CHOICES)
+    iParentIdentifier = models.CharField(max_length=255, verbose_name='Parent'\
+                                         ' Identifier', help_text='INSPIRE '\
+                                         'metadata element: UUID of the '\
+                                         'parent metadata series.')
+    ireferenceSystemID = models.CharField(max_length=10, 
+                                          verbose_name='Reference system '\
+                                          'EPSG code', help_text='INSPIRE '\
+                                          'metadata element: EPSG code of '\
+                                          'coordinate reference system.')
+    iOtherDetails = models.CharField(max_length=255, verbose_name='Other '\
+                                     'details', help_text='INSPIRE '\
+                                     'metadata element: URL for the PUM.',
+                                     null=True, blank=True)
+    iCredit = models.TextField(verbose_name='Credit', help_text='INSPIRE '\
+                               'metadata element: Product credit information.')
 
     def __unicode__(self):
         return self.shortName
@@ -233,3 +248,12 @@ class Dataset(models.Model):
 
     def __unicode__(self):
         return self.name
+
+class GeneralMetadata(models.Model):
+    orgName = models.CharField(max_length=255, verbose_name='Organisation name')
+    orgURL = models.CharField(max_length=255, verbose_name='Organisation URL')
+    contactName = models.CharField(max_length=100, verbose_name='Contact name')
+    contactEmail = models.EmailField(verbose_name='Contact e-mail')
+
+    def __unicode__(self):
+        return self.orgName

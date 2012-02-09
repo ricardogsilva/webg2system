@@ -30,6 +30,7 @@ class MetadataGenerator(object):
                 #04 - characterSet
                     # utf8, no need to change anything
                 #05 - parentIdentifier
+                    # uuid of the dataset series
                 'parentIdentifier' : self.tree.xpath('gmd:parentIdentifier'\
                     '/gco:CharacterString', namespaces=self.ns)[0],
                 #06 - hierarchyLevel
@@ -78,8 +79,8 @@ class MetadataGenerator(object):
                     # checkPointAvailability does not need any modification
                     # checkPointDescription does not need any modification
                 'cornerPoint' : self.tree.xpath('gmd:spatialRepresentation'\
-                        'Info/*/gmd:cornerPoints/gml:Point/gml:pos', 
-                        namespaces=self.ns)[0],
+                    'Info/*/gmd:cornerPoints/gml:Point/gml:pos', 
+                    namespaces=self.ns)[0],
                     # pointInPixel does not need any modification
                 #12 - referenceSystemInfo
                 # EPSG code
@@ -91,16 +92,51 @@ class MetadataGenerator(object):
                 #13 - referenceSystemInfo <- TO BE REMOVED FROM THE TEMPLATE
                 #14 - identificationInfo
                     # citation
+                        # title
                 'title' : self.tree.xpath('gmd:identificationInfo[1]'\
-                        '/*/gmd:citation/gmd:CI_Citation/gmd:title'\
-                        '/gco:CharacterString', namespaces=self.ns)[0],
+                    '/*/gmd:citation/gmd:CI_Citation/gmd:title'\
+                    '/gco:CharacterString', namespaces=self.ns)[0],
+                        # date (creation of the resource)
+                'date' : self.tree.xpath('gmd:identificationInfo[1]/*'\
+                    '/gmd:citation/*/gmd:date/*/gmd:date/gco:Date', 
+                    namespaces=self.ns)[0],
+                        # what is this? algorithm version?
+                'edition' : self.tree.xpath('gmd:identificationInfo[1]/*'\
+                    '/gmd:citation/gmd:edition/gco:CharacterString', 
+                    namespaces=self.ns)[0],
+                        # what is this? the date when the algorithm version became active?
+                'editionDate' : self.tree.xpath('gmd:identificationInfo[1]/*'\
+                    '/gmd:citation/gmd:editionDate/gco:Date', 
+                    namespaces=self.ns)[0],
+                        # identifier
+                        # I.M. name
+                'authorityTitle' : self.tree.xpath('gmd:identificationInfo[1]'\
+                    '/*/gmd:citation/*/gmd:identifier/*/gmd:authority'\
+                    '/*/gmd:title/gco:CharacterString', namespaces=self.ns)[0],
+                        # What is this? Authority date?
+                'authorityDate' : self.tree.xpath('gmd:identificationInfo[1]'\
+                    '/*/gmd:citation/*/gmd:identifier/*/gmd:authority'\
+                    '/*/gmd:date/gco:Date', namespaces=self.ns)[0],
+                        # What is this? Authority date revision?
+                'authorityDateRev' : self.tree.xpath('gmd:identificationInfo[1]'\
+                    '/*/gmd:citation/*/gmd:identifier/*/gmd:authority'\
+                    '/*/gmd:dateType/gmd:CI_DateTypeCode', 
+                    namespaces=self.ns)[0],
+                        # other citation details
+                'otherDetails' : self.tree.xpath('gmd:identificationInfo[1]'\
+                    '/*/gmd:citation/*/gmd:otherCitationDetails'\
+                    '/gco:CharacterString', namespaces=self.ns)[0],
                     # abstract
                 'abstract' : self.tree.xpath('gmd:identificationInfo[1]'\
                         '/*/gmd:abstract/gco:CharacterString', 
                         namespaces=self.ns)[0],
-                    # purpose
+                    # purpose <- does not need changing
                     # credit
-                    # status
+                'credit' : self.tree.xpath('gmd:identificationInfo[1]/*'\
+                    '/gmd:credit/gco:CharacterString', namespaces=self.ns)[0],
+                    # status (its a code list)
+                'status' : self.tree.xpath('gmd:identificationInfo[1]/*'\
+                    '/gmd:status/gmd:MD_ProgressCode', namespaces=self.ns)[0],
                     # pointOfContact
                     # pointOfContact
                     # resourceMaintenance
