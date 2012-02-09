@@ -192,5 +192,9 @@ LOGGING = {
                 'handlers' : ['console', 'mail_admins'],
                 'level' : 'DEBUG',
             },
+            'webg2system.api' : {
+                'handlers' : ['console', 'mail_admins'],
+                'level' : 'DEBUG',
+            },
         },
 }

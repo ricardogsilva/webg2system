@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 #-*- coding: utf-8 -*-
 
+import logging
+
 from tastypie.authorization import Authorization
 from tastypie.resources import ModelResource
 from tastypie import fields
@@ -40,6 +42,12 @@ class RunningPackageResource(ModelResource):
     area = fields.ForeignKey(AreaResource, 'area')
     host = fields.ForeignKey(HostResource, 'host')
 
+    def __init__(self, api_name=None):
+        super(RunningPackageResource, self).__init__(api_name)
+        self.logger = logging.getLogger('.'.join((__name__, 
+                                        self.__class__.__name__)))
+
+
     class Meta:
         queryset = RunningPackage.objects.all()
         resource_name = 'runningpackage'
@@ -50,3 +58,14 @@ class RunningPackageResource(ModelResource):
                 'area' : 2,
                 'host' : 2,
         }
+
+    def obj_create(self, bundle, request=None, **kwargs):
+        # the bundle object is returned after the data is inserted in the 
+        # database
+        bundle = super(RunningPackageResource, self).obj_create(bundle, 
+                                                                request, 
+                                                                **kwargs)
+        self.logger.debug('bundle: %s' % bundle)
+        self.logger.debug('About to execute the runningPackage instance\'s run() method...')
+        bundle.obj.run()
+        return bundle
