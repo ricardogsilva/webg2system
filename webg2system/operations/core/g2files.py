@@ -360,7 +360,7 @@ class G2File(GenericItem):
                         pack = aPack
         if pack is None:
             pack = eval('g2p.%s(packSettings, theTimeslot, theArea, theHost, '\
-                        'create_io=False)' % theClass)
+                        'createIO=False)' % theClass)
             self._originatorPackages.append(pack)
         return pack
 

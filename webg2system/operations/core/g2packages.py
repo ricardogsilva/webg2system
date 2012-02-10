@@ -3,8 +3,9 @@ import time
 import re
 from random import randint
 from uuid import uuid1
+import datetime as dt
 
-import systemsettings
+import systemsettings.models as ss
 
 from g2item import GenericItem
 from g2files import G2File
@@ -50,7 +51,7 @@ class GenericPackage(GenericItem):
         '''
 
         objects = []
-        hostSettings = systemsettings.models.Host.objects.get(name=self.host.name)
+        hostSettings = ss.Host.objects.get(name=self.host.name)
         for specificSettings in filesSettings:
             timeslots = []
             for tsDisplacement in specificSettings.specificTimeslots.all():
@@ -60,7 +61,7 @@ class GenericPackage(GenericItem):
                 timeslots.append(self.timeslot)
             specificAreas = [a for a in specificSettings.specificAreas.all()]
             if len(specificAreas) == 0:
-                specificAreas = systemsettings.models.Source.objects.get(\
+                specificAreas = ss.Source.objects.get(\
                                 name=self.source.generalName).area_set.all()
             for spArea in specificAreas:
                 for spTimeslot in timeslots:
@@ -280,7 +281,7 @@ class FetchData(ProcessingPackage):
         - outputDir
     '''
 
-    def __init__(self, settings, timeslot, area, host, create_io=True):
+    def __init__(self, settings, timeslot, area, host, createIO=True):
         '''
         Inputs:
 
@@ -292,7 +293,7 @@ class FetchData(ProcessingPackage):
 
             host - A systemsettings.models.Host object
 
-            create_io - A boolean indicating if the inputs and outputs
+            createIO - A boolean indicating if the inputs and outputs
                 are to be created. Defaults to True.
         '''
 
@@ -303,7 +304,7 @@ class FetchData(ProcessingPackage):
                 settings.packagepath_set.get(name='outputDir'), 
                 self)
         self.outputDir = os.path.join(self.host.dataPath, relativeOutDir)
-        if create_io:
+        if createIO:
             self.inputs = self._create_files(
                 'input', 
                 settings.packageInput_systemsettings_packageinput_related.all()
@@ -448,7 +449,7 @@ class PreProcessor(ProcessingPackage):
 
 class LRITPreprocessor(PreProcessor):
 
-    def __init__(self, settings, timeslot, area, host, create_io=True):
+    def __init__(self, settings, timeslot, area, host, createIO=True):
         super(LRITPreprocessor, self).__init__(settings, timeslot, area, host)
         self.rawSettings = settings
         self.name = settings.name
@@ -468,7 +469,7 @@ class LRITPreprocessor(PreProcessor):
                 settings.packagepath_set.get(name='codeDir'), 
                 self)
         self.codeDir = os.path.join(self.host.codePath, relCodeDir)
-        if create_io:
+        if createIO:
             self.inputs = self._create_files(
                 'input', 
                 settings.packageInput_systemsettings_packageinput_related.all()
@@ -523,7 +524,7 @@ class LRITPreprocessor(PreProcessor):
 
 class GRIBPreprocessor(PreProcessor):
 
-    def __init__(self, settings, timeslot, area, host, create_io=True):
+    def __init__(self, settings, timeslot, area, host, createIO=True):
         super(GRIBPreprocessor, self).__init__(settings, timeslot, area, host)
         self.rawSettings = settings
         self.name = settings.name
@@ -540,7 +541,7 @@ class GRIBPreprocessor(PreProcessor):
                 self)
         self.codeDir = os.path.join(self.host.codePath, relCodeDir)
         self.tempOutputDir = os.path.join(self.workingDir, 'tempOutput')
-        if create_io:
+        if createIO:
             self.inputs = self._create_files(
                 'input', 
                 settings.packageInput_systemsettings_packageinput_related.all()
@@ -608,7 +609,7 @@ class GRIBPreprocessor(PreProcessor):
 
 class Processor(ProcessingPackage):
 
-    def __init__(self, settings, timeslot, area, host, create_io=True):
+    def __init__(self, settings, timeslot, area, host, createIO=True):
         '''
         Inputs:
 
@@ -620,7 +621,7 @@ class Processor(ProcessingPackage):
 
             host - A systemsettings.models.Host object
 
-            create_io - A boolean indicating if the inputs and outputs
+            createIO - A boolean indicating if the inputs and outputs
                 are to be created. Defaults to True.
         '''
 
@@ -644,7 +645,7 @@ class Processor(ProcessingPackage):
                 settings.packagepath_set.get(name='acfTemplate'), 
                 self)
         self.acfTemplateDir = os.path.join(self.host.dataPath, relAcfTemplateDir)
-        if create_io:
+        if createIO:
             self.inputs = self._create_files(
                 'input', 
                 settings.packageInput_systemsettings_packageinput_related.all()
@@ -762,7 +763,7 @@ class DataFusion(ProcessingPackage):
             version
     '''
 
-    def __init__(self, settings, timeslot, area, host):
+    def __init__(self, settings, timeslot, area, host, createIO=True):
         '''
         Inputs:
 
@@ -790,8 +791,15 @@ class DataFusion(ProcessingPackage):
         self.outputDir = os.path.join(self.host.dataPath, relativeOutDir)
         self.codeDir = os.path.join(self.host.codePath, relativeCodeDir)
         self.workingDir = os.path.join(self.host.dataPath, relativeWorkDir)
-        self.inputs = self._create_files('input', settings.packageInput_systemsettings_packageinput_related.all())
-        self.outputs = self._create_files('output', settings.packageOutput_systemsettings_packageoutput_related.all())
+        if createIO:
+            self.inputs = self._create_files(
+                'input', 
+                settings.packageInput_systemsettings_packageinput_related.all()
+            )
+            self.outputs = self._create_files(
+                'output', 
+                settings.packageOutput_systemsettings_packageoutput_related.all()
+            )
 
 
 class WebDisseminator(ProcessingPackage):
@@ -799,7 +807,7 @@ class WebDisseminator(ProcessingPackage):
     This class takes care of creating quickviews, WMS and CSW integration.
     '''
 
-    def __init__(self, settings, timeslot, area, host):
+    def __init__(self, settings, timeslot, area, host, createIO=True):
         '''
         Inputs:
 
@@ -826,10 +834,11 @@ class WebDisseminator(ProcessingPackage):
         self.workingDir = os.path.join(self.host.dataPath, relWorkDir)
         relXmlTemplateDir = utilities.parse_marked(
                 settings.packagepath_set.get(name='xmlTemplateDir'), self)
-        #self.xmlTemplateDir = os.path.join(self.host.codePath, # <- not needed
-        #                                   relXmlTemplateDir)
         self.xmlTemplate = os.path.join(self.host.codePath, relXmlTemplateDir,
                                         self.xmlTemplate)
+        relXmlDir = utilities.parse_marked(
+                settings.packagepath_set.get(name='xmlOutDir'), self)
+        self.xmlOutDir = os.path.join(self.host.dataPath, relXmlDir)
         relMapfileOutDir = utilities.parse_marked(
                 settings.packagepath_set.get(name='mapfileOutDir'), self)
         self.mapfileOutDir = os.path.join(self.host.dataPath, 
@@ -857,6 +866,7 @@ class WebDisseminator(ProcessingPackage):
         self._delete_directories([self.workingDir])
         self.host.clean_dirs(self.mapfileOutDir)
         self.host.clean_dirs(self.quickviewOutDir)
+        self.host.clean_dirs(self.xmlOutDir)
         return 0
 
     def prepare(self, callback=None):
@@ -918,25 +928,42 @@ class WebDisseminator(ProcessingPackage):
 
     def generate_xml_metadata(self, fileList):
 
-        for path in fileList:
+        if not self.host.is_dir(self.xmlOutDir):
+            self.host.make_dir(self.xmlOutDir)
+        today = dt.date.today().strftime('%Y-%m-%d')
+        genMeta = ss.GeneralMetadata.objects.get()
+        for fNum, path in enumerate(fileList):
+            self.logger.debug('(%i/%i) - Creating xml...' % 
+                              (fNum+1, len(fileList)))
             fs = utilities.get_file_settings(path)
-            if fs is not None:
-                # enhance with  area and timeslot information
-                self.mdGenerator.update_element('Resource title', 
-                                                fs.product.iResourceTitle)
-                self.mdGenerator.update_element('Resource abstract', 
-                                                fs.product.iResourceAbstract)
-                self.mdGenerator.update_element('Resource type', 
-                                                fs.product.iResourceType)
-            minx, maxx, miny, maxy = self.mapper.get_bounds(path)
-            self.mdGenerator.update_element('westLongitude', '%.2f' % minx)
-            self.mdGenerator.update_element('eastLongitude', '%.2f' % maxx)
-            self.mdGenerator.update_element('southLatitude', '%.2f' % miny)
-            self.mdGenerator.update_element('northLatitude', '%.2f' % maxy)
             uuid = uuid1()
             self.mdGenerator.update_element('fileIdentifier', str(uuid))
-            self.mdGenerator.update_element('uuid', str(uuid))
-            self.mdGenerator.update_element('idCode', str(uuid))
+            self.mdGenerator.update_element('parentIdentifier', 
+                                            fs.product.iParentIdentifier)
+            self.mdGenerator.update_element('hierarchyLevel', 
+                                            fs.product.iResourceType)
+            self.mdGenerator.update_element('organisationName', 
+                                            genMeta.orgName)
+            self.mdGenerator.update_element('electronicMailAddress', 
+                                            genMeta.contactEmail)
+            self.mdGenerator.update_element('dateStamp', today)
+
+            #self.mdGenerator.update_element('Resource title', 
+            #                                fs.product.iResourceTitle)
+            #self.mdGenerator.update_element('Resource abstract', 
+            #                                fs.product.iResourceAbstract)
+            #self.mdGenerator.update_element('Resource type', 
+            #                                fs.product.iResourceType)
+            #minx, maxx, miny, maxy = self.mapper.get_bounds(path)
+            #self.mdGenerator.update_element('westLongitude', '%.2f' % minx)
+            #self.mdGenerator.update_element('eastLongitude', '%.2f' % maxx)
+            #self.mdGenerator.update_element('southLatitude', '%.2f' % miny)
+            #self.mdGenerator.update_element('northLatitude', '%.2f' % maxy)
+            #self.mdGenerator.update_element('uuid', str(uuid))
+            #self.mdGenerator.update_element('idCode', str(uuid))
+            pathFName = os.path.splitext(os.path.basename(path))[0]
+            xmlPath = os.path.join(self.xmlOutDir, '%s.xml' % pathFName)
+            self.mdGenerator.save_xml(xmlPath)
 
     def populate_csw_server(self):
 

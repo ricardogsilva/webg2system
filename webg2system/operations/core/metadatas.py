@@ -36,7 +36,7 @@ class MetadataGenerator(object):
                 #06 - hierarchyLevel
                 'hierarchyLevel' : self.tree.xpath(
                     'gmd:hierarchyLevel/gmd:MD_ScopeCode', 
-                    namespaces=self.ns),
+                    namespaces=self.ns)[0],
                 #07 - contact (Metadata on Metadata)
                 #   This section deals with who is responsible for the 
                 #   metadata.
@@ -102,11 +102,11 @@ class MetadataGenerator(object):
                     namespaces=self.ns)[0],
                         # what is this? algorithm version?
                 'edition' : self.tree.xpath('gmd:identificationInfo[1]/*'\
-                    '/gmd:citation/gmd:edition/gco:CharacterString', 
+                    '/gmd:citation/*/gmd:edition/gco:CharacterString', 
                     namespaces=self.ns)[0],
                         # what is this? the date when the algorithm version became active?
                 'editionDate' : self.tree.xpath('gmd:identificationInfo[1]/*'\
-                    '/gmd:citation/gmd:editionDate/gco:Date', 
+                    '/gmd:citation/*/gmd:editionDate/gco:Date', 
                     namespaces=self.ns)[0],
                         # identifier
                         # I.M. name
@@ -116,11 +116,11 @@ class MetadataGenerator(object):
                         # What is this? Authority date?
                 'authorityDate' : self.tree.xpath('gmd:identificationInfo[1]'\
                     '/*/gmd:citation/*/gmd:identifier/*/gmd:authority'\
-                    '/*/gmd:date/gco:Date', namespaces=self.ns)[0],
+                    '/*/gmd:date/*/gmd:date/gco:Date', namespaces=self.ns)[0],
                         # What is this? Authority date revision?
                 'authorityDateRev' : self.tree.xpath('gmd:identificationInfo[1]'\
                     '/*/gmd:citation/*/gmd:identifier/*/gmd:authority'\
-                    '/*/gmd:dateType/gmd:CI_DateTypeCode', 
+                    '/*/gmd:date/*/gmd:dateType/gmd:CI_DateTypeCode', 
                     namespaces=self.ns)[0],
                         # other citation details
                 'otherDetails' : self.tree.xpath('gmd:identificationInfo[1]'\

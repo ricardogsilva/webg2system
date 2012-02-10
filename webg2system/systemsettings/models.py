@@ -250,8 +250,15 @@ class Dataset(models.Model):
         return self.name
 
 class GeneralMetadata(models.Model):
-    orgName = models.CharField(max_length=255, verbose_name='Organisation name')
-    orgURL = models.CharField(max_length=255, verbose_name='Organisation URL')
+    orgName = models.CharField(max_length=255, verbose_name='Organization name')
+    orgURL = models.CharField(max_length=255, verbose_name='Organization URL')
+    orgStreetAddress = models.CharField(max_length=255, 
+                                        verbose_name='Organization street '\
+                                        'address')
+    orgCountry = models.CharField(max_length=10, verbose_name='Organization'\
+                                  ' country code', help_text='The ISO country'\
+                                  ' code for the coutry.')
+    orgCity = models.CharField(max_length=100, verbose_name='Organization city')
     contactName = models.CharField(max_length=100, verbose_name='Contact name')
     contactEmail = models.EmailField(verbose_name='Contact e-mail')
 
