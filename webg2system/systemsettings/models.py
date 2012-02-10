@@ -255,9 +255,8 @@ class GeneralMetadata(models.Model):
     orgStreetAddress = models.CharField(max_length=255, 
                                         verbose_name='Organization street '\
                                         'address')
-    orgCountry = models.CharField(max_length=10, verbose_name='Organization'\
-                                  ' country code', help_text='The ISO country'\
-                                  ' code for the coutry.')
+    orgPostalCode = models.CharField(max_length=20, 
+                                     verbose_name='Organization postal code')
     orgCity = models.CharField(max_length=100, verbose_name='Organization city')
     contactName = models.CharField(max_length=100, verbose_name='Contact name')
     contactEmail = models.EmailField(verbose_name='Contact e-mail')

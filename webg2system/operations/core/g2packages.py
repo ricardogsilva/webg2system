@@ -936,6 +936,7 @@ class WebDisseminator(ProcessingPackage):
             self.logger.debug('(%i/%i) - Creating xml...' % 
                               (fNum+1, len(fileList)))
             fs = utilities.get_file_settings(path)
+            minx, miny, maxx, maxy = self.mapper.get_bounds(path)
             uuid = uuid1()
             self.mdGenerator.update_element('fileIdentifier', str(uuid))
             self.mdGenerator.update_element('parentIdentifier', 
@@ -944,17 +945,39 @@ class WebDisseminator(ProcessingPackage):
                                             fs.product.iResourceType)
             self.mdGenerator.update_element('organisationName', 
                                             genMeta.orgName)
+            self.mdGenerator.update_element('organisationAddress', 
+                                            genMeta.orgStreetAddress)
+            self.mdGenerator.update_element('organisationCity', 
+                                            genMeta.orgCity)
+            self.mdGenerator.update_element('organisationPostalCode', 
+                                            genMeta.orgPostalCode)
             self.mdGenerator.update_element('electronicMailAddress', 
                                             genMeta.contactEmail)
             self.mdGenerator.update_element('dateStamp', today)
-
-            #self.mdGenerator.update_element('Resource title', 
-            #                                fs.product.iResourceTitle)
+            rowSize = fs.fileextrainfo_set.get(name='nLines').string
+            self.mdGenerator.update_element('rowSize', rowSize)
+            self.mdGenerator.update_element('rowResolution', '%.2f' % 
+                                            fs.product.pixelSize)
+            colSize = fs.fileextrainfo_set.get(name='nCols').string
+            self.mdGenerator.update_element('colSize', colSize)
+            self.mdGenerator.update_element('colResolution', '%.2f' %
+                                            fs.product.pixelSize)
+            cornerPoint = '%.1f %.1f' % (maxy, minx)
+            self.mdGenerator.update_element('cornerPoint', cornerPoint)
+            self.mdGenerator.update_element('referenceSystemIdentifier', 
+                                            fs.product.ireferenceSystemID)
+            self.mdGenerator.update_element('title', fs.product.iResourceTitle)
+            # For now, assuming the metadata is being created on the same day
+            # that the products got generated. This assumption is not good.
+            # A better solution would be to move this method (and the 
+            # quicklooks too, for similar reason) to the class that actually 
+            # generates the product and have it be generated right after the
+            # product.
+            self.mdGenerator.update_element('date', today)
             #self.mdGenerator.update_element('Resource abstract', 
             #                                fs.product.iResourceAbstract)
             #self.mdGenerator.update_element('Resource type', 
             #                                fs.product.iResourceType)
-            #minx, maxx, miny, maxy = self.mapper.get_bounds(path)
             #self.mdGenerator.update_element('westLongitude', '%.2f' % minx)
             #self.mdGenerator.update_element('eastLongitude', '%.2f' % maxx)
             #self.mdGenerator.update_element('southLatitude', '%.2f' % miny)
@@ -965,6 +988,13 @@ class WebDisseminator(ProcessingPackage):
             xmlPath = os.path.join(self.xmlOutDir, '%s.xml' % pathFName)
             self.mdGenerator.save_xml(xmlPath)
 
-    def populate_csw_server(self):
+    def populate_csw_server(self, xmlFiles):
+        '''
+        Insert the records present in the xmlFiles in the csw server.
+
+        Inputs:
+            
+            xmlFiles - A list of xml files
+        '''
 
         raise NotImplementedError

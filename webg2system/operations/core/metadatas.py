@@ -8,6 +8,9 @@ processing system.
 
 import logging
 from lxml import etree
+import urllib
+import urllib2
+import cookielib
 
 class MetadataGenerator(object):
 
@@ -48,6 +51,15 @@ class MetadataGenerator(object):
                 'organisationName' : self.tree.xpath('gmd:contact/*'\
                     '/gmd:organisationName/gco:CharacterString', 
                     namespaces=self.ns)[0],
+                'organisationAddress' : self.tree.xpath('gmd:contact/*/'\
+                    'gmd:contactInfo/*/gmd:address/*/gmd:deliveryPoint/'\
+                    'gco:CharacterString', namespaces=self.ns)[0],
+                'organisationCity' : self.tree.xpath('gmd:contact/*/'\
+                    'gmd:contactInfo/*/gmd:address/*/gmd:city/'\
+                    'gco:CharacterString', namespaces=self.ns)[0],
+                'organisationPostalCode' : self.tree.xpath('gmd:contact/*/'\
+                    'gmd:contactInfo/*/gmd:address/*/gmd:postalCode/'\
+                    'gco:CharacterString', namespaces=self.ns)[0],
                 'electronicMailAddress' : self.tree.xpath('gmd:contact/*'\
                     '/gmd:contactInfo/*/gmd:address/*/gmd:'\
                     'electronicMailAddress/gco:CharacterString', 
@@ -219,6 +231,12 @@ class MetadataGenerator(object):
 
         self.tree.write(path)
 
+    # FIXME
+    # - This method is to replace most of the commands present in
+    # operations.core.g2packages.WebDisseminator.generate_xml_metadata()
+    def process_tile(self, tilePath):
+        raise NotImplementedError
+
     def update_element(self, elementName, value):
         '''
         Update the element's value with the new setting.
@@ -235,6 +253,67 @@ class MetadataGenerator(object):
         el.text = value
         return el
 
-    # use owslib
+    # FIXME
+    # this code is adapted from
+    # http://trac.osgeo.org/geonetwork/wiki/HowToDoCSWTransactionOperations#Python
     def send_to_csw(self):
-        raise NotImplementedError
+        gn_username = 'admin'
+        gn_password = 'admin'
+        gn_baseURL = 'http://geo4.meteo.pt/geonetwork'
+        gn_loginURI = 'srv/en/xml.user.login'
+        gn_logoutURI = 'srv/en/xml.user.logout'
+        gn_cswURI = 'srv/en/csw'
+
+        # HTTP header for authentication
+        header_urlencode = {"Content-type": "application/x-www-form-urlencoded", "Accept": "text/plain"}
+        # HTTP header for CSW request
+        header_xml = {"Content-type": "application/xml", "Accept": "text/plain"}
+        # authentication Post parameters
+        post_parameters = urllib.urlencode({"username": gn_username, "password": gn_password})
+
+        # Sample CSW transactions
+        xml_request = "<?xml version=\"1.0\"?>\
+               <csw:DescribeRecord xmlns:csw=\"http://www.opengis.net/cat/csw/2.0.2\"\
+               service=\"CSW\" version=\"2.0.2\" outputFormat=\"application/xml\"\
+               schemaLanguage=\"http://www.w3.org/XML/Schema\"/>"
+
+        url_in = '/'.join((gn_baseURL, gn_loginURI))
+        url_out = '/'.join((gn_baseURL, gn_logoutURI))
+        url_csw = '/'.join((gn_baseURL, gn_cswURI))
+
+
+        # first, always log out
+        request = urllib2.Request(url_out)
+        response = urllib2.urlopen(request)
+        #print response.read()       # debug
+
+        # send authentication request
+        request = urllib2.Request(url_in, post_parameters, header_urlencode)
+        response = urllib2.urlopen(request)
+        # a basic memory-only cookie jar instance
+        cookies = cookielib.CookieJar()
+        cookies.extract_cookies(response,request)
+        cookie_handler= urllib2.HTTPCookieProcessor( cookies )
+        # a redirect handler
+        redirect_handler= urllib2.HTTPRedirectHandler()
+        # save cookie and redirect handler for future HTTP Posts
+        opener = urllib2.build_opener(redirect_handler,cookie_handler)
+
+        # CSW request
+        request = urllib2.Request(url_csw, xml_request2, header_xml)
+        response = opener.open(request)
+        # CSW respons
+        xml_response = response.read()
+        print xml_response  # debug
+
+        # Do something with the response. For example:
+        #xmldoc = minidom.parseString(xml_response)
+        #for node in xmldoc.getElementsByTagName('ows:ExceptionText'):       # display <ows:ExceptionText /> value(s)
+        #    print "    EXCEPTION: "+node.firstChild.nodeValue
+        #xmldoc.unlink()     # cleanup DOM for improved performance
+
+        # more CSW requests if desired
+        # Last, always log out
+        request = urllib2.Request(url_out)
+        response = opener.open(request)
+        #print response.read()       # debug
