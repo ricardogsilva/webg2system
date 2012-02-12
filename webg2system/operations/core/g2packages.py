@@ -747,6 +747,62 @@ class Processor(ProcessingPackage):
         return retCode
 
 
+class SWIProcessor(ProcessingPackage):
+
+    def __init__(self, settings, timeslot, area, host, createIO=True):
+        '''
+        Inputs:
+
+            settings - A systemsettings.models.Package object
+
+            timeslot - A datetime.datetime object
+
+            area - A systemsettings.models.Area object
+
+            host - A systemsettings.models.Host object
+
+            createIO - A boolean indicating if the inputs and outputs
+                are to be created. Defaults to True.
+        '''
+
+        super(SWIProcessor, self).__init__(settings, timeslot, area, host)
+        self.rawSettings = settings
+        self.name = settings.name
+        relOutDir = utilities.parse_marked(
+                settings.packagepath_set.get(name='outputDir'), 
+                self)
+        self.outputDir = os.path.join(self.host.dataPath, relOutDir)
+        relCodeDir = utilities.parse_marked(
+                settings.packagepath_set.get(name='codeDir'), 
+                self)
+        self.codeDir = os.path.join(self.host.codePath, relCodeDir)
+        relWorkDir = utilities.parse_marked(
+                settings.packagepath_set.get(name='workingDir'), 
+                self)
+        self.workingDir = os.path.join(self.host.dataPath, relWorkDir)
+        relDggDir = utilities.parse_marked(
+                settings.packagepath_set.get(name='dggDir'), 
+                self)
+        self.dggDir = os.path.join(self.host.dataPath, relDggDir)
+        relTempOutDir = utilities.parse_marked(
+                settings.packagepath_set.get(name='tempOutDir'), 
+                self)
+        self.tempOutDir = os.path.join(self.host.dataPath, relTempOutDir)
+        relStaticDir = utilities.parse_marked(
+                settings.packagepath_set.get(name='staticDir'), 
+                self)
+        self.staticDir = os.path.join(self.host.dataPath, relStaticDir)
+        if createIO:
+            self.inputs = self._create_files(
+                'input', 
+                settings.packageInput_systemsettings_packageinput_related.all()
+            )
+            self.outputs = self._create_files(
+                'output', 
+                settings.packageOutput_systemsettings_packageoutput_related.all()
+            )
+
+
 class DataFusion(ProcessingPackage):
     '''
     !This class is not finished yet!
