@@ -30,13 +30,10 @@ class G2Source(object):
         for specSource in sourceSettings.specificsource_set.all():
             if specSource.startDate <= timeslot < specSource.endDate:
                 self.name = specSource.name
+                if specSource.number is not None:
+                    self.specificNumber = int(specSource.number)
         self.generalName = sourceSettings.name
         #self.areas = [a.name for a in settings.area_set.all()]
         self.area = areaSettings.name
-        for extraInfo in ('subSatellitePoint', 'lfac', 'cfac', 'loff',
-                          'coff', 'pixelSize', 'sensor', 'altName',):
-            try:
-                exec('self.%s = sourceSettings.sourceextrainfo_set.get(name="%s")'
-                     % (extraInfo, extraInfo))
-            except ObjectDoesNotExist:
-                pass
+        for extraInfo in sourceSettings.sourceextrainfo_set.all():
+            exec('self.%s = "%s"' % (extraInfo.name, extraInfo.string))

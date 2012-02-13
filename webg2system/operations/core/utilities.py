@@ -52,6 +52,14 @@ def convert_marks(markList, obj):
             markValue = obj.source.name
         elif mark == 'area':
             markValue = obj.source.area
+        elif mark == 'specificNumber':
+            markValue = obj.source.specificNumber
+        elif mark == 'altName':
+            markValue = obj.source.altName
+        elif mark == 'subSatellitePoint':
+            # get rid of any eventual plus or minus signs in the sub satellite 
+            # point
+            markValue = re.sub(r'[+-]', '', obj.source.subSatellitePoint)
         else:
             try:
                 markValue = eval('obj.%s' % mark)

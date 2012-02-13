@@ -690,7 +690,7 @@ class Processor(ProcessingPackage):
         fileContents += "&NAM_STOP_STATUS_RETRIEVAL_FREQ\n"
         fileContents += "YFREQINSECS = %s\n" % (self.pcf_stop_status_ret_freq)
         fileContents += "/\n"
-        pcfPath = "%s/ProductConfigurationFile" % self.workingDir
+        pcfPath = os.path.join(self.workingDir, 'ProductConfigurationFile')
         self.host.create_file(pcfPath, fileContents)
         return pcfPath
 
@@ -801,6 +801,120 @@ class SWIProcessor(ProcessingPackage):
                 'output', 
                 settings.packageOutput_systemsettings_packageoutput_related.all()
             )
+
+    def _write_acf(self):
+        """
+        Write the AlgorithmConfigurationFile for the external algorithm.
+
+        Returns: A string indicating the full path to the newly created
+                 file.
+        """
+
+        fileContents = "&NAM_EMPLACEMENT_FICHIER_BINAIRE\n"
+        fileContents += "YFICHIER_BINAIRE = '%s/'\n/\n" % (self.staticDir) 
+        fileContents += "&NAM_EMPLACEMENT_TMP\n"
+        fileContents += "YEMPLACEMENTTMP= '%s/'\n/\n" % (self.tempOutDir) 
+        fileContents += "&NAM_FORMAT_ENTRE\n"
+        # this variable allows the SWI algorithm to read its inputs either 
+        # in BUFR or native formats
+        fileContents += "YFORMATENTREE = 1\n/\n"         
+        fileContents += "&PROCLINE_VERSION\n"
+        fileContents += "YPROCLINE_VERSION = '%s'\n/\n" % self.version
+        fileContents += "&PROCLINE_DATE_ISO\n"
+        fileContents += dt.datetime.utcnow().strftime("YPROCLINE_DATE_ISO = '%Y-%m-%d'\n/")
+        acfPath = os.path.join(self.workingDir, 'AlgorithmConfigurationFile')
+        self.host.create_file(acfPath, fileContents)
+        return acfPath
+
+    def write_pcf(self, availableDict):
+        '''
+        Write the product configuration file.
+
+        Inputs:
+
+            availableDict - A dictionary with G2File objects as keys and
+                lists with the full paths to the respective files as values.
+
+        Returns:
+
+            The full path to the newly-written product configuration file.
+        '''
+
+        fileContents = "&NAM_ALG_MODES\n"
+        fileContents += "MODE = %s\n/\n" % (self.pcf_alg_mode) 
+        fileContents += "&NAM_ALG_INPUT_FILES_PATH\n"
+        fileContents += "YFILEINP=" 
+        for g2f, pathList in availableDict.iteritems():
+            for path in pathList:
+                fileContents += "'%s',\n" % path
+        fileContents = fileContents[:-2] #trimming the last newline and comma
+        fileContents += "\n/\n"
+        fileContents += "&NAM_ALG_OUTPUT_FILES_PATH\n"
+        fileContents += "YFILEOUT = "
+        for fileObj in self.outputs:
+            namePattern = fileObj.searchPatterns[0]
+            if namePattern.endswith(".*"):
+                namePattern = namePattern[:-2] # trimming the last '.*' sign
+            fileContents += "'%s/%s',\n" % (self.outputDir, namePattern)
+        fileContents = fileContents[:-2]
+        fileContents += "\n/\n"
+        fileContents += "&NAM_STOP_STATUS_RETRIEVAL_FREQ\n"
+        fileContents += "YFREQINSECS = %s\n" % (self.pcf_stop_status_ret_freq)
+        fileContents += "/\n"
+        pcfPath = os.path.join(self.workingDir, 'ProductConfigurationFile')
+        self.host.create_file(pcfPath, fileContents)
+        return pcfPath
+
+    def move_dgg_file(self):
+        """
+        Store dgg files in a YYYY/MM directory structure.
+
+        Inputs:
+        Returns:
+        """
+
+        for path in self.host.list_dir(self.tempOutDir):
+            if self.host.is_file(path):
+                fileTs = utilities.extract_timeslot(path)
+                newDir = os.path.join(self.dggDir, fileTs.strftime('%Y'),
+                                       fileTs.strftime('%m'))
+                if not self.host.is_dir(newDir):
+                    self.host.make_dir(newDir)
+                self.logger.info("Copying %s to %s" % (itemPath, newDir))
+                self.host.send([path], newDir)
+
+    def get_temp_file(self, maxLag=10):
+        """
+        Get the temp file needed to run the external package into the tempDir.
+
+        Inputs: maxLag - An integer specifying the number of days that are to
+                         be searched for a temp file.
+        """
+
+        # Difference in days between the instance's timeslot and the earliest
+        # usable temp file
+        #lag = 2
+        lag = 1
+        currentTs = self.timeslotDT - dt.timedelta(days=lag)
+        foundFile = False
+        while (not foundFile) and \
+                ((self.timeslotDT - currentTs).days < (lag + maxLag)):
+            searchPath = os.path.join(self.dggDir, currentTs.strftime("%Y"),
+                                      currentTs.strftime("%m"))
+            allFiles = self.host.list_dir(searchPath)
+            searchPattern = re.compile(currentTs.strftime('%Y%m%d'))
+            availableFiles = [p for p in allFiles if \
+                    searchPattern.search(p) is not None]
+            if len(availableFiles) > 0:
+                theFile = availableFiles[0]
+                #self.logger.info("Copying %s to %s" % (theFile, 
+                #                                       self.tempOutDir))
+                self.host.send(theFile, self.tempOutDir)
+                foundFile = True
+            else:
+                currentTs = currentTs - dt.timedelta(days=1)
+        if not foundFile:
+            self.logger.info("Couldn't find a suitable temp file (DGG).")
 
 
 class DataFusion(ProcessingPackage):
