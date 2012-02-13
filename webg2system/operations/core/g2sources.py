@@ -5,6 +5,8 @@
 Script's doctring goes here.
 """
 
+from django.core.exceptions import ObjectDoesNotExist
+
 import systemsettings.models as ss
 
 class G2Source(object):
@@ -31,3 +33,10 @@ class G2Source(object):
         self.generalName = sourceSettings.name
         #self.areas = [a.name for a in settings.area_set.all()]
         self.area = areaSettings.name
+        for extraInfo in ('subSatellitePoint', 'lfac', 'cfac', 'loff',
+                          'coff', 'pixelSize', 'sensor', 'altName',):
+            try:
+                exec('self.%s = sourceSettings.sourceextrainfo_set.get(name="%s")'
+                     % (extraInfo, extraInfo))
+            except ObjectDoesNotExist:
+                pass

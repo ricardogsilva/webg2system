@@ -6,11 +6,11 @@ class HostAdmin(admin.ModelAdmin):
 
 class SpecificSourceInline(admin.StackedInline):
     model = SpecificSource
-    extra = 1
+    extra = 0
 
 class SourceExtraInfoInline(admin.StackedInline):
     model = SourceExtraInfo
-    extra = 1
+    extra = 0
 
 class AreaInline(admin.StackedInline):
     model = Area

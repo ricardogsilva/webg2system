@@ -158,10 +158,11 @@ class SourceExtraInfo(MarkedString):
     source = models.ForeignKey(Source)
 
 class SpecificSource(models.Model):
+    source = models.ForeignKey(Source)
     name = models.CharField(max_length=100)
     startDate = models.DateTimeField()
     endDate = models.DateTimeField()
-    source = models.ForeignKey(Source)
+    number = models.IntegerField(null=True, blank=True)
        
     def __unicode__(self):
         return self.name
