@@ -30,6 +30,7 @@ import tables
 import systemsettings.models as ss
 from sshproxy import SSHProxy
 from ftpproxy import FTPProxy
+from twisted.python.dist import relativeTo
 
 # TODO
 # - Review all the methods that have a FIXME tag
@@ -174,9 +175,15 @@ class G2LocalHost(G2Host):
     This class has the implementation of the local file IO operations.
     """
 
-    def list_dir(self, directory):
-        fullPath = os.path.join(self.dataPath, directory)
-        return [os.path.join(fullPath, p) for p in os.listdir(fullPath)]
+    def list_dir(self, directory, relativeTo='data'):
+        relMap = {'data' : self.dataPath, 'code' : self.codePath}
+        fullPath = os.path.join(relMap.get(relativeTo), directory)
+        if self.is_dir(directory, relativeTo):
+            dirList = [os.path.join(fullPath, p) for p in os.listdir(fullPath)]
+        else:
+            dirList = []
+            self.logger.warning('No such directory: %s' % fullPath)
+        return dirList
 
     def find(self, pathList):
         '''

@@ -68,13 +68,13 @@ class GenericPackage(GenericItem):
                     # create a new input
                     generalFileSettings = eval('specificSettings.%sItem.file' \
                                                % fileRole)
-                    self.logger.debug('Creating file: %s ' % generalFileSettings.name)
-                    self.logger.debug('timeslot: %s' % spTimeslot)
-                    self.logger.debug('area: %s' % spArea) 
+                    #self.logger.debug('Creating file: %s ' % generalFileSettings.name)
+                    #self.logger.debug('timeslot: %s' % spTimeslot)
+                    #self.logger.debug('area: %s' % spArea) 
                     newObject = G2File(generalFileSettings, spTimeslot, spArea,
                                        hostSettings, specificSettings.optional,
                                        parent=self)
-                    self.logger.debug('----------') 
+                    #self.logger.debug('----------') 
                     objects.append(newObject)
         return objects
 
@@ -414,6 +414,7 @@ class FetchData(ProcessingPackage):
         if compressOutputs:
             self.compress_outputs()
         return 0
+
 
 class PreProcessor(ProcessingPackage):
     '''
@@ -802,7 +803,7 @@ class SWIProcessor(ProcessingPackage):
                 settings.packageOutput_systemsettings_packageoutput_related.all()
             )
 
-    def _write_acf(self):
+    def write_acf(self):
         """
         Write the AlgorithmConfigurationFile for the external algorithm.
 
@@ -840,27 +841,26 @@ class SWIProcessor(ProcessingPackage):
             The full path to the newly-written product configuration file.
         '''
 
-        fileContents = "&NAM_ALG_MODES\n"
-        fileContents += "MODE = %s\n/\n" % (self.pcf_alg_mode) 
-        fileContents += "&NAM_ALG_INPUT_FILES_PATH\n"
-        fileContents += "YFILEINP=" 
+        
+        fileContents = '&NAM_ALG_MODES\n'
+        fileContents += 'MODE = %s\n/\n' % (self.pcf_alg_mode) 
+        fileContents += '&NAM_ALG_INPUT_FILES_PATH\n'
+        fileContents += 'YFILEINP='
+        filePaths = []
         for g2f, pathList in availableDict.iteritems():
-            for path in pathList:
-                fileContents += "'%s',\n" % path
-        fileContents = fileContents[:-2] #trimming the last newline and comma
-        fileContents += "\n/\n"
-        fileContents += "&NAM_ALG_OUTPUT_FILES_PATH\n"
-        fileContents += "YFILEOUT = "
-        for fileObj in self.outputs:
-            namePattern = fileObj.searchPatterns[0]
-            if namePattern.endswith(".*"):
-                namePattern = namePattern[:-2] # trimming the last '.*' sign
-            fileContents += "'%s/%s',\n" % (self.outputDir, namePattern)
-        fileContents = fileContents[:-2]
-        fileContents += "\n/\n"
-        fileContents += "&NAM_STOP_STATUS_RETRIEVAL_FREQ\n"
-        fileContents += "YFREQINSECS = %s\n" % (self.pcf_stop_status_ret_freq)
-        fileContents += "/\n"
+            filePaths += pathList
+        filePaths.sort()
+        for path in filePaths:
+            fileContents += "'%s', " % path
+        fileContents = fileContents[:-1] #trimming the last comma
+        #fileContents += ','.join(filePaths)
+        fileContents += '\n/\n'
+        fileContents += '&NAM_ALG_OUTPUT_FILES_PATH\n'
+        fileContents += "YFILEOUT = '%s/'" % self.outputDir
+        fileContents += '\n/\n'
+        fileContents += '&NAM_STOP_STATUS_RETRIEVAL_FREQ\n'
+        fileContents += 'YFREQINSECS = %s\n' % (self.pcf_stop_status_ret_freq)
+        fileContents += '/\n'
         pcfPath = os.path.join(self.workingDir, 'ProductConfigurationFile')
         self.host.create_file(pcfPath, fileContents)
         return pcfPath
@@ -880,8 +880,8 @@ class SWIProcessor(ProcessingPackage):
                                        fileTs.strftime('%m'))
                 if not self.host.is_dir(newDir):
                     self.host.make_dir(newDir)
-                self.logger.info("Copying %s to %s" % (itemPath, newDir))
-                self.host.send([path], newDir)
+                self.logger.info("Copying %s to %s" % (path, newDir))
+                self.host.send([path], newDir, self.host)
 
     def get_temp_file(self, maxLag=10):
         """
@@ -890,15 +890,17 @@ class SWIProcessor(ProcessingPackage):
         Inputs: maxLag - An integer specifying the number of days that are to
                          be searched for a temp file.
         """
-
+        
+        if not self.host.is_dir(self.tempOutDir):
+            self.host.make_dir(self.tempOutDir)
         # Difference in days between the instance's timeslot and the earliest
         # usable temp file
         #lag = 2
         lag = 1
-        currentTs = self.timeslotDT - dt.timedelta(days=lag)
+        currentTs = self.timeslot - dt.timedelta(days=lag)
         foundFile = False
         while (not foundFile) and \
-                ((self.timeslotDT - currentTs).days < (lag + maxLag)):
+                ((self.timeslot - currentTs).days < (lag + maxLag)):
             searchPath = os.path.join(self.dggDir, currentTs.strftime("%Y"),
                                       currentTs.strftime("%m"))
             allFiles = self.host.list_dir(searchPath)
@@ -909,12 +911,61 @@ class SWIProcessor(ProcessingPackage):
                 theFile = availableFiles[0]
                 #self.logger.info("Copying %s to %s" % (theFile, 
                 #                                       self.tempOutDir))
-                self.host.send(theFile, self.tempOutDir)
+                self.host.send([theFile], self.tempOutDir, self.host)
                 foundFile = True
             else:
                 currentTs = currentTs - dt.timedelta(days=1)
         if not foundFile:
             self.logger.info("Couldn't find a suitable temp file (DGG).")
+
+    def execute_external_algorithm(self, pcfPath, acfPath):
+        '''
+        Run the external algorithm.
+
+        Inputs:
+
+            pcfPath - The full path to the product configuration file.
+
+            acfPath - The full path to the algorithm configuration file.
+            
+        NOTE:
+        The SWI_g2 package expects the AlgorithmConfigurationFile and 
+        ProductConfigurationFile in a different order than the rest of the
+        packages.
+        '''
+
+        for dirPath in (self.outputDir, self.tempOutDir):
+            if not self.host.is_dir(dirPath):
+                self.host.make_dir(dirPath)
+        command = './wrapper_g2.exe %s %s' % (acfPath, pcfPath)
+        runningDir = os.path.join(self.codeDir, '%s_v%s' % (self.codeName, 
+                                                            self.version))
+        #self.logger.info('external command:\n\t%s' % command)
+        #self.logger.info('runningDir:\n\t%s' % runningDir)
+        stdout, stderr, retCode = self.host.run_program(command, 
+                                                        workingDir=runningDir)
+        self.logger.info(stdout)
+        self.logger.error(stderr)
+        return retCode
+
+    def run_main(self, callback=None):
+        fetched = self.fetch_inputs(useArchive=True)
+        self.get_temp_file()
+        pcfPath = self.write_pcf(fetched)
+        acfPath = self.write_acf()
+        self.logger.info('Running FORTRAN code...')
+        retCode = self.execute_external_algorithm(pcfPath, acfPath)
+        self.move_dgg_file()
+        return retCode
+
+    def clean_up(self, compressOutputs=True, callback=None):
+        self._delete_directories([self.workingDir])
+        self.host.clean_dirs(self.outputDir)
+        self.host.clean_dirs(self.staticDir)
+        self.host.clean_dirs(self.tempOutDir)
+        if compressOutputs:
+            self.compress_outputs()
+        return 0
 
 
 class DataFusion(ProcessingPackage):

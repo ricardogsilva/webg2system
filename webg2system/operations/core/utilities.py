@@ -56,6 +56,11 @@ def convert_marks(markList, obj):
             markValue = obj.source.specificNumber
         elif mark == 'altName':
             markValue = obj.source.altName
+        elif mark == 'version':
+            try:
+                markValue = eval('obj.%s' % mark)
+            except AttributeError:
+                markValue = obj.parent.version
         elif mark == 'subSatellitePoint':
             # get rid of any eventual plus or minus signs in the sub satellite 
             # point
