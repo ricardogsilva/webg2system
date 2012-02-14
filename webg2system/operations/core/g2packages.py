@@ -748,6 +748,39 @@ class Processor(ProcessingPackage):
         return retCode
 
 
+class GSAProcessor(ProcessingPackage):
+    
+    def __init__(self, settings, timeslot, area, host, createIO=True):
+        super(GSAProcessor, self).__init__(settings, timeslot, area, host)
+        self.rawSettings = settings
+        self.name = settings.name
+        relOutDir = utilities.parse_marked(
+                settings.packagepath_set.get(name='outputDir'), 
+                self)
+        self.outputDir = os.path.join(self.host.dataPath, relOutDir)
+        relCodeDir = utilities.parse_marked(
+                settings.packagepath_set.get(name='codeDir'), 
+                self)
+        self.codeDir = os.path.join(self.host.codePath, relCodeDir)
+        relWorkDir = utilities.parse_marked(
+                settings.packagepath_set.get(name='workingDir'), 
+                self)
+        self.workingDir = os.path.join(self.host.dataPath, relWorkDir)
+        relinternalDir = utilities.parse_marked(
+                settings.packagepath_set.get(name='internalDir'), 
+                self)
+        self.internalDir = os.path.join(self.host.dataPath, relInternalDir)
+        if createIO:
+            self.inputs = self._create_files(
+                'input', 
+                settings.packageInput_systemsettings_packageinput_related.all()
+            )
+            self.outputs = self._create_files(
+                'output', 
+                settings.packageOutput_systemsettings_packageoutput_related.all()
+            )
+
+
 class SWIProcessor(ProcessingPackage):
 
     def __init__(self, settings, timeslot, area, host, createIO=True):
