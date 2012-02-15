@@ -766,7 +766,7 @@ class GSAProcessor(ProcessingPackage):
                 settings.packagepath_set.get(name='workingDir'), 
                 self)
         self.workingDir = os.path.join(self.host.dataPath, relWorkDir)
-        relinternalDir = utilities.parse_marked(
+        relInternalDir = utilities.parse_marked(
                 settings.packagepath_set.get(name='internalDir'), 
                 self)
         self.internalDir = os.path.join(self.host.dataPath, relInternalDir)

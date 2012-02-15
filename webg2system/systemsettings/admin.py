@@ -46,6 +46,10 @@ class FileExtraInfoInline(admin.StackedInline):
     model = FileExtraInfo
     extra = 0
 
+class DatasetInline(admin.StackedInline):
+    model = Dataset
+    extra = 0
+    
 class CodeClassAdmin(admin.ModelAdmin):
     pass
 
@@ -68,10 +72,6 @@ class SourceAdmin(admin.ModelAdmin):
     inlines = [AreaInline, SpecificSourceInline, SourceExtraInfoInline]
     list_display = ('name', 'areas', 'specific_names')
 
-class DatasetInline(admin.StackedInline):
-    model = Dataset
-    extra = 0
-
 class ProductAdmin(admin.ModelAdmin):
     radio_fields = {'iResourceType' : admin.HORIZONTAL}
     fieldsets = [
@@ -82,6 +82,9 @@ class ProductAdmin(admin.ModelAdmin):
             (
                 'INSPIRE metadata', 
                 {'fields' : [
+                        'originatorOrganization',
+                        'principalInvestigatorOrganization',
+                        'keywords',
                         'iResourceTitle', 
                         'iResourceAbstract', 
                         'iResourceType',
@@ -100,6 +103,11 @@ class GeneralMetadataAdmin(admin.ModelAdmin):
     model = GeneralMetadata
     extra = 0
     list_display = ('orgName', 'orgURL', 'contactName', 'contactEmail')
+    
+class KeywordAdmin(admin.ModelAdmin):
+    model = Keyword
+    extra = 0
+    list_display = ('name', 'controlledVocabulary')
 
 #admin.site.register(ExceptHour)
 admin.site.register(TimeslotDisplacer)
@@ -110,3 +118,4 @@ admin.site.register(File, FileAdmin)
 admin.site.register(Source, SourceAdmin)
 admin.site.register(Product, ProductAdmin)
 admin.site.register(GeneralMetadata, GeneralMetadataAdmin)
+admin.site.register(Keyword, KeywordAdmin)

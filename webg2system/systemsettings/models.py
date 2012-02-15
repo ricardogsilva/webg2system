@@ -201,6 +201,16 @@ class Product(models.Model):
                              ('service', 'service'))
     name = models.CharField(max_length=100)
     shortName = models.CharField(max_length=20, verbose_name='Short name')
+    originatorOrganization = models.ForeignKey(
+            'GeneralMetadata', 
+            related_name='product_%(app_label)s_%(class)s_related',
+            verbose_name='Originator organization', 
+            help_text='INSPIRE metadata.')
+    principalInvestigatorOrganization = models.ForeignKey(
+            'GeneralMetadata',
+            verbose_name='Principal investigator organization',
+            help_text='INSPIRE metadata.')
+    keywords = models.ManyToManyField('Keyword')
     #description = models.TextField(null=True, blank=True)
     #nRows = models.IntegerField(default=0, verbose_name='Number of rows')
     #nCols = models.IntegerField(default=0, verbose_name='Number of columns')
@@ -261,6 +271,25 @@ class GeneralMetadata(models.Model):
     orgCity = models.CharField(max_length=100, verbose_name='Organization city')
     contactName = models.CharField(max_length=100, verbose_name='Contact name')
     contactEmail = models.EmailField(verbose_name='Contact e-mail')
-
+    
     def __unicode__(self):
         return self.orgName
+        
+class Keyword(models.Model):
+    name = models.CharField(max_length=100)
+    controlledVocabulary = models.ForeignKey('ControlledVocabulary', 
+                                             null=True, blank=True, 
+                                             verbose_name='Controlled '\
+                                             'vocabulary')
+    description = models.TextField(null=True, blank=True)
+    
+    def __unicode__(self):
+        return self.name
+
+class ControlledVocabulary(models.Model):
+    title = models.CharField(max_length=100)
+    dateType = models.CharField(max_length=100)
+    date = models.DateField()
+    
+    def __unicode__(self):
+        return self.title

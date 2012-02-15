@@ -101,7 +101,6 @@ class MetadataGenerator(object):
                     '/gmd:RS_Identifier/gmd:code/gco:CharacterString', 
                     namespaces=self.ns)[0],
                     # the codeSpace tag does not need changing
-                #13 - referenceSystemInfo <- TO BE REMOVED FROM THE TEMPLATE
                 #14 - identificationInfo
                     # citation
                         # title
@@ -149,11 +148,115 @@ class MetadataGenerator(object):
                     # status (its a code list)
                 'status' : self.tree.xpath('gmd:identificationInfo[1]/*'\
                     '/gmd:status/gmd:MD_ProgressCode', namespaces=self.ns)[0],
-                    # pointOfContact
-                    # pointOfContact
-                    # resourceMaintenance
+                    # pointOfContact[1]
+                'pc1OrganisationName' : self.tree.xpath('gmd:'\
+                    'identificationInfo[1]/*/gmd:pointOfContact[1]/*/'\
+                    'gmd:organisationName/gco:CharacterString', 
+                    namespaces=self.ns)[0],
+                'pc1PositionName' : self.tree.xpath('gmd:'\
+                    'identificationInfo[1]/*/gmd:pointOfContact[1]/*/'\
+                    'gmd:positionName/gco:CharacterString', 
+                    namespaces=self.ns)[0],
+                'pc1OrgAddress' : self.tree.xpath('gmd:'\
+                    'identificationInfo[1]/*/gmd:pointOfContact[1]/*/'\
+                    'gmd:contactInfo/*/gmd:address/*/gmd:deliveryPoint/'\
+                    'gco:CharacterString', namespaces=self.ns)[0],
+                'pc1OrgCity' : self.tree.xpath('gmd:'\
+                    'identificationInfo[1]/*/gmd:pointOfContact[1]/*/'\
+                    'gmd:contactInfo/*/gmd:address/*/gmd:city/'\
+                    'gco:CharacterString', namespaces=self.ns)[0],
+                'pc1OrgPostal' : self.tree.xpath('gmd:'\
+                    'identificationInfo[1]/*/gmd:pointOfContact[1]/*/'\
+                    'gmd:contactInfo/*/gmd:address/*/gmd:postalCode/'\
+                    'gco:CharacterString', namespaces=self.ns)[0],
+                    # the next element is a list
+                'pc1OrgCountry' : self.tree.xpath('gmd:'\
+                    'identificationInfo[1]/*/gmd:pointOfContact[1]/*/'\
+                    'gmd:contactInfo/*/gmd:address/*/gmd:country/'\
+                    'gmd:Country', namespaces=self.ns)[0],
+                'pc1OrgEmail' : self.tree.xpath('gmd:'\
+                    'identificationInfo[1]/*/gmd:pointOfContact[1]/*/'\
+                    'gmd:contactInfo/*/gmd:address/*/gmd:electronicMailAddress/'\
+                    'gco:CharacterString', namespaces=self.ns)[0],
+                'pc1OrgURL' : self.tree.xpath('gmd:'\
+                    'identificationInfo[1]/*/gmd:pointOfContact[1]/*/'\
+                    'gmd:contactInfo/*/gmd:onlineResource/*/gmd:linkage/'\
+                    'gmd:URL', namespaces=self.ns)[0],
+                'pc1LinkageProtocol' : self.tree.xpath('gmd:'\
+                    'identificationInfo[1]/*/gmd:pointOfContact[1]/*/'\
+                    'gmd:contactInfo/*/gmd:onlineResource/*/gmd:protocol/'\
+                    'gco:CharacterString', namespaces=self.ns)[0],
+                'pc1LinkageSiteName' : self.tree.xpath('gmd:'\
+                    'identificationInfo[1]/*/gmd:pointOfContact[1]/*/'\
+                    'gmd:contactInfo/*/gmd:onlineResource/*/gmd:name/'\
+                    'gco:CharacterString', namespaces=self.ns)[0],
+                        # description <- unchanged
+                        # function <- unchanged
+                        # hoursOfService <- unchanged
+                        # contactInstructions <- unchanged
+                        #the next element is a list
+                'pc1Role' : self.tree.xpath('gmd:identificationInfo[1]/*/'\
+                    'gmd:pointOfContact[1]/*/gmd:role/gmd:CI_RoleCode', 
+                    namespaces=self.ns)[0],
+                
+                    # pointOfContact[2]
+                'pc2OrganisationName' : self.tree.xpath('gmd:'\
+                    'identificationInfo[1]/*/gmd:pointOfContact[1]/*/'\
+                    'gmd:organisationName/gco:CharacterString', 
+                    namespaces=self.ns)[0],
+                'pc2PositionName' : self.tree.xpath('gmd:'\
+                    'identificationInfo[1]/*/gmd:pointOfContact[1]/*/'\
+                    'gmd:positionName/gco:CharacterString', 
+                    namespaces=self.ns)[0],
+                'pc2OrgAddress' : self.tree.xpath('gmd:'\
+                    'identificationInfo[1]/*/gmd:pointOfContact[1]/*/'\
+                    'gmd:contactInfo/*/gmd:address/*/gmd:deliveryPoint/'\
+                    'gco:CharacterString', namespaces=self.ns)[0],
+                'pc2OrgCity' : self.tree.xpath('gmd:'\
+                    'identificationInfo[1]/*/gmd:pointOfContact[1]/*/'\
+                    'gmd:contactInfo/*/gmd:address/*/gmd:city/'\
+                    'gco:CharacterString', namespaces=self.ns)[0],
+                'pc2OrgPostal' : self.tree.xpath('gmd:'\
+                    'identificationInfo[1]/*/gmd:pointOfContact[1]/*/'\
+                    'gmd:contactInfo/*/gmd:address/*/gmd:postalCode/'\
+                    'gco:CharacterString', namespaces=self.ns)[0],
+                    # the next element is a list
+                'pc2OrgCountry' : self.tree.xpath('gmd:'\
+                    'identificationInfo[1]/*/gmd:pointOfContact[1]/*/'\
+                    'gmd:contactInfo/*/gmd:address/*/gmd:country/'\
+                    'gmd:Country', namespaces=self.ns)[0],
+                'pc2OrgEmail' : self.tree.xpath('gmd:'\
+                    'identificationInfo[1]/*/gmd:pointOfContact[1]/*/'\
+                    'gmd:contactInfo/*/gmd:address/*/gmd:electronicMailAddress/'\
+                    'gco:CharacterString', namespaces=self.ns)[0],
+                'pc2OrgURL' : self.tree.xpath('gmd:'\
+                    'identificationInfo[1]/*/gmd:pointOfContact[1]/*/'\
+                    'gmd:contactInfo/*/gmd:onlineResource/*/gmd:linkage/'\
+                    'gmd:URL', namespaces=self.ns)[0],
+                'pc2LinkageProtocol' : self.tree.xpath('gmd:'\
+                    'identificationInfo[1]/*/gmd:pointOfContact[1]/*/'\
+                    'gmd:contactInfo/*/gmd:onlineResource/*/gmd:protocol/'\
+                    'gco:CharacterString', namespaces=self.ns)[0],
+                'pc2LinkageSiteName' : self.tree.xpath('gmd:'\
+                    'identificationInfo[1]/*/gmd:pointOfContact[1]/*/'\
+                    'gmd:contactInfo/*/gmd:onlineResource/*/gmd:name/'\
+                    'gco:CharacterString', namespaces=self.ns)[0],
+                        # description <- unchanged
+                        # function <- unchanged
+                        # hoursOfService <- unchanged
+                        # contactInstructions <- unchanged
+                        #the next element is a list
+                'pc2Role' : self.tree.xpath('gmd:identificationInfo[1]/*/'\
+                    'gmd:pointOfContact[1]/*/gmd:role/gmd:CI_RoleCode', 
+                    namespaces=self.ns)[0],
+                    # resourceMaintenance <- unchanged
                     # graphicOverview
-                    # resourceFormat
+                'quicklookName' : self.tree.xpath('gmd:identificationInfo/*/'\
+                    'gmd:graphicOverview/*/gmd:fileName/gco:CharacterString',
+                    namespaces=self.ns),
+                        # fileDescription <- to be changed in the profile
+                        # fileType <- to be changed in the profile
+                    # resourceFormat <- unchanged
                     # descriptiveKeywords
                     # descriptiveKeywords
                     # descriptiveKeywords
@@ -198,10 +301,7 @@ class MetadataGenerator(object):
                     'gmd:identificationInfo/*/gmd:citation/*/gmd:title/'\
                             'gco:CharacterString',
                     namespaces=self.ns),
-                'quicklook' : self.tree.xpath(
-                    'gmd:identificationInfo/*/gmd:graphicOverview/*/'\
-                            'gmd:fileName/gco:CharacterString',
-                    namespaces=self.ns),
+                
                 'westLongitude' : self.tree.xpath(
                     'gmd:identificationInfo/*/gmd:extent/*/*/*/'\
                             'gmd:westBoundLongitude/gco:Decimal',
@@ -252,7 +352,36 @@ class MetadataGenerator(object):
         el = self.changeableElements.get(elementName)
         el.text = value
         return el
+    
+    def _sort_keywords(self, productSettings):
+        vocabularies = {None : []}
+        for keywordSetting in productSettings.keywords.all():
+            vocab = k.controlledVocabulary
+            if vocab is None:
+                vocabularies[None].append(keywordSetting)
+            else:
+                if vocabularies.get(vocab.title) is None:
+                    vocabularies[vocab.title] = []
+                entry = vocabularies.get(vocab.title)
+                entry.append(keywordSetting)
+        return vocabularies
 
+    def _apply_keywords(self, productSettings):
+        '''
+        Apply the keywords to the object's metadata tree.
+        '''
+        parentElement = self.tree.xpath('gmd:identificationInfo/'\
+                                        'gmd:MD_DataIdentification', 
+                                        namespaces=self.ns)[0]
+        vocabularyDict = self._sort_keywords(productSettings)
+        for vocab, keywordSettings in vocabularyDict.iteritems():
+            child = etree.SubElement(parentElement, 'gmd:DescriptiveKeywords')
+            if vocab is not None:
+                pass
+
+            for keySett in keywordSettings:
+                pass
+        
     # FIXME
     # this code is adapted from
     # http://trac.osgeo.org/geonetwork/wiki/HowToDoCSWTransactionOperations#Python
