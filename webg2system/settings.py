@@ -130,6 +130,7 @@ INSTALLED_APPS = (
     'south',
     'systemsettings',
     'operations',
+    'inspiresettings',
 )
 
 # A sample logging configuration. The only tangible logging
