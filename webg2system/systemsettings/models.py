@@ -211,6 +211,9 @@ class Product(models.Model):
             verbose_name='Principal investigator organization',
             help_text='INSPIRE metadata.')
     keywords = models.ManyToManyField('Keyword')
+    topicCategories = models.ManyToManyField('TopicCategory', 
+                                             verbose_name='ISO 19115 Topic '\
+                                             'categories')
     #description = models.TextField(null=True, blank=True)
     #nRows = models.IntegerField(default=0, verbose_name='Number of rows')
     #nCols = models.IntegerField(default=0, verbose_name='Number of columns')
@@ -290,6 +293,20 @@ class ControlledVocabulary(models.Model):
     title = models.CharField(max_length=100)
     dateType = models.CharField(max_length=100)
     date = models.DateField()
+
+    class Meta:
+        verbose_name_plural = 'controlled vocabularies'
     
     def __unicode__(self):
         return self.title
+
+class TopicCategory(models.Model):
+    name = models.CharField(max_length=100, help_text='ISO 19115 topic '\
+                            'category')
+    description = models.TextField(null=True, blank=True)
+
+    class Meta:
+        verbose_name_plural = 'topic categories'
+    
+    def __unicode__(self):
+        return self.name

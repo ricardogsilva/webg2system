@@ -253,25 +253,25 @@ class MetadataGenerator(object):
                     # graphicOverview
                 'quicklookName' : self.tree.xpath('gmd:identificationInfo/*/'\
                     'gmd:graphicOverview/*/gmd:fileName/gco:CharacterString',
-                    namespaces=self.ns),
+                    namespaces=self.ns)[0],
                         # fileDescription <- to be changed in the profile
                         # fileType <- to be changed in the profile
                     # resourceFormat <- unchanged
-                    # descriptiveKeywords
-                    # descriptiveKeywords
-                    # descriptiveKeywords
-                    # descriptiveKeywords
-                    # descriptiveKeywords
-                    # resourceconstraints
-                    # resourceconstraints
-                    # resourceconstraints
-                    # aggregationInfo
-                    # aggregationInfo
-                    # aggregationInfo
-                    # spatialRepresentationType
+                    # descriptiveKeywords <- the _apply_keywords() method takes care of these
+                    # resourceconstraints <- unchanged
+                    # resourceconstraints <- unchanged
+                    # resourceconstraints <- unchanged
+                    # aggregationInfo <- unchanged
+                    # aggregationInfo <- to be removed from the template
+                    # aggregationInfo <- to be removed from the template
+                    # spatialRepresentationType <- unchanged
                     # spatialResolution
-                    # language
-                    # characterSet
+                'resolution' : self.tree.xpath('gmd:identificationInfo/*/'\
+                                               'gmd:spatialResolution/*/'\
+                                               'gmd:distance/gco:Distance', 
+                                               namespaces=self.ns)[0],
+                    # language <- unchanged
+                    # characterSet <- unchanged
                     # topicCategory
                     # topicCategory
                     # topicCategory
@@ -355,32 +355,83 @@ class MetadataGenerator(object):
     
     def _sort_keywords(self, productSettings):
         vocabularies = {None : []}
-        for keywordSetting in productSettings.keywords.all():
+        for k in productSettings.keywords.all():
             vocab = k.controlledVocabulary
             if vocab is None:
-                vocabularies[None].append(keywordSetting)
+                vocabularies[None].append(k)
             else:
                 if vocabularies.get(vocab.title) is None:
                     vocabularies[vocab.title] = []
                 entry = vocabularies.get(vocab.title)
-                entry.append(keywordSetting)
+                entry.append(k)
         return vocabularies
 
     def _apply_keywords(self, productSettings):
         '''
         Apply the keywords to the object's metadata tree.
         '''
+
+        self._remove_original_keywords()
         parentElement = self.tree.xpath('gmd:identificationInfo/'\
                                         'gmd:MD_DataIdentification', 
                                         namespaces=self.ns)[0]
         vocabularyDict = self._sort_keywords(productSettings)
         for vocab, keywordSettings in vocabularyDict.iteritems():
-            child = etree.SubElement(parentElement, 'gmd:DescriptiveKeywords')
-            if vocab is not None:
-                pass
-
+            descKeywordsEl = etree.SubElement(parentElement, 
+                                              '{%s}descriptiveKeywords' % \
+                                              self.ns['gmd'])
+            mdKeywordsEl = etree.SubElement(descKeywordsEl, 
+                                            '{%s}MD_Keywords' % \
+                                            self.ns['gmd'])
             for keySett in keywordSettings:
-                pass
+                keywordEl = etree.SubElement(mdKeywordsEl, '{%s}keyword' % \
+                                             self.ns['gmd'])
+                charStringEl = etree.SubElement(keywordEl, 
+                                                '{%s}CharacterString' % \
+                                                self.ns['gco'])
+                charStringEl.text = keySett.name
+            if vocab is not None:
+                vocSettings = keySett.controlledVocabulary
+                thesaurusEl = etree.SubElement(mdKeywordsEl, 
+                                               '{%s}thesaurusName' % \
+                                               self.ns['gmd'])
+                ciCitationEl = etree.SubElement(thesaurusEl, 
+                                                '{%s}CI_Citation' % \
+                                                self.ns['gmd'])
+                titleEl = etree.SubElement(ciCitationEl, '{%s}title' % \
+                                           self.ns['gmd'])
+                titleEl.text = vocSettings.title
+                dateEl = etree.SubElement(ciCitationEl, '{%s}date' % \
+                                          self.ns['gmd'])
+                ciDateEl = etree.SubElement(dateEl, '{%s}CI_Date' % \
+                                            self.ns['gmd'])
+                subDateEl = etree.SubElement(ciDateEl, '{%s}date' % \
+                                             self.ns['gmd'])
+                gcoDateEl = etree.SubElement(subDateEl, '{%s}Date' % \
+                                             self.ns['gco'])
+                gcoDateEl.text = vocSettings.date.strftime('%Y-%m-%d')
+                dateTypeEl = etree.SubElement(ciDateEl, '{%s}dateType' % \
+                                              self.ns['gmd'])
+                dateTypeCodeEl = etree.SubElement(dateTypeEl, 
+                                                  '{%s}CI_DateTypeCode' % \
+                                                  self.ns['gmd'])
+                codeElAttribs = dateTypeCodeEl.attrib
+                codeElAttribs['{%s}codeList' % self.ns['gmd']] = 'http://'\
+                        'standards.iso.org/ittf/PubliclyAvailableStandards/'\
+                        'ISO_19139_Schemas/resources/Codelist/'\
+                        'ML_gmxCodelists.xml#CI_DateTypeCode'
+                codeElAttribs['{%s}codeListValue' % self.ns['gmd']] = vocSettings.dateType
+                dateTypeCodeEl.text = vocSettings.dateType
+
+    def _remove_original_keywords(self):
+        parent = self.tree.xpath('gmd:identificationInfo/'\
+                                 'gmd:MD_DataIdentification', 
+                                 namespaces=self.ns)[0]
+        keywords = parent.xpath('gmd:descriptiveKeywords', namespaces=self.ns)
+        for k in keywords:
+            parent.remove(k)
+
+
         
     # FIXME
     # this code is adapted from

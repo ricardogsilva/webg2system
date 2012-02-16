@@ -85,6 +85,7 @@ class ProductAdmin(admin.ModelAdmin):
                         'originatorOrganization',
                         'principalInvestigatorOrganization',
                         'keywords',
+                        'topicCategories',
                         'iResourceTitle', 
                         'iResourceAbstract', 
                         'iResourceType',
@@ -109,6 +110,15 @@ class KeywordAdmin(admin.ModelAdmin):
     extra = 0
     list_display = ('name', 'controlledVocabulary')
 
+class ControlledVocabularyAdmin(admin.ModelAdmin):
+    model = ControlledVocabulary
+    extra = 0
+
+class TopicCategoryAdmin(admin.ModelAdmin):
+    model = TopicCategory
+    extra = 10
+    list_display = ('name', 'description')
+
 #admin.site.register(ExceptHour)
 admin.site.register(TimeslotDisplacer)
 admin.site.register(CodeClass, CodeClassAdmin)
@@ -119,3 +129,5 @@ admin.site.register(Source, SourceAdmin)
 admin.site.register(Product, ProductAdmin)
 admin.site.register(GeneralMetadata, GeneralMetadataAdmin)
 admin.site.register(Keyword, KeywordAdmin)
+admin.site.register(ControlledVocabulary, ControlledVocabularyAdmin)
+admin.site.register(TopicCategory, TopicCategoryAdmin)

@@ -1238,6 +1238,7 @@ class WebDisseminator(ProcessingPackage):
             #self.mdGenerator.update_element('northLatitude', '%.2f' % maxy)
             #self.mdGenerator.update_element('uuid', str(uuid))
             #self.mdGenerator.update_element('idCode', str(uuid))
+            self.mdGenerator._apply_keywords(fs.product)
             pathFName = os.path.splitext(os.path.basename(path))[0]
             xmlPath = os.path.join(self.xmlOutDir, '%s.xml' % pathFName)
             self.mdGenerator.save_xml(xmlPath)
