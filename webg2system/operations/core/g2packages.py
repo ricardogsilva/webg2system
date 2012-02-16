@@ -13,6 +13,40 @@ import mappers
 import metadatas
 import utilities
 
+# to be deleted!
+import logging
+
+class Outra(object):
+    '''
+    A dummy class that just sleeps for two minutes.
+
+    This is just for testing the daemonization of RunningPackage instances.
+    '''
+
+    def __init__(self, *args, **kwargs):
+        self.logger = logging.getLogger(
+                '.'.join((__name__, self.__class__.__name__)))
+
+    def clean_up(self):
+        pass
+
+    def outputs_available(self):
+        return False
+
+    def prepare(self):
+        return 0
+
+    def run_main(self, sleepMins=3):
+        import time
+        counter = 1
+        self.logger.info('About to sleep for %i minutes...' % sleepMins)
+        while counter <= sleepMins:
+            time.sleep(60)
+            self.logger.info('Still asleep - %i minutes have passed' % counter)
+            counter += 1
+        return 0
+
+
 class GenericPackage(GenericItem):
     '''
     Base class for ALL G2Packages.
