@@ -67,5 +67,6 @@ class RunningPackageResource(ModelResource):
                                                                 **kwargs)
         self.logger.debug('bundle: %s' % bundle)
         self.logger.debug('About to execute the runningPackage instance\'s run() method...')
-        bundle.obj.run()
+        #bundle.obj.run()
+        bundle.obj.daemonize()
         return bundle

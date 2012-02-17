@@ -27,23 +27,24 @@ class Outra(object):
         self.logger = logging.getLogger(
                 '.'.join((__name__, self.__class__.__name__)))
 
-    def clean_up(self):
+    def clean_up(self, callback=None):
         pass
 
     def outputs_available(self):
         return False
 
-    def prepare(self):
+    def prepare(self, callback=None):
         return 0
 
-    def run_main(self, sleepMins=3):
+    def run_main(self, callback=None, sleepSecs=5, sleepSteps=3):
         import time
         counter = 1
-        self.logger.info('About to sleep for %i minutes...' % sleepMins)
-        while counter <= sleepMins:
-            time.sleep(60)
-            self.logger.info('Still asleep - %i minutes have passed' % counter)
+        self.logger.info('About to sleep for %i seconds...' % (sleepSecs * sleepSteps))
+        while counter <= sleepSteps:
+            time.sleep(sleepSecs)
+            self.logger.info('Still asleep - %i seconds have passed' % (counter * sleepSecs))
             counter += 1
+        self.logger.info('Not sleeping anymore, yeah!')
         return 0
 
 
