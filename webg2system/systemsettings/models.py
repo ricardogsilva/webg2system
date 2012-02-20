@@ -1,6 +1,6 @@
 from django.db import models
 
-from inspiresettings.models import SpatialDataTheme
+from inspiresettings.models import SpatialDataTheme, Collaborator
 
 # TODO
 #   - add a help_text attribute to all the fields that need one.
@@ -204,12 +204,13 @@ class Product(models.Model):
     name = models.CharField(max_length=100)
     shortName = models.CharField(max_length=20, verbose_name='Short name')
     originatorOrganization = models.ForeignKey(
-            'GeneralMetadata', 
+            Collaborator,
             related_name='product_%(app_label)s_%(class)s_related',
             verbose_name='Originator organization', 
-            help_text='INSPIRE metadata.')
+            help_text='INSPIRE metadata. Point of contact in the '\
+                      'organization responsible for the metadata.')
     principalInvestigatorOrganization = models.ForeignKey(
-            'GeneralMetadata',
+            Collaborator,
             verbose_name='Principal investigator organization',
             help_text='INSPIRE metadata.')
     inspireKeyword = models.ForeignKey(SpatialDataTheme, 

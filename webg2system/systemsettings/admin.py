@@ -74,30 +74,30 @@ class SourceAdmin(admin.ModelAdmin):
 
 class ProductAdmin(admin.ModelAdmin):
     radio_fields = {'iResourceType' : admin.HORIZONTAL}
-    fieldsets = [
-            (
-                None, 
-                {'fields' : ['name', 'shortName', 'pixelSize']}
-            ),
-            (
-                'INSPIRE metadata', 
-                {'fields' : [
-                        'originatorOrganization',
-                        'principalInvestigatorOrganization',
-                        'inspireKeyword',
-                        'keywords',
-                        'topicCategories',
-                        'iResourceTitle', 
-                        'iResourceAbstract', 
-                        'iResourceType',
-                        'iParentIdentifier',
-                        'ireferenceSystemID',
-                        'iOtherDetails',
-                        'iCredit',
-                        ],
-                 'classes' : ['collapse']}
-            ),
-    ]
+    #fieldsets = [
+    #        (
+    #            None, 
+    #            {'fields' : ['name', 'shortName', 'pixelSize']}
+    #        ),
+    #        (
+    #            'INSPIRE metadata', 
+    #            {'fields' : [
+    #                    'originatorOrganization',
+    #                    'principalInvestigatorOrganization',
+    #                    'inspireKeyword',
+    #                    'keywords',
+    #                    'topicCategories',
+    #                    'iResourceTitle', 
+    #                    'iResourceAbstract', 
+    #                    'iResourceType',
+    #                    'iParentIdentifier',
+    #                    'ireferenceSystemID',
+    #                    'iOtherDetails',
+    #                    'iCredit',
+    #                    ],
+    #             'classes' : ['collapse']}
+    #        ),
+    #]
     inlines = [DatasetInline]
     list_display = ('shortName', 'name')
 

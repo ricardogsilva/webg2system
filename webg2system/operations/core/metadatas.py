@@ -574,7 +574,6 @@ class MetadataGenerator(object):
         gcoPostalEl = etree.SubElement(postalCodeEl, '{%}CharacterString' \
                                        % self.ns['gco'])
         gcoPostalEl.text = contact.organization.postalCode
-
         countryEl = etree.SubElement(ciAddressEl, '{%}country' \
                                        % self.ns['gmd'])
         countryListEl = etree.SubElement(countryEl, '{%}Country' \
@@ -584,32 +583,17 @@ class MetadataGenerator(object):
             'www.iso.org/iso/en/prods-services/iso3166ma/'\
             '02iso-3166-code-lists/index.html'
         countryListElAttribs['{%s}codeSpace' % self.ns['gmd']] = 'ISO 3166-1'
-
         countryCode = contact.organization.country
         countryListElAttribs['{%s}codeListValue' % self.ns['gmd']] = countryCode
         countryListEl.text = pycountry.countries.get(alpha2=countryCode)
 
-        #'pc2PositionName' : self.tree.xpath('gmd:'\
-        #    'identificationInfo[1]/*/gmd:pointOfContact[1]/*/'\
-        #    'gmd:positionName/gco:CharacterString', 
-        #    namespaces=self.ns)[0],
-        #'pc2OrgAddress' : self.tree.xpath('gmd:'\
-        #    'identificationInfo[1]/*/gmd:pointOfContact[1]/*/'\
-        #    'gmd:contactInfo/*/gmd:address/*/gmd:deliveryPoint/'\
-        #    'gco:CharacterString', namespaces=self.ns)[0],
-        #'pc2OrgCity' : self.tree.xpath('gmd:'\
-        #    'identificationInfo[1]/*/gmd:pointOfContact[1]/*/'\
-        #    'gmd:contactInfo/*/gmd:address/*/gmd:city/'\
-        #    'gco:CharacterString', namespaces=self.ns)[0],
-        #'pc2OrgPostal' : self.tree.xpath('gmd:'\
-        #    'identificationInfo[1]/*/gmd:pointOfContact[1]/*/'\
-        #    'gmd:contactInfo/*/gmd:address/*/gmd:postalCode/'\
-        #    'gco:CharacterString', namespaces=self.ns)[0],
-        #    # the next element is a list
-        #'pc2OrgCountry' : self.tree.xpath('gmd:'\
-        #    'identificationInfo[1]/*/gmd:pointOfContact[1]/*/'\
-        #    'gmd:contactInfo/*/gmd:address/*/gmd:country/'\
-        #    'gmd:Country', namespaces=self.ns)[0],
+        emailEl = etree.SubElement(ciAddressEl, '{%}electronicMailAddress' \
+                                       % self.ns['gmd'])
+        gcoEmailEl = etree.SubElement(emailEl, '{%}CharacterString' \
+                                       % self.ns['gco'])
+        gcoEmailEl.text = contact.email
+
+
         #'pc2OrgEmail' : self.tree.xpath('gmd:'\
         #    'identificationInfo[1]/*/gmd:pointOfContact[1]/*/'\
         #    'gmd:contactInfo/*/gmd:address/*/gmd:electronicMailAddress/'\

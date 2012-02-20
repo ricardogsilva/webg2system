@@ -38,5 +38,5 @@ class Collaborator(models.Model):
     organization = models.ForeignKey(Organization)
 
     def __unicode__(self):
-        return self.name
+        return '%s - %s' % (self.organization.name, self.name)
 
