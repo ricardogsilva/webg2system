@@ -1,5 +1,7 @@
 from django.db import models
 
+from inspiresettings.models import SpatialDataTheme
+
 # TODO
 #   - add a help_text attribute to all the fields that need one.
 #   - integrate with python-piston and expose a REST API for creating
@@ -210,10 +212,16 @@ class Product(models.Model):
             'GeneralMetadata',
             verbose_name='Principal investigator organization',
             help_text='INSPIRE metadata.')
+    inspireKeyword = models.ForeignKey(SpatialDataTheme, 
+                                       verbose_name='INSPIRE data theme')
     keywords = models.ManyToManyField('Keyword')
-    topicCategories = models.ManyToManyField('TopicCategory', 
+    topicCategories = models.ManyToManyField('TopicCategory', null=True,
                                              verbose_name='ISO 19115 Topic '\
-                                             'categories')
+                                             'categories', blank=True,
+                                             help_text='The topic categories'\
+                                             ' chosen here will complement '\
+                                             'the ones that already match '\
+                                             'the selected INSPIRE data theme')
     #description = models.TextField(null=True, blank=True)
     #nRows = models.IntegerField(default=0, verbose_name='Number of rows')
     #nCols = models.IntegerField(default=0, verbose_name='Number of columns')

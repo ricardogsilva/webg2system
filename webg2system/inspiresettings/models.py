@@ -1,3 +1,5 @@
+import pycountry
+
 from django.db import models
 
 class SpatialDataTheme(models.Model):
@@ -12,6 +14,28 @@ class SpatialDataTheme(models.Model):
                                          null=True, blank=True,
                                          verbose_name='ISO 19115 Topic '\
                                          'Category')
+
+    def __unicode__(self):
+        return self.name
+
+class Organization(models.Model):
+    COUNTRY_CHOICES = [(c.alpha2, c.name) for c in pycountry.countries]
+    name = models.CharField(max_length=255)
+    url = models.CharField(max_length=255)
+    streetAddress = models.CharField(max_length=255, 
+                                     verbose_name='Street Address')
+    postalCode = models.CharField(max_length=20, 
+                                  verbose_name='Postal Code')
+    city = models.CharField(max_length=100)
+    country = models.CharField(max_length=2, choices=COUNTRY_CHOICES)
+
+    def __unicode__(self):
+        return self.name
+
+class Collaborator(models.Model):
+    name = models.CharField(max_length=255)
+    email = models.EmailField()
+    organization = models.ForeignKey(Organization)
 
     def __unicode__(self):
         return self.name

@@ -84,6 +84,7 @@ class ProductAdmin(admin.ModelAdmin):
                 {'fields' : [
                         'originatorOrganization',
                         'principalInvestigatorOrganization',
+                        'inspireKeyword',
                         'keywords',
                         'topicCategories',
                         'iResourceTitle', 

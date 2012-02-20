@@ -1267,13 +1267,14 @@ class WebDisseminator(ProcessingPackage):
             #                                fs.product.iResourceAbstract)
             #self.mdGenerator.update_element('Resource type', 
             #                                fs.product.iResourceType)
-            #self.mdGenerator.update_element('westLongitude', '%.2f' % minx)
-            #self.mdGenerator.update_element('eastLongitude', '%.2f' % maxx)
-            #self.mdGenerator.update_element('southLatitude', '%.2f' % miny)
-            #self.mdGenerator.update_element('northLatitude', '%.2f' % maxy)
             #self.mdGenerator.update_element('uuid', str(uuid))
             #self.mdGenerator.update_element('idCode', str(uuid))
             self.mdGenerator._apply_keywords(fs.product)
+            self.mdGenerator._apply_topic_categories(fs.product)
+            self.mdGenerator.update_element('westLongitude', '%.2f' % minx)
+            self.mdGenerator.update_element('eastLongitude', '%.2f' % maxx)
+            self.mdGenerator.update_element('southLatitude', '%.2f' % miny)
+            self.mdGenerator.update_element('northLatitude', '%.2f' % maxy)
             pathFName = os.path.splitext(os.path.basename(path))[0]
             xmlPath = os.path.join(self.xmlOutDir, '%s.xml' % pathFName)
             self.mdGenerator.save_xml(xmlPath)
