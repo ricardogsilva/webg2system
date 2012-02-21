@@ -21,6 +21,7 @@ class SpatialDataTheme(models.Model):
 class Organization(models.Model):
     COUNTRY_CHOICES = [(c.alpha2, c.name) for c in pycountry.countries]
     name = models.CharField(max_length=255)
+    short_name = models.CharField(max_length=10)
     url = models.CharField(max_length=255)
     streetAddress = models.CharField(max_length=255, 
                                      verbose_name='Street Address')
