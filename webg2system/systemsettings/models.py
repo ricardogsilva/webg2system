@@ -1,6 +1,6 @@
 from django.db import models
 
-from inspiresettings.models import SpatialDataTheme, Collaborator
+from inspiresettings.models import SpatialDataTheme, Collaborator, TopicCategory, Keyword, TopicCategory
 
 # TODO
 #   - add a help_text attribute to all the fields that need one.
@@ -194,6 +194,10 @@ class CodeClass(models.Model):
     className = models.CharField(max_length=100, verbose_name='Class')
     description = models.TextField(null=True, blank=True)
 
+    class Meta:
+        verbose_name_plural = 'code classes'
+
+
     def __unicode__(self):
         return self.className
 
@@ -201,22 +205,20 @@ class Product(models.Model):
     RESOURCE_TYPE_CHOICES = (('dataset', 'dataset'), 
                              ('series', 'series'), 
                              ('service', 'service'))
+    OVERVIEW_TYPE_CHOICES = (('png', 'png'),)
     name = models.CharField(max_length=100)
     shortName = models.CharField(max_length=20, verbose_name='Short name')
-    originatorOrganization = models.ForeignKey(
+    originator_collaborator = models.ForeignKey(
             Collaborator,
             related_name='product_%(app_label)s_%(class)s_related',
-            verbose_name='Originator organization', 
             help_text='INSPIRE metadata. Point of contact in the '\
                       'organization responsible for the metadata.')
-    principalInvestigatorOrganization = models.ForeignKey(
-            Collaborator,
-            verbose_name='Principal investigator organization',
-            help_text='INSPIRE metadata.')
+    principal_investigator = models.ForeignKey(Collaborator,
+                                               help_text='INSPIRE metadata.')
     inspireKeyword = models.ForeignKey(SpatialDataTheme, 
                                        verbose_name='INSPIRE data theme')
-    keywords = models.ManyToManyField('Keyword')
-    topicCategories = models.ManyToManyField('TopicCategory', null=True,
+    keywords = models.ManyToManyField(Keyword, null=True, blank=True)
+    topicCategories = models.ManyToManyField(TopicCategory, null=True,
                                              verbose_name='ISO 19115 Topic '\
                                              'categories', blank=True,
                                              help_text='The topic categories'\
@@ -256,6 +258,15 @@ class Product(models.Model):
                                      null=True, blank=True)
     iCredit = models.TextField(verbose_name='Credit', help_text='INSPIRE '\
                                'metadata element: Product credit information.')
+    graphic_overview_description = models.TextField(help_text='INSPIRE ' \
+                                                    'metadata element: ' \
+                                                    'Description of the ' \
+                                                    'graphical overview '\
+                                                    '(quicklook).')
+    graphic_overview_type = models.CharField(max_length=10, 
+                                             choices=OVERVIEW_TYPE_CHOICES,
+                                             help_text='File format for the'\
+                                             'quicklooks.')
 
     def __unicode__(self):
         return self.shortName
@@ -269,53 +280,5 @@ class Dataset(models.Model):
     scalingFactor = models.IntegerField()
     missingValue = models.IntegerField()
 
-    def __unicode__(self):
-        return self.name
-
-class GeneralMetadata(models.Model):
-    orgName = models.CharField(max_length=255, verbose_name='Organization name')
-    orgURL = models.CharField(max_length=255, verbose_name='Organization URL')
-    orgStreetAddress = models.CharField(max_length=255, 
-                                        verbose_name='Organization street '\
-                                        'address')
-    orgPostalCode = models.CharField(max_length=20, 
-                                     verbose_name='Organization postal code')
-    orgCity = models.CharField(max_length=100, verbose_name='Organization city')
-    contactName = models.CharField(max_length=100, verbose_name='Contact name')
-    contactEmail = models.EmailField(verbose_name='Contact e-mail')
-    
-    def __unicode__(self):
-        return self.orgName
-        
-class Keyword(models.Model):
-    name = models.CharField(max_length=100)
-    controlledVocabulary = models.ForeignKey('ControlledVocabulary', 
-                                             null=True, blank=True, 
-                                             verbose_name='Controlled '\
-                                             'vocabulary')
-    description = models.TextField(null=True, blank=True)
-    
-    def __unicode__(self):
-        return self.name
-
-class ControlledVocabulary(models.Model):
-    title = models.CharField(max_length=100)
-    dateType = models.CharField(max_length=100)
-    date = models.DateField()
-
-    class Meta:
-        verbose_name_plural = 'controlled vocabularies'
-    
-    def __unicode__(self):
-        return self.title
-
-class TopicCategory(models.Model):
-    name = models.CharField(max_length=100, help_text='ISO 19115 topic '\
-                            'category')
-    description = models.TextField(null=True, blank=True)
-
-    class Meta:
-        verbose_name_plural = 'topic categories'
-    
     def __unicode__(self):
         return self.name

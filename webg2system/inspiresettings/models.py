@@ -10,11 +10,42 @@ class SpatialDataTheme(models.Model):
                             'INSPIRE Directive')
     description = models.TextField(null=True, blank=True)
     annex = models.CharField(max_length=5, choices=ANNEX_CHOICES)
-    isoTopicCategory = models.ForeignKey('systemsettings.TopicCategory',
+    isoTopicCategory = models.ForeignKey('TopicCategory',
                                          null=True, blank=True,
                                          verbose_name='ISO 19115 Topic '\
                                          'Category')
 
+    def __unicode__(self):
+        return self.name
+
+class TopicCategory(models.Model):
+    name = models.CharField(max_length=100, help_text='ISO 19115 topic '\
+                            'category')
+    description = models.TextField(null=True, blank=True)
+
+    class Meta:
+        verbose_name_plural = 'topic categories'
+    
+    def __unicode__(self):
+        return self.name
+
+class ControlledVocabulary(models.Model):
+    title = models.CharField(max_length=100)
+    date_type = models.CharField(max_length=100)
+    date = models.DateField()
+
+    class Meta:
+        verbose_name_plural = 'controlled vocabularies'
+    
+    def __unicode__(self):
+        return self.title
+
+class Keyword(models.Model):
+    name = models.CharField(max_length=100)
+    controlled_vocabulary = models.ForeignKey(ControlledVocabulary, 
+                                             null=True, blank=True)
+    description = models.TextField(null=True, blank=True)
+    
     def __unicode__(self):
         return self.name
 

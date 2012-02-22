@@ -74,51 +74,10 @@ class SourceAdmin(admin.ModelAdmin):
 
 class ProductAdmin(admin.ModelAdmin):
     radio_fields = {'iResourceType' : admin.HORIZONTAL}
-    #fieldsets = [
-    #        (
-    #            None, 
-    #            {'fields' : ['name', 'shortName', 'pixelSize']}
-    #        ),
-    #        (
-    #            'INSPIRE metadata', 
-    #            {'fields' : [
-    #                    'originatorOrganization',
-    #                    'principalInvestigatorOrganization',
-    #                    'inspireKeyword',
-    #                    'keywords',
-    #                    'topicCategories',
-    #                    'iResourceTitle', 
-    #                    'iResourceAbstract', 
-    #                    'iResourceType',
-    #                    'iParentIdentifier',
-    #                    'ireferenceSystemID',
-    #                    'iOtherDetails',
-    #                    'iCredit',
-    #                    ],
-    #             'classes' : ['collapse']}
-    #        ),
-    #]
     inlines = [DatasetInline]
     list_display = ('shortName', 'name')
+    filter_horizontal = ('keywords', 'topicCategories',)
 
-class GeneralMetadataAdmin(admin.ModelAdmin):
-    model = GeneralMetadata
-    extra = 0
-    list_display = ('orgName', 'orgURL', 'contactName', 'contactEmail')
-    
-class KeywordAdmin(admin.ModelAdmin):
-    model = Keyword
-    extra = 0
-    list_display = ('name', 'controlledVocabulary')
-
-class ControlledVocabularyAdmin(admin.ModelAdmin):
-    model = ControlledVocabulary
-    extra = 0
-
-class TopicCategoryAdmin(admin.ModelAdmin):
-    model = TopicCategory
-    extra = 10
-    list_display = ('name', 'description')
 
 #admin.site.register(ExceptHour)
 admin.site.register(TimeslotDisplacer)
@@ -128,7 +87,3 @@ admin.site.register(Package, PackageAdmin)
 admin.site.register(File, FileAdmin)
 admin.site.register(Source, SourceAdmin)
 admin.site.register(Product, ProductAdmin)
-admin.site.register(GeneralMetadata, GeneralMetadataAdmin)
-admin.site.register(Keyword, KeywordAdmin)
-admin.site.register(ControlledVocabulary, ControlledVocabularyAdmin)
-admin.site.register(TopicCategory, TopicCategoryAdmin)

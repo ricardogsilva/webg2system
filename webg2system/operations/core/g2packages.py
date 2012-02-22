@@ -1211,11 +1211,37 @@ class WebDisseminator(ProcessingPackage):
     def generate_quicklooks(self, mapfile, fileList):
 
         self.host.make_dir(self.quickviewOutDir)
-        quicklooks = self.mapper.generate_quicklooks(self.quickviewOutDir, 
-                                                     mapfile, fileList)
+        legendPath = self._generate_quicklooks_legend(self.quickviewOutDir, 
+                                                      mapfile)
+        quickLooks = []
+        for fNum, path in enumerate(fileList):
+            self.logger.debug('(%i/%i) - Creating quicklook...' % 
+                              (fNum+1, len(fileList)))
+            quickPath = self.mapper.generate_quicklook(self.quickviewOutDir, 
+                                                       mapfile, path, 
+                                                       legendPath)
+            quickLooks.append(quickPath)
+        self.mapper.remove_temps([legendPath])
         return quicklooks
 
+    def _generate_quicklooks_legend(self, outputDir, mapfile):
+        legendPath = os.path.join(outputDir, 'legend.png')
+        legendCommand = 'legend %s %s' % (mapfile, legendPath)
+        mapfileDir = os.path.dirname(mapfile)
+        self.host.run_program(legendCommand, mapfileDir)
+        return legendPath
+
+
     def generate_xml_metadata(self, fileList):
+        '''
+        Generate the xml metadata files.
+
+        Inputs:
+
+            fileList - A list with the full paths to the HDF5 tiles.
+
+            quickLooks - A list with the full paths to the quickLooks.
+        '''
 
         if not self.host.is_dir(self.xmlOutDir):
             self.host.make_dir(self.xmlOutDir)
@@ -1224,57 +1250,13 @@ class WebDisseminator(ProcessingPackage):
         for fNum, path in enumerate(fileList):
             self.logger.debug('(%i/%i) - Creating xml...' % 
                               (fNum+1, len(fileList)))
-            fs = utilities.get_file_settings(path)
-            minx, miny, maxx, maxy = self.mapper.get_bounds(path)
-            uuid = uuid1()
-            self.mdGenerator.update_element('fileIdentifier', str(uuid))
-            self.mdGenerator.update_element('parentIdentifier', 
-                                            fs.product.iParentIdentifier)
-            self.mdGenerator.update_element('hierarchyLevel', 
-                                            fs.product.iResourceType)
-            self.mdGenerator.update_element('organisationName', 
-                                            genMeta.orgName)
-            self.mdGenerator.update_element('organisationAddress', 
-                                            genMeta.orgStreetAddress)
-            self.mdGenerator.update_element('organisationCity', 
-                                            genMeta.orgCity)
-            self.mdGenerator.update_element('organisationPostalCode', 
-                                            genMeta.orgPostalCode)
-            self.mdGenerator.update_element('electronicMailAddress', 
-                                            genMeta.contactEmail)
-            self.mdGenerator.update_element('dateStamp', today)
-            rowSize = fs.fileextrainfo_set.get(name='nLines').string
-            self.mdGenerator.update_element('rowSize', rowSize)
-            self.mdGenerator.update_element('rowResolution', '%.2f' % 
-                                            fs.product.pixelSize)
-            colSize = fs.fileextrainfo_set.get(name='nCols').string
-            self.mdGenerator.update_element('colSize', colSize)
-            self.mdGenerator.update_element('colResolution', '%.2f' %
-                                            fs.product.pixelSize)
-            cornerPoint = '%.1f %.1f' % (maxy, minx)
-            self.mdGenerator.update_element('cornerPoint', cornerPoint)
-            self.mdGenerator.update_element('referenceSystemIdentifier', 
-                                            fs.product.ireferenceSystemID)
-            self.mdGenerator.update_element('title', fs.product.iResourceTitle)
-            # For now, assuming the metadata is being created on the same day
-            # that the products got generated. This assumption is not good.
-            # A better solution would be to move this method (and the 
-            # quicklooks too, for similar reason) to the class that actually 
-            # generates the product and have it be generated right after the
-            # product.
-            self.mdGenerator.update_element('date', today)
-            #self.mdGenerator.update_element('Resource abstract', 
-            #                                fs.product.iResourceAbstract)
-            #self.mdGenerator.update_element('Resource type', 
-            #                                fs.product.iResourceType)
-            #self.mdGenerator.update_element('uuid', str(uuid))
-            #self.mdGenerator.update_element('idCode', str(uuid))
-            self.mdGenerator._apply_keywords(fs.product)
-            self.mdGenerator._apply_topic_categories(fs.product)
-            self.mdGenerator.update_element('westLongitude', '%.2f' % minx)
-            self.mdGenerator.update_element('eastLongitude', '%.2f' % maxx)
-            self.mdGenerator.update_element('southLatitude', '%.2f' % miny)
-            self.mdGenerator.update_element('northLatitude', '%.2f' % maxy)
+            self.mdGenerator.apply_changes(path, self.mapper)
+
+            #self.mdGenerator.update_element('westLongitude', '%.2f' % minx)
+            #self.mdGenerator.update_element('eastLongitude', '%.2f' % maxx)
+            #self.mdGenerator.update_element('southLatitude', '%.2f' % miny)
+            #self.mdGenerator.update_element('northLatitude', '%.2f' % maxy)
+
             pathFName = os.path.splitext(os.path.basename(path))[0]
             xmlPath = os.path.join(self.xmlOutDir, '%s.xml' % pathFName)
             self.mdGenerator.save_xml(xmlPath)

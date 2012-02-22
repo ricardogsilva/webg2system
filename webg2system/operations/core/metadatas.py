@@ -44,30 +44,7 @@ class MetadataGenerator(object):
                 'hierarchyLevel' : self.tree.xpath(
                     'gmd:hierarchyLevel/gmd:MD_ScopeCode', 
                     namespaces=self.ns)[0],
-                #07 - contact (Metadata on Metadata)
-                #   This section deals with who is responsible for the 
-                #   metadata.
-                #       
-                #   Consider adding (or removing) the rest of the tags used 
-                #   in the global template. 
-                #   The 'role' elment is to left as pointOfContact, as is in 
-                #   the template.
-                'organisationName' : self.tree.xpath('gmd:contact/*'\
-                    '/gmd:organisationName/gco:CharacterString', 
-                    namespaces=self.ns)[0],
-                'organisationAddress' : self.tree.xpath('gmd:contact/*/'\
-                    'gmd:contactInfo/*/gmd:address/*/gmd:deliveryPoint/'\
-                    'gco:CharacterString', namespaces=self.ns)[0],
-                'organisationCity' : self.tree.xpath('gmd:contact/*/'\
-                    'gmd:contactInfo/*/gmd:address/*/gmd:city/'\
-                    'gco:CharacterString', namespaces=self.ns)[0],
-                'organisationPostalCode' : self.tree.xpath('gmd:contact/*/'\
-                    'gmd:contactInfo/*/gmd:address/*/gmd:postalCode/'\
-                    'gco:CharacterString', namespaces=self.ns)[0],
-                'electronicMailAddress' : self.tree.xpath('gmd:contact/*'\
-                    '/gmd:contactInfo/*/gmd:address/*/gmd:'\
-                    'electronicMailAddress/gco:CharacterString', 
-                    namespaces=self.ns)[0],
+                #07 - contact (Metadata on Metadata) <- handled by the _apply_contact_info() method 
                 #08 - dateStamp (date stamp for when the metadata was created)
                 'dateStamp' : self.tree.xpath('gmd:dateStamp/gco:Date', 
                     namespaces=self.ns)[0],
@@ -152,114 +129,10 @@ class MetadataGenerator(object):
                     # status (its a code list)
                 'status' : self.tree.xpath('gmd:identificationInfo[1]/*'\
                     '/gmd:status/gmd:MD_ProgressCode', namespaces=self.ns)[0],
-                    # pointOfContact[1]
-                'pc1OrganisationName' : self.tree.xpath('gmd:'\
-                    'identificationInfo[1]/*/gmd:pointOfContact[1]/*/'\
-                    'gmd:organisationName/gco:CharacterString', 
-                    namespaces=self.ns)[0],
-                'pc1PositionName' : self.tree.xpath('gmd:'\
-                    'identificationInfo[1]/*/gmd:pointOfContact[1]/*/'\
-                    'gmd:positionName/gco:CharacterString', 
-                    namespaces=self.ns)[0],
-                'pc1OrgAddress' : self.tree.xpath('gmd:'\
-                    'identificationInfo[1]/*/gmd:pointOfContact[1]/*/'\
-                    'gmd:contactInfo/*/gmd:address/*/gmd:deliveryPoint/'\
-                    'gco:CharacterString', namespaces=self.ns)[0],
-                'pc1OrgCity' : self.tree.xpath('gmd:'\
-                    'identificationInfo[1]/*/gmd:pointOfContact[1]/*/'\
-                    'gmd:contactInfo/*/gmd:address/*/gmd:city/'\
-                    'gco:CharacterString', namespaces=self.ns)[0],
-                'pc1OrgPostal' : self.tree.xpath('gmd:'\
-                    'identificationInfo[1]/*/gmd:pointOfContact[1]/*/'\
-                    'gmd:contactInfo/*/gmd:address/*/gmd:postalCode/'\
-                    'gco:CharacterString', namespaces=self.ns)[0],
-                    # the next element is a list
-                'pc1OrgCountry' : self.tree.xpath('gmd:'\
-                    'identificationInfo[1]/*/gmd:pointOfContact[1]/*/'\
-                    'gmd:contactInfo/*/gmd:address/*/gmd:country/'\
-                    'gmd:Country', namespaces=self.ns)[0],
-                'pc1OrgEmail' : self.tree.xpath('gmd:'\
-                    'identificationInfo[1]/*/gmd:pointOfContact[1]/*/'\
-                    'gmd:contactInfo/*/gmd:address/*/gmd:electronicMailAddress/'\
-                    'gco:CharacterString', namespaces=self.ns)[0],
-                'pc1OrgURL' : self.tree.xpath('gmd:'\
-                    'identificationInfo[1]/*/gmd:pointOfContact[1]/*/'\
-                    'gmd:contactInfo/*/gmd:onlineResource/*/gmd:linkage/'\
-                    'gmd:URL', namespaces=self.ns)[0],
-                'pc1LinkageProtocol' : self.tree.xpath('gmd:'\
-                    'identificationInfo[1]/*/gmd:pointOfContact[1]/*/'\
-                    'gmd:contactInfo/*/gmd:onlineResource/*/gmd:protocol/'\
-                    'gco:CharacterString', namespaces=self.ns)[0],
-                'pc1LinkageSiteName' : self.tree.xpath('gmd:'\
-                    'identificationInfo[1]/*/gmd:pointOfContact[1]/*/'\
-                    'gmd:contactInfo/*/gmd:onlineResource/*/gmd:name/'\
-                    'gco:CharacterString', namespaces=self.ns)[0],
-                        # description <- unchanged
-                        # function <- unchanged
-                        # hoursOfService <- unchanged
-                        # contactInstructions <- unchanged
-                        #the next element is a list
-                'pc1Role' : self.tree.xpath('gmd:identificationInfo[1]/*/'\
-                    'gmd:pointOfContact[1]/*/gmd:role/gmd:CI_RoleCode', 
-                    namespaces=self.ns)[0],
-                
-                    # pointOfContact[2]
-                'pc2OrganisationName' : self.tree.xpath('gmd:'\
-                    'identificationInfo[1]/*/gmd:pointOfContact[1]/*/'\
-                    'gmd:organisationName/gco:CharacterString', 
-                    namespaces=self.ns)[0],
-                'pc2PositionName' : self.tree.xpath('gmd:'\
-                    'identificationInfo[1]/*/gmd:pointOfContact[1]/*/'\
-                    'gmd:positionName/gco:CharacterString', 
-                    namespaces=self.ns)[0],
-                'pc2OrgAddress' : self.tree.xpath('gmd:'\
-                    'identificationInfo[1]/*/gmd:pointOfContact[1]/*/'\
-                    'gmd:contactInfo/*/gmd:address/*/gmd:deliveryPoint/'\
-                    'gco:CharacterString', namespaces=self.ns)[0],
-                'pc2OrgCity' : self.tree.xpath('gmd:'\
-                    'identificationInfo[1]/*/gmd:pointOfContact[1]/*/'\
-                    'gmd:contactInfo/*/gmd:address/*/gmd:city/'\
-                    'gco:CharacterString', namespaces=self.ns)[0],
-                'pc2OrgPostal' : self.tree.xpath('gmd:'\
-                    'identificationInfo[1]/*/gmd:pointOfContact[1]/*/'\
-                    'gmd:contactInfo/*/gmd:address/*/gmd:postalCode/'\
-                    'gco:CharacterString', namespaces=self.ns)[0],
-                    # the next element is a list
-                'pc2OrgCountry' : self.tree.xpath('gmd:'\
-                    'identificationInfo[1]/*/gmd:pointOfContact[1]/*/'\
-                    'gmd:contactInfo/*/gmd:address/*/gmd:country/'\
-                    'gmd:Country', namespaces=self.ns)[0],
-                'pc2OrgEmail' : self.tree.xpath('gmd:'\
-                    'identificationInfo[1]/*/gmd:pointOfContact[1]/*/'\
-                    'gmd:contactInfo/*/gmd:address/*/gmd:electronicMailAddress/'\
-                    'gco:CharacterString', namespaces=self.ns)[0],
-                'pc2OrgURL' : self.tree.xpath('gmd:'\
-                    'identificationInfo[1]/*/gmd:pointOfContact[1]/*/'\
-                    'gmd:contactInfo/*/gmd:onlineResource/*/gmd:linkage/'\
-                    'gmd:URL', namespaces=self.ns)[0],
-                'pc2LinkageProtocol' : self.tree.xpath('gmd:'\
-                    'identificationInfo[1]/*/gmd:pointOfContact[1]/*/'\
-                    'gmd:contactInfo/*/gmd:onlineResource/*/gmd:protocol/'\
-                    'gco:CharacterString', namespaces=self.ns)[0],
-                'pc2LinkageSiteName' : self.tree.xpath('gmd:'\
-                    'identificationInfo[1]/*/gmd:pointOfContact[1]/*/'\
-                    'gmd:contactInfo/*/gmd:onlineResource/*/gmd:name/'\
-                    'gco:CharacterString', namespaces=self.ns)[0],
-                        # description <- unchanged
-                        # function <- unchanged
-                        # hoursOfService <- unchanged
-                        # contactInstructions <- unchanged
-                        #the next element is a list
-                'pc2Role' : self.tree.xpath('gmd:identificationInfo[1]/*/'\
-                    'gmd:pointOfContact[1]/*/gmd:role/gmd:CI_RoleCode', 
-                    namespaces=self.ns)[0],
+                    # pointOfContact[1] <- handled by the _apply_contact_info() method 
+                    # pointOfContact[2] <- handled by the _apply_contact_info() method 
                     # resourceMaintenance <- unchanged
-                    # graphicOverview
-                'quicklookName' : self.tree.xpath('gmd:identificationInfo/*/'\
-                    'gmd:graphicOverview/*/gmd:fileName/gco:CharacterString',
-                    namespaces=self.ns)[0],
-                        # fileDescription <- to be changed in the profile
-                        # fileType <- to be changed in the profile
+                    # graphicOverview <- handled by the _apply_graphic_overview() method
                     # resourceFormat <- unchanged
                     # descriptiveKeywords <- the _apply_keywords() method takes care of these
                     # resourceconstraints <- unchanged
@@ -522,8 +395,8 @@ class MetadataGenerator(object):
                                               self.ns['gmd'])
             MDTopicCatCode.text = t
 
-    def _apply_contact_info(self, parentElement, contactElName, positionName, 
-                            role, contact):
+    def _apply_contact_info(self, parentElement, contactElName, role, contact, 
+                            positionName=None):
         '''
 
         Inputs:
@@ -533,12 +406,13 @@ class MetadataGenerator(object):
             contactElName - A string specifying the name of the contact
                 info element to create.
 
-            positionName - A string specifying the value for the 'positionName'
-                xml element.
-
             role - A string specifying the value for the 'role' xml element.
 
             contact - systemsettings.models.GeneralMetadata instance.
+
+            positionName - A string specifying the value for the 'positionName'
+                xml element. If None (the default) this element is ommited
+                from the xml tree.
         '''
 
         contactEl = etree.SubElement(parentElement, '{%s}%s' % (self.ns['gmd'],
@@ -550,11 +424,12 @@ class MetadataGenerator(object):
         gcoOrgNameEl = etree.SubElement(orgNameEl, '{%s}CharacterString'\
                                         % self.ns['gco'])
         gcoOrgNameEl.text = contact.organization.name
-        positionEl = etree.SubElement(ciRespPartyEl, '{%s}positionName'\
-                                      % self.ns['gmd'])
-        gcoPositionNameEl = etree.SubElement(positionEl, '{%s}CharacterString'\
-                                             % self.ns['gco'])
-        gcoPositionNameEl.text = positionName
+        if positionName is not None:
+            positionEl = etree.SubElement(ciRespPartyEl, '{%s}positionName'\
+                                          % self.ns['gmd'])
+            gcoPositionNameEl = etree.SubElement(positionEl, '{%s}CharacterString'\
+                                                 % self.ns['gco'])
+            gcoPositionNameEl.text = positionName
         contactInfoEl = etree.SubElement(ciRespPartyEl, '{%}contactInfo' \
                                          % self.ns['gmd'])
         ciContactEl = etree.SubElement(contactInfoEl, '{%}CI_Contact' \
@@ -661,14 +536,77 @@ class MetadataGenerator(object):
         Inputs:
 
             filePath - the original HDF5 tile being processed
+
+            mapper - A Mapper instance
         '''
 
+        today = dt.date.today().strftime('%Y-%m-%d')
         fs = utilities.get_file_settings(filePath)
         minx, miny, maxx, maxy = mapper.get_bounds(filePath)
         uuid = uuid1()
         self.update_element('fileIdentifier', str(uuid))
         self.update_element('parentIdentifier', fs.product.iParentIdentifier)
         self.update_element('hierarchyLevel', fs.product.iResourceType)
+        self._remove_contact_info(self.tree.getroot(), 'contact')
+        self._apply_contact_info(self.tree.getroot(), 'contact', 
+                                 role='pointOfContact', 
+                                 contact=fs.product.originator_collaborator)
+        self.update_element('dateStamp', today)
+        rowSize = fs.fileextrainfo_set.get(name='nLines').string
+        self.update_element('rowSize', rowSize)
+        self.update_element('rowResolution', '%.2f' % fs.product.pixelSize)
+        colSize = fs.fileextrainfo_set.get(name='nCols').string
+        self.update_element('colSize', colSize)
+        self.update_element('colResolution', '%.2f' % fs.product.pixelSize)
+        cornerPoint = '%.1f %.1f' % (maxy, minx)
+        self.update_element('cornerPoint', cornerPoint)
+        self.update_element('referenceSystemIdentifier', 
+                            fs.product.ireferenceSystemID)
+        self.update_element('title', fs.product.iResourceTitle)
+        # For now, assuming the metadata is being created on the same day
+        # that the products got generated. This assumption is not good.
+        # A better solution would be to move this method (and the 
+        # quicklooks too, for similar reason) to the class that actually 
+        # generates the product and have it be generated right after the
+        # product.
+        self.update_element('date', today)
+        self.update_element('abstract', fs.product.iResourceAbstract)
+        self.update_element('Resource type', fs.product.iResourceType)
+        self.update_element('credit', fs.product.iCredit)
+        identInfoEl = self.tree.xpath('gmd:identificationInfo/'\
+                                      'gmd:MD_DataIdentification', 
+                                      namespaces=self.ns)
+        self._remove_contact_info(identInfoEl, 'pointOfContact')
+        self._apply_contact_info(identInfoEl, 'pointOfContact', 
+                                 role='principalInvestigator', 
+                                 positionName='Researcher',
+                                 contact=fs.product.principal_investigator)
+        self._apply_contact_info(identInfoEl, 'pointOfContact', 
+                                 role='originator', 
+                                 positionName='Geoland2 Help Desk',
+                                 contact=fs.product.originator_collaborator)
+        self._apply_graphic_overview(filePath, fs.product)
+        self._apply_keywords(fs.product)
+        self._apply_topic_categories(fs.product)
+
+    def _apply_graphic_overview(self, filePath, product):
+        fileNameEl = self.tree.xpath('gmd:identificationInfo/*/'\
+                                     'gmd:graphicOverview/*/'\
+                                     'gmd:fileName/gco:CharacterString',
+                                     namespaces=self.ns)[0]
+        fileNameEl.text = '%s.png' % os.path.basename(filePath)
+        fileDescEl = self.tree.xpath('gmd:identificationInfo/*/'\
+                                     'gmd:fileDescription/*/'\
+                                     'gmd:fileName/gco:CharacterString',
+                                     namespaces=self.ns)[0]
+        fileDescEl.text = product.graphic_overview_description
+        fileTypeEl = self.tree.xpath('gmd:identificationInfo/*/'\
+                                     'gmd:fileType/*/'\
+                                     'gmd:fileName/gco:CharacterString',
+                                     namespaces=self.ns)[0]
+        fileTypeEl.text = product.graphic_overview_type
+
+
 
 
         

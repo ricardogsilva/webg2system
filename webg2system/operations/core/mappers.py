@@ -301,43 +301,36 @@ class NGPMapper(Mapper): #crappy name
     # FIXME
     # - Use mapscript.imageObj to generate the quicklooks instead of
     #   launching the shp2img external process       
-    def generate_quicklooks(self, outputDir, mapfile, fileList):
+    def generate_quicklook(self, outputDir, mapfile, filePath, legendPath):
         '''
-        Generate the quicklook files.
+        Generate the quicklook file.
 
         Inputs:
+
+            outputDir - directory where the quicklook file is to be saved to.
 
             mapfile - Full path to the mapfile to be used when generating 
                 the quicklooks.
 
-            fileList - A list of paths with the files to create quicklooks
-                to.
+            filePath - The file for which the quicklook is to be created.
+
+            legendPath - Path to the legend file.
 
         Returns:
             
             A list of full paths to the newly created quicklooks.
         '''
 
-        quickLooks = []
-        legendPath = os.path.join(outputDir, 'legend.png')
-        legendCommand = 'legend %s %s' % (mapfile, legendPath)
-        mapfileDir = os.path.dirname(mapfile)
-        self.host.run_program(legendCommand, mapfileDir)
-        for fNum, path in enumerate(fileList):
-            self.logger.debug('(%i/%i) - Creating quicklook...' % 
-                              (fNum+1, len(fileList)))
-            dirPath, fname = os.path.split(path)
-            minx, miny, maxx, maxy = self.get_bounds(path)
-            rawQuickPath = os.path.join(outputDir, 'rawquicklook_%s.png' % fname)
-            command = 'shp2img -m %s -o %s -e %i %i %i %i -s '\
-                      '400 400 -l %s' % (mapfile, rawQuickPath, minx, miny, 
-                                         maxx, maxy, self.product.shortName)
-            stdout, stderr, retcode = self.host.run_program(command)
-            outPath = self._complete_quicklook(rawQuickPath, legendPath)
-            quickLooks.append(outPath)
-            self.remove_temps([rawQuickPath])
-        self.remove_temps([legendPath])
-        return quickLooks
+        dirPath, fname = os.path.split(filePath)
+        minx, miny, maxx, maxy = self.get_bounds(filePath)
+        rawQuickPath = os.path.join(outputDir, 'rawquicklook_%s.png' % fname)
+        command = 'shp2img -m %s -o %s -e %i %i %i %i -s '\
+                  '400 400 -l %s' % (mapfile, rawQuickPath, minx, miny, 
+                                     maxx, maxy, self.product.shortName)
+        stdout, stderr, retcode = self.host.run_program(command)
+        outPath = self._complete_quicklook(rawQuickPath, legendPath)
+        self.remove_temps([rawQuickPath])
+        return outPath
 
     def get_bounds(self, path):
         '''Return a 4-element tuple with minx, miny, maxx, maxy.'''
