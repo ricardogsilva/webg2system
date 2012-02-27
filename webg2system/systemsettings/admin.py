@@ -49,6 +49,7 @@ class FileExtraInfoInline(admin.StackedInline):
 class DatasetInline(admin.StackedInline):
     model = Dataset
     extra = 0
+    radio_fields = {'coverage_content_type' : admin.HORIZONTAL}
     
 class CodeClassAdmin(admin.ModelAdmin):
     pass

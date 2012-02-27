@@ -163,8 +163,11 @@ class MetadataGenerator(object):
                 'northLatitude' : self.tree.xpath('gmd:identificationInfo/*/'\
                     'gmd:extent/*/*/*/gmd:northBoundLatitude/gco:Decimal',
                     namespaces=self.ns)[0],
-                    # extent
+                    # extent <- temporal extent <- to be removed from the template
                     # supplementalInformation
+                'supplemental' : self.tree.xpath('gmd:identificationInfo/*/'
+                    'gmd:supplementalInformation/gco:CharacterString', 
+                    namespaces=self.ns)[0],
                 #15 - contentInfo
                 #16 - contentInfo
                 #17 - contentInfo
@@ -587,7 +590,15 @@ class MetadataGenerator(object):
                                  contact=fs.product.originator_collaborator)
         self._apply_graphic_overview(filePath, fs.product)
         self._apply_keywords(fs.product)
+        self.update_element('resolution', '%.2f' % fs.product.pixelSize)
         self._apply_topic_categories(fs.product)
+        self.update_element('westLongitude', '%.2f' % minx)
+        self.update_element('eastLongitude', '%.2f' % maxx)
+        self.update_element('southLatitude', '%.2f' % miny)
+        self.update_element('northLatitude', '%.2f' % maxy)
+        self.update_element('supplemental', fs.product.supplemental_info)
+        for dataset in fs.product.dataset_set.all():
+            self._apply_contentInfo(dataset)
 
     def _apply_graphic_overview(self, filePath, product):
         fileNameEl = self.tree.xpath('gmd:identificationInfo/*/'\
@@ -606,6 +617,67 @@ class MetadataGenerator(object):
                                      namespaces=self.ns)[0]
         fileTypeEl.text = product.graphic_overview_type
 
+    def _apply_contentInfo(self, dataset):
+        parent = self.tree.xpath('gmd:identificationInfo/'\
+                                        'gmd:MD_DataIdentification', 
+                                        namespaces=self.ns)[0]
+        ciEl = etree.SubElement(parent, '{%}contentInfo' % self.ns['gmd'])
+        covEl = etree.SubElement(ciEl, '{%}MD_CoverageDescription' \
+                                 % self.ns['gmd'])
+        covEl.attrib['{%s}uuid' % self.ns['gmd']] = dataset.name
+        attrDescriptionEl = etree.SubElement(covEl, '{%}attributeDescription' \
+                                             % self.ns['gmd'])
+        recordTypeEl = etree.SubElement(attrDescriptionEl, '{%}RecordType' \
+                                        % self.ns['gco'])
+        recordTypeEl.text = dataset.name
+        contentTypeEl = etree.SubElement(covEl, '{%}contentType' % \
+                                         self.ns['gmd'])
+        contTypeAttr = contentTypeEl.attrib
+        contTypeAttr['{%s}codeList' % self.ns['gmd']] = 'http://' \
+            'www.isotc211.org/2005/resources/codelist/gmxCodelists.xml' \
+            '#MD_CoverageContentTypeCode'
+        contTypeAttr['{%s}codeListValue' % self.ns['gmd']] = dataset.coverage_content_type
+        dimEl = self.etree.SubElement(covEl, '{%s}dimension' % self.ns['gmd'])
+        bandEl = self.etree.SubElement(dimEl, '{%s}MD_Band' % self.ns['gmd'])
+        seqIdEl = self.etree.SubElement(bandEl, '{%s}sequenceIdentifier' % \
+                                        self.ns['gmd'])
+        memberNameEl = self.etree.SubElement(seqIdEl, '{%s}MemberName' % \
+                                             self.ns['gco'])
+        aNameEl = self.etree.SubElement(memberNameEl, '{%s}aName' % \
+                                        self.ns['gco'])
+        aNameGcoEl = self.etree.SubElement(aNameEl, '{%s}CharacterString' % \
+                                           self.ns['gco'])
+        aNameGcoEl.text = 'Digital Number'
+        attribTypeEl = self.etree.SubElement(memberNameEl, '{%s}attributeType'\
+                                             % self.ns['gco'])
+        typeNameEl = self.etree.SubElement(attribTypeEl, '{%s}TypeName'\
+                                           % self.ns['gco'])
+        aNameEl2 = self.etree.SubElement(typeNameEl, '{%s}aName' % \
+                                         self.ns['gco'])
+        aNameGcoEl2 = self.etree.SubElement(aNameEl2, '{%s}CharacterString' % \
+                                           self.ns['gco'])
+        aNameGcoEl2.text = 'value type'
+
+
+
+
+        descriptorEl = self.etree.SubElement(bandEl, '{%s}descriptor' % \
+                                             self.ns['gmd'])
+
+
+        maxValEl = self.etree.SubElement(bandEl, '{%s}maxValue' % \
+                                         self.ns['gmd'])
+
+        minValEl = self.etree.SubElement(bandEl, '{%s}minValue' % \
+                                         self.ns['gmd'])
+
+        bitsEl = self.etree.SubElement(bandEl, '{%s}bitsPerValue' % \
+                                         self.ns['gmd'])
+
+        scaleFactorEl = self.etree.SubElement(bandEl, '{%s}scaleFactor' % \
+                                         self.ns['gmd'])
+
+        offsetEl = self.etree.SubElement(bandEl, '{%s}offset' % self.ns['gmd'])
 
 
 

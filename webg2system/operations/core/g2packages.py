@@ -1246,17 +1246,10 @@ class WebDisseminator(ProcessingPackage):
         if not self.host.is_dir(self.xmlOutDir):
             self.host.make_dir(self.xmlOutDir)
         today = dt.date.today().strftime('%Y-%m-%d')
-        genMeta = ss.GeneralMetadata.objects.get()
         for fNum, path in enumerate(fileList):
             self.logger.debug('(%i/%i) - Creating xml...' % 
                               (fNum+1, len(fileList)))
             self.mdGenerator.apply_changes(path, self.mapper)
-
-            #self.mdGenerator.update_element('westLongitude', '%.2f' % minx)
-            #self.mdGenerator.update_element('eastLongitude', '%.2f' % maxx)
-            #self.mdGenerator.update_element('southLatitude', '%.2f' % miny)
-            #self.mdGenerator.update_element('northLatitude', '%.2f' % maxy)
-
             pathFName = os.path.splitext(os.path.basename(path))[0]
             xmlPath = os.path.join(self.xmlOutDir, '%s.xml' % pathFName)
             self.mdGenerator.save_xml(xmlPath)

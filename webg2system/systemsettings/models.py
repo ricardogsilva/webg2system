@@ -267,11 +267,19 @@ class Product(models.Model):
                                              choices=OVERVIEW_TYPE_CHOICES,
                                              help_text='File format for the'\
                                              'quicklooks.')
+    supplemental_info = models.CharField(max_length=255, help_text='INSPIRE '\
+                                         'metadata element. URL for the '\
+                                         'product page.')
 
     def __unicode__(self):
         return self.shortName
 
 class Dataset(models.Model):
+    COVERAGE_CONTENT_TYPE_CHOICES = (
+            ('image', 'image'), 
+            ('thematicClassification', 'thematicClassification'), 
+            ('physicalMeasurement', 'physicalMeasurement')
+    )
     name = models.CharField(max_length=100)
     description = models.TextField(null=True, blank=True)
     unit = models.CharField(max_length=20, blank=True)
@@ -279,6 +287,18 @@ class Dataset(models.Model):
     product = models.ForeignKey(Product)
     scalingFactor = models.IntegerField()
     missingValue = models.IntegerField()
+    coverage_content_type = models.CharField(
+            max_length=30, 
+            help_text='INSPIRE metadata element: choices:<br />Image - '\
+                    'Meaningful numerical representation of a physical '\
+                    'parameter that is not the actual value of the physical '\
+                    'parameter.<br />thematicClassification - code value with no '\
+                    'quantitative meaning, used to represent a physical '\
+                    'quantity.<br />physicalMeasurement - Value in physical '\
+                    'units of the quantity being measured.',
+            choices=COVERAGE_CONTENT_TYPE_CHOICES
+    )
+
 
     def __unicode__(self):
         return self.name
