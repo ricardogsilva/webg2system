@@ -215,6 +215,9 @@ class Product(models.Model):
                       'organization responsible for the metadata.')
     principal_investigator = models.ForeignKey(Collaborator,
                                                help_text='INSPIRE metadata.')
+    distributor = models.ForeignKey(Collaborator,
+            help_text='INSPIRE metadata.',
+            related_name='distributor_%(app_label)s_%(class)s_related')
     inspireKeyword = models.ForeignKey(SpatialDataTheme, 
                                        verbose_name='INSPIRE data theme')
     keywords = models.ManyToManyField(Keyword, null=True, blank=True)
@@ -298,6 +301,9 @@ class Dataset(models.Model):
                     'units of the quantity being measured.',
             choices=COVERAGE_CONTENT_TYPE_CHOICES
     )
+    max_value = models.IntegerField(default=0)
+    min_value = models.IntegerField(default=0)
+    bit_depth= models.IntegerField(default=16)
 
 
     def __unicode__(self):

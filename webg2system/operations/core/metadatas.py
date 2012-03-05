@@ -165,36 +165,29 @@ class MetadataGenerator(object):
                     namespaces=self.ns)[0],
                     # extent <- temporal extent <- to be removed from the template
                     # supplementalInformation
-                'supplemental' : self.tree.xpath('gmd:identificationInfo/*/'
+                'supplemental' : self.tree.xpath('gmd:identificationInfo/*/'\
                     'gmd:supplementalInformation/gco:CharacterString', 
                     namespaces=self.ns)[0],
-                #15 - contentInfo
-                #16 - contentInfo
-                #17 - contentInfo
-                #18 - contentInfo
-                #19 - contentInfo
-                #20 - contentInfo
+                #15 - contentInfo <- the _apply_contentInfo method
                 #21 - distributionInfo
+                    # distribution format <- unchanged
+                    # distributor
+                        # distributorContact <- _apply_contact_info method
+                        # distributionOrderProcess <- unchanged
+                    # transfer options
+                'searchURL' : self.tree.xpath('gmd:distributionInfo/*/gmd:'\
+                    'transferOptions[1]/*/gmd:online/*/gmd:linkage/gmd:URL', 
+                    namespaces=self.ns)[0],
                 #22 - dataQualityInfo
+                    # scope <-unchanged
+                    # report
+                'thematicAccuracyTitle' : self.tree.xpath('gmd:' \
+                    'dataQualityInfo/*/gmd:report/gmd:DQ_ThematicAccuracy/'\
+                    'gmd:result/*/gmd:specification/*/gmd:title/'\
+                    'gco:CharacterString', namespaces=self.ns)[0],
+
+                'thematicAccuracyDate' : self.tree.xpath('', namespaces=self.ns)[0],
                 #23 - metadataMaintenance
-                'Resource type' : self.tree.xpath('gmd:hierarchyLevel'\
-                        '/gmd:MD_ScopeCode', namespaces=self.ns)[0],
-                'uuid' : self.tree.xpath(
-                    'gmd:identificationInfo/gmd:MD_DataIdentification',
-                    namespaces=self.ns)[0], # the XML uuid
-                'idCode' : self.tree.xpath(
-                    'gmd:identificationInfo/*/gmd:citation/*/gmd:identifier/'\
-                            '*/gmd:code/gco:CharacterString', 
-                    namespaces=self.ns)[0],# the XML uuid
-                'idTitle' : self.tree.xpath(
-                    'gmd:identificationInfo/*/gmd:citation/*/gmd:title/'\
-                            'gco:CharacterString',
-                    namespaces=self.ns),
-                
-                'download' : self.tree.xpath(
-                    'gmd:distributionInfo/*/gmd:transferOptions/*/*/*/*/'\
-                    'gmd:URL',
-                    namespaces=self.ns),
             }
 
     def save_xml(self, path):
@@ -599,6 +592,13 @@ class MetadataGenerator(object):
         self.update_element('supplemental', fs.product.supplemental_info)
         for dataset in fs.product.dataset_set.all():
             self._apply_contentInfo(dataset)
+        distributorEl = self.tree.xpath('gmd:distributionInfo/*/' \
+            'gmd:distributor/gmd:MD_Distributor', namespaces=self.ns)
+        self._apply_contact_info(distributorEl, 'distributorContact', 
+                                 role='distributor',
+                                 positionName='IM Geoland-2 Helpdesk',
+                                 contact=fs.product.distributor)
+        self.update_element('thematicAccuracyTitle', 'Internal validation report')
 
     def _apply_graphic_overview(self, filePath, product):
         fileNameEl = self.tree.xpath('gmd:identificationInfo/*/'\
@@ -618,10 +618,8 @@ class MetadataGenerator(object):
         fileTypeEl.text = product.graphic_overview_type
 
     def _apply_contentInfo(self, dataset):
-        parent = self.tree.xpath('gmd:identificationInfo/'\
-                                        'gmd:MD_DataIdentification', 
-                                        namespaces=self.ns)[0]
-        ciEl = etree.SubElement(parent, '{%}contentInfo' % self.ns['gmd'])
+        ciEl = etree.SubElement(self.tree.getroot(), '{%}contentInfo' % \
+                                self.ns['gmd'])
         covEl = etree.SubElement(ciEl, '{%}MD_CoverageDescription' \
                                  % self.ns['gmd'])
         covEl.attrib['{%s}uuid' % self.ns['gmd']] = dataset.name
@@ -637,7 +635,50 @@ class MetadataGenerator(object):
             'www.isotc211.org/2005/resources/codelist/gmxCodelists.xml' \
             '#MD_CoverageContentTypeCode'
         contTypeAttr['{%s}codeListValue' % self.ns['gmd']] = dataset.coverage_content_type
-        dimEl = self.etree.SubElement(covEl, '{%s}dimension' % self.ns['gmd'])
+        self._apply_content_info_dimension_digital_number(covEl, dataset)
+        self._apply_content_info_dimension_physical_value(covEl, dataset)
+        self._apply_content_info_dimension_invalid(covEl, dataset)
+
+    def _apply_content_info_dimension_digital_number(self, parent, dataset):
+        seqIDName = 'Digital Number'
+        seqIDType = 'value type'
+        descriptor = 'Significant digital value range'
+        maxVal = dataset.max_value * dataset.scalingFactor
+        minVal = dataset.min_value * dataset.scalingFactor
+        bitDepth = dataset.bit_depth
+        scaleFactor = dataset.scalingFactor
+        offset = '0.0'
+        self._apply_content_info_dimension(parent, seqIDName, seqIDType, 
+                                           descriptor, maxVal, minVal,
+                                           bitDepth, scaleFactor, offset)
+
+    def _apply_content_info_dimension_physical_value(self, parent, dataset):
+        seqIDName = 'Physical Value'
+        seqIDType = 'value type'
+        descriptor = self.dataset.name
+        maxVal = dataset.max_value
+        minVal = dataset.min_value
+        #units are missing
+        self._apply_content_info_dimension(parent, seqIDName, seqIDType,
+                                           descriptor, maxVal, minVal)
+
+    def _apply_content_info_dimension_invalid(self, parent, dataset):
+        seqIDName = 'Invalid'
+        seqIDType = 'flag type'
+        descriptor = 'Invalid'
+        maxVal = dataset.missingValue
+        minVal = dataset.missingValue
+        bitDepth = dataset.bit_depth
+        self._apply_content_info_dimension(parent, seqIDName, seqIDType,
+                                           descriptor, maxVal, minVal, 
+                                           bitDepth=bitDepth)
+
+    def _apply_content_info_dimension(self, parent, seqIDName, seqIDType, 
+                                      descriptor, maxVal, minVal, 
+                                      bitDepth=None, scaleFactor=None, 
+                                      offset=None):
+
+        dimEl = self.etree.SubElement(parent, '{%s}dimension' % self.ns['gmd'])
         bandEl = self.etree.SubElement(dimEl, '{%s}MD_Band' % self.ns['gmd'])
         seqIdEl = self.etree.SubElement(bandEl, '{%s}sequenceIdentifier' % \
                                         self.ns['gmd'])
@@ -647,7 +688,7 @@ class MetadataGenerator(object):
                                         self.ns['gco'])
         aNameGcoEl = self.etree.SubElement(aNameEl, '{%s}CharacterString' % \
                                            self.ns['gco'])
-        aNameGcoEl.text = 'Digital Number'
+        aNameGcoEl.text = seqIDName
         attribTypeEl = self.etree.SubElement(memberNameEl, '{%s}attributeType'\
                                              % self.ns['gco'])
         typeNameEl = self.etree.SubElement(attribTypeEl, '{%s}TypeName'\
@@ -656,30 +697,38 @@ class MetadataGenerator(object):
                                          self.ns['gco'])
         aNameGcoEl2 = self.etree.SubElement(aNameEl2, '{%s}CharacterString' % \
                                            self.ns['gco'])
-        aNameGcoEl2.text = 'value type'
-
-
-
-
+        aNameGcoEl2.text = seqIDType
         descriptorEl = self.etree.SubElement(bandEl, '{%s}descriptor' % \
                                              self.ns['gmd'])
-
-
+        descGco = self.etree.SubElement(descriptorEl, '{%s}CharacterString' % \
+                                        self.ns['gco'])
+        descGco.text = descriptor
         maxValEl = self.etree.SubElement(bandEl, '{%s}maxValue' % \
                                          self.ns['gmd'])
-
+        maxGco = self.etree.SubElement(maxValEl, '{%s}Real' % self.ns['gco'])
+        maxGco.text = maxVal
         minValEl = self.etree.SubElement(bandEl, '{%s}minValue' % \
                                          self.ns['gmd'])
-
-        bitsEl = self.etree.SubElement(bandEl, '{%s}bitsPerValue' % \
-                                         self.ns['gmd'])
-
-        scaleFactorEl = self.etree.SubElement(bandEl, '{%s}scaleFactor' % \
-                                         self.ns['gmd'])
-
-        offsetEl = self.etree.SubElement(bandEl, '{%s}offset' % self.ns['gmd'])
-
-
+        minGco = self.etree.SubElement(minValEl, '{%s}Real' % self.ns['gco'])
+        minGco.text = minVal
+        if bitDepth is not None:
+            bitsEl = self.etree.SubElement(bandEl, '{%s}bitsPerValue' % \
+                                           self.ns['gmd'])
+            bitDepthGco = self.etree.SubElement(bitsEl, '{%s}Integer' % \
+                                                self.ns['gco'])
+            bitDepthGco.text = bitDepth
+        if scaleFactor is not None:
+            scaleFactorEl = self.etree.SubElement(bandEl, '{%s}scaleFactor' % \
+                                                  self.ns['gmd'])
+            scaleFactorGco = self.etree.SubElement(scaleFactorEl, '{%s}Real' %\
+                                                   self.ns['gco'])
+            scaleFactorGco.text = scaleFactor
+        if offset is not None:
+            offsetEl = self.etree.SubElement(bandEl, '{%s}offset' % \
+                                             self.ns['gmd'])
+            offsetGco = self.etree.SubElement(offsetEl, '{%s}Real' % \
+                                              self.ns['gco'])
+            offsetGco.text = offset
 
         
     # FIXME
