@@ -1144,9 +1144,16 @@ class WebDisseminator(ProcessingPackage):
                 settings.packagepath_set.get(name='geotifOutDir'), self)
         self.geotifOutDir = os.path.join(self.host.dataPath, 
                                          relGeotifOutDir)
+        relWebDir = utilities.parse_marked(
+                settings.packagepath_set.get(name='hdf5WebDir'), self)
+        self.hdf5WebDir = os.path.join(self.host.dataPath, relWebDir)
         self.inputs = self._create_files(
             'input', 
             settings.packageInput_systemsettings_packageinput_related.all()
+        )
+        self.outputs = self._create_files(
+            'output', 
+            settings.packageOutput_systemsettings_packageoutput_related.all()
         )
         self.mapper = mappers.NGPMapper(self.inputs[0]) # <- badly defined
         self.mdGenerator = metadatas.MetadataGenerator(self.xmlTemplate)
@@ -1231,7 +1238,6 @@ class WebDisseminator(ProcessingPackage):
         self.host.run_program(legendCommand, mapfileDir)
         return legendPath
 
-
     def generate_xml_metadata(self, fileList):
         '''
         Generate the xml metadata files.
@@ -1245,11 +1251,10 @@ class WebDisseminator(ProcessingPackage):
 
         if not self.host.is_dir(self.xmlOutDir):
             self.host.make_dir(self.xmlOutDir)
-        today = dt.date.today().strftime('%Y-%m-%d')
         for fNum, path in enumerate(fileList):
             self.logger.debug('(%i/%i) - Creating xml...' % 
                               (fNum+1, len(fileList)))
-            self.mdGenerator.apply_changes(path, self.mapper)
+            self.mdGenerator.apply_changes(path, self.mapper, self.hdf5WebDir)
             pathFName = os.path.splitext(os.path.basename(path))[0]
             xmlPath = os.path.join(self.xmlOutDir, '%s.xml' % pathFName)
             self.mdGenerator.save_xml(xmlPath)

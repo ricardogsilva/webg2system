@@ -6,6 +6,7 @@ A module for implementing metadata related functionality for the Geoland-2
 processing system.
 """
 
+import os
 import logging
 from lxml import etree
 import urllib
@@ -15,6 +16,8 @@ from uuid import uuid1
 import datetime as dt
 
 import pycountry
+
+import utilities
 
 class MetadataGenerator(object):
 
@@ -175,8 +178,8 @@ class MetadataGenerator(object):
                         # distributorContact <- _apply_contact_info method
                         # distributionOrderProcess <- unchanged
                     # transfer options
-                'searchURL' : self.tree.xpath('gmd:distributionInfo/*/gmd:'\
-                    'transferOptions[1]/*/gmd:online/*/gmd:linkage/gmd:URL', 
+                'linkage' : self.tree.xpath('gmd:distributionInfo/*/gmd:'\
+                    'transferOptions[1]/*/gmd:onLine/*/gmd:linkage/gmd:URL', 
                     namespaces=self.ns)[0],
                 #22 - dataQualityInfo
                     # scope <-unchanged
@@ -185,9 +188,14 @@ class MetadataGenerator(object):
                     'dataQualityInfo/*/gmd:report/gmd:DQ_ThematicAccuracy/'\
                     'gmd:result/*/gmd:specification/*/gmd:title/'\
                     'gco:CharacterString', namespaces=self.ns)[0],
-
-                'thematicAccuracyDate' : self.tree.xpath('', namespaces=self.ns)[0],
-                #23 - metadataMaintenance
+                'valReport' : self.tree.xpath('gmd:dataQualityInfo/*/gmd:'\
+                    'report/gmd:DQ_ThematicAccuracy/gmd:result/*/gmd:'\
+                    'explanation/gco:CharacterString', namespaces=self.ns)[0],
+                #'thematicAccuracyDate' : self.tree.xpath('', namespaces=self.ns)[0],
+                'lineage' : self.tree.xpath('gmd:dataQualityInfo/*/gmd:'\
+                    'lineage/*/gmd:statement/gco:CharacterString', 
+                    namespaces=self.ns)[0],
+                #23 - metadataMaintenance <- unchanged
             }
 
     def save_xml(self, path):
@@ -426,32 +434,32 @@ class MetadataGenerator(object):
             gcoPositionNameEl = etree.SubElement(positionEl, '{%s}CharacterString'\
                                                  % self.ns['gco'])
             gcoPositionNameEl.text = positionName
-        contactInfoEl = etree.SubElement(ciRespPartyEl, '{%}contactInfo' \
+        contactInfoEl = etree.SubElement(ciRespPartyEl, '{%s}contactInfo' \
                                          % self.ns['gmd'])
-        ciContactEl = etree.SubElement(contactInfoEl, '{%}CI_Contact' \
+        ciContactEl = etree.SubElement(contactInfoEl, '{%s}CI_Contact' \
                                        % self.ns['gmd'])
-        addressEl = etree.SubElement(ciContactEl, '{%}address' \
+        addressEl = etree.SubElement(ciContactEl, '{%s}address' \
                                      % self.ns['gmd'])
-        ciAddressEl = etree.SubElement(addressEl, '{%}CI_Address' \
+        ciAddressEl = etree.SubElement(addressEl, '{%s}CI_Address' \
                                        % self.ns['gmd'])
-        delPointEl = etree.SubElement(ciAddressEl, '{%}deliveryPoint' \
+        delPointEl = etree.SubElement(ciAddressEl, '{%s}deliveryPoint' \
                                        % self.ns['gmd'])
-        gcoDelPointEl = etree.SubElement(delPointEl, '{%}CharacterString' \
+        gcoDelPointEl = etree.SubElement(delPointEl, '{%s}CharacterString' \
                                        % self.ns['gco'])
         gcoDelPointEl.text = contact.organization.streetAddress
-        cityEl = etree.SubElement(ciAddressEl, '{%}city' \
+        cityEl = etree.SubElement(ciAddressEl, '{%s}city' \
                                        % self.ns['gmd'])
-        gcoCityEl = etree.SubElement(cityEl, '{%}CharacterString' \
+        gcoCityEl = etree.SubElement(cityEl, '{%s}CharacterString' \
                                        % self.ns['gco'])
         gcoCityEl.text = contact.organization.city
-        postalCodeEl = etree.SubElement(ciAddressEl, '{%}postalCode' \
+        postalCodeEl = etree.SubElement(ciAddressEl, '{%s}postalCode' \
                                        % self.ns['gmd'])
-        gcoPostalEl = etree.SubElement(postalCodeEl, '{%}CharacterString' \
+        gcoPostalEl = etree.SubElement(postalCodeEl, '{%s}CharacterString' \
                                        % self.ns['gco'])
         gcoPostalEl.text = contact.organization.postalCode
-        countryEl = etree.SubElement(ciAddressEl, '{%}country' \
+        countryEl = etree.SubElement(ciAddressEl, '{%s}country' \
                                        % self.ns['gmd'])
-        countryListEl = etree.SubElement(countryEl, '{%}Country' \
+        countryListEl = etree.SubElement(countryEl, '{%s}Country' \
                                        % self.ns['gmd'])
         countryListElAttribs = countryListEl.attrib
         countryListElAttribs['{%s}codeList' % self.ns['gmd']] = 'http://'\
@@ -460,35 +468,35 @@ class MetadataGenerator(object):
         countryListElAttribs['{%s}codeSpace' % self.ns['gmd']] = 'ISO 3166-1'
         countryCode = contact.organization.country
         countryListElAttribs['{%s}codeListValue' % self.ns['gmd']] = countryCode
-        countryListEl.text = pycountry.countries.get(alpha2=countryCode)
-        emailEl = etree.SubElement(ciAddressEl, '{%}electronicMailAddress' \
+        countryListEl.text = pycountry.countries.get(alpha2=countryCode).name
+        emailEl = etree.SubElement(ciAddressEl, '{%s}electronicMailAddress' \
                                    % self.ns['gmd'])
-        gcoEmailEl = etree.SubElement(emailEl, '{%}CharacterString' \
+        gcoEmailEl = etree.SubElement(emailEl, '{%s}CharacterString' \
                                       % self.ns['gco'])
         gcoEmailEl.text = contact.email
-        onlineResourceEl = etree.SubElement(ciContactEl, '{%}onlineResource' \
+        onlineResourceEl = etree.SubElement(ciContactEl, '{%s}onlineResource' \
                                             % self.ns['gmd'])
-        ciOnlineEl = etree.SubElement(onlineResourceEl, '{%}CI_OnlineResource'\
+        ciOnlineEl = etree.SubElement(onlineResourceEl, '{%s}CI_OnlineResource'\
                                       % self.ns['gmd'])
-        linkageEl = etree.SubElement(ciOnlineEl, '{%}linkage' % self.ns['gmd'])
-        urlEl = etree.SubElement(linkageEl, '{%}URL' % self.ns['gmd'])
+        linkageEl = etree.SubElement(ciOnlineEl, '{%s}linkage' % self.ns['gmd'])
+        urlEl = etree.SubElement(linkageEl, '{%s}URL' % self.ns['gmd'])
         urlEl.text = contact.organization.url
-        protocolEl = etree.SubElement(ciOnlineEl, '{%}protocol' % \
+        protocolEl = etree.SubElement(ciOnlineEl, '{%s}protocol' % \
                                       self.ns['gmd'])
-        gcoProtocolEl = etree.SubElement(protocolEl, '{%}CharacterString' % \
+        gcoProtocolEl = etree.SubElement(protocolEl, '{%s}CharacterString' % \
                                          self.ns['gco'])
         gcoProtocolEl.text = 'HTTP'
-        nameEl = etree.SubElement(ciOnlineEl, '{%}name' % self.ns['gmd'])
-        gcoNameEl = etree.SubElement(nameEl, '{%}CharacterString' % \
+        nameEl = etree.SubElement(ciOnlineEl, '{%s}name' % self.ns['gmd'])
+        gcoNameEl = etree.SubElement(nameEl, '{%s}CharacterString' % \
                                          self.ns['gco'])
         gcoNameEl.text = '%s website' % contact.organization.short_name
-        descrEl = etree.SubElement(ciOnlineEl, '{%}description' % self.ns['gmd'])
-        gcoDescrEl = etree.SubElement(descrEl, '{%}CharacterString' % \
+        descrEl = etree.SubElement(ciOnlineEl, '{%s}description' % self.ns['gmd'])
+        gcoDescrEl = etree.SubElement(descrEl, '{%s}CharacterString' % \
                                          self.ns['gco'])
         gcoDescrEl.text = 'Organization website'
-        functionEl = etree.SubElement(ciOnlineEl, '{%}function' \
+        functionEl = etree.SubElement(ciOnlineEl, '{%s}function' \
                                        % self.ns['gmd'])
-        functionListEl = etree.SubElement(functionEl, 'CI_OnlineFunctionCode' \
+        functionListEl = etree.SubElement(functionEl, '{%s}CI_OnlineFunctionCode' \
                                           % self.ns['gmd'])
         functionListElAttribs = functionListEl.attrib
         functionListElAttribs['{%s}codeList' % self.ns['gmd']] = 'http://'\
@@ -496,24 +504,24 @@ class MetadataGenerator(object):
             'ISO_19139_Schemas/resources/Codelist/'\
             'ML_gmxCodelists.xml#CI_OnlineFunctionCode'
         functionListElAttribs['{%s}codeListValue' % self.ns['gmd']] = 'information'
-        functionListElAttribs.text = 'information'
-        hoursServEl = etree.SubElement(ciContactEl, '{%}hoursOfService' \
+        functionListEl.text = 'information'
+        hoursServEl = etree.SubElement(ciContactEl, '{%s}hoursOfService' \
                                        % self.ns['gmd'])
-        gcoHoursEl = etree.SubElement(hoursServEl, '{%}CharacterString' % \
+        gcoHoursEl = etree.SubElement(hoursServEl, '{%s}CharacterString' % \
                                       self.ns['gco'])
         gcoHoursEl.text = 'Office hours, 5 days per week'
-        instructionsEl = etree.SubElement(ciContactEl, '{%}contactInstructions'\
+        instructionsEl = etree.SubElement(ciContactEl, '{%s}contactInstructions'\
                                           % self.ns['gmd'])
-        gcoInstructionsEl = etree.SubElement(instructionsEl, '{%}CharacterString'\
+        gcoInstructionsEl = etree.SubElement(instructionsEl, '{%s}CharacterString'\
                                              % self.ns['gco'])
         gcoInstructionsEl.text = 'Preferrably by e-mail'
-        roleEl = etree.SubElement(ciRespPartyEl, '{%}role' % self.ns['gmd'])
-        roleListEl = etree.SubElement(roleEl, '{%}CI_RoleCode' % self.ns['gmd'])
+        roleEl = etree.SubElement(ciRespPartyEl, '{%s}role' % self.ns['gmd'])
+        roleListEl = etree.SubElement(roleEl, '{%s}CI_RoleCode' % self.ns['gmd'])
         roleListAttribs = roleListEl.attrib
-        roleListAttribs['{%}codeList' % self.ns['gmd']] = 'http://standards.'\
+        roleListAttribs['{%s}codeList' % self.ns['gmd']] = 'http://standards.'\
                 'iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/'\
                 'resources/Codelist/ML_gmxCodelists.xml#CI_RoleCode'
-        roleListAttribs['{%}codeListValue' % self.ns['gmd']] = role
+        roleListAttribs['{%s}codeListValue' % self.ns['gmd']] = role
 
     def _remove_contact_info(self, parentElement, contactElName):
         '''
@@ -525,24 +533,28 @@ class MetadataGenerator(object):
         for c in contactEls:
             parentElement.remove(c)
 
-    def apply_changes(self, filePath, mapper):
+    def apply_changes(self, filePath, mapper, outputDir):
         '''
         Aplpy the changes to the XML tree.
 
         Inputs:
 
-            filePath - the original HDF5 tile being processed
+            filePath - the original HDF5 tile being processed.
 
-            mapper - A Mapper instance
+            mapper - A Mapper instance.
+
+            outputDir - directory where the product tiles are made web 
+                accessible.
         '''
 
         today = dt.date.today().strftime('%Y-%m-%d')
+        fileName = os.path.basename(filePath)
         fs = utilities.get_file_settings(filePath)
         minx, miny, maxx, maxy = mapper.get_bounds(filePath)
         uuid = uuid1()
         self.update_element('fileIdentifier', str(uuid))
         self.update_element('parentIdentifier', fs.product.iParentIdentifier)
-        self.update_element('hierarchyLevel', fs.product.iResourceType)
+        self.update_element('hierarchyLevel', 'dataset')
         self._remove_contact_info(self.tree.getroot(), 'contact')
         self._apply_contact_info(self.tree.getroot(), 'contact', 
                                  role='pointOfContact', 
@@ -567,7 +579,6 @@ class MetadataGenerator(object):
         # product.
         self.update_element('date', today)
         self.update_element('abstract', fs.product.iResourceAbstract)
-        self.update_element('Resource type', fs.product.iResourceType)
         self.update_element('credit', fs.product.iCredit)
         identInfoEl = self.tree.xpath('gmd:identificationInfo/'\
                                       'gmd:MD_DataIdentification', 
@@ -598,7 +609,10 @@ class MetadataGenerator(object):
                                  role='distributor',
                                  positionName='IM Geoland-2 Helpdesk',
                                  contact=fs.product.distributor)
+        self.update_element('linkage', os.path.join(outputDir, fileName))
         self.update_element('thematicAccuracyTitle', 'Internal validation report')
+        self.update_element('valReport', fs.product.validation_report)
+        self.update_element('lineage', fs.product.lineage)
 
     def _apply_graphic_overview(self, filePath, product):
         fileNameEl = self.tree.xpath('gmd:identificationInfo/*/'\
@@ -618,17 +632,17 @@ class MetadataGenerator(object):
         fileTypeEl.text = product.graphic_overview_type
 
     def _apply_contentInfo(self, dataset):
-        ciEl = etree.SubElement(self.tree.getroot(), '{%}contentInfo' % \
+        ciEl = etree.SubElement(self.tree.getroot(), '{%s}contentInfo' % \
                                 self.ns['gmd'])
-        covEl = etree.SubElement(ciEl, '{%}MD_CoverageDescription' \
+        covEl = etree.SubElement(ciEl, '{%s}MD_CoverageDescription' \
                                  % self.ns['gmd'])
         covEl.attrib['{%s}uuid' % self.ns['gmd']] = dataset.name
-        attrDescriptionEl = etree.SubElement(covEl, '{%}attributeDescription' \
+        attrDescriptionEl = etree.SubElement(covEl, '{%s}attributeDescription' \
                                              % self.ns['gmd'])
-        recordTypeEl = etree.SubElement(attrDescriptionEl, '{%}RecordType' \
+        recordTypeEl = etree.SubElement(attrDescriptionEl, '{%s}RecordType' \
                                         % self.ns['gco'])
         recordTypeEl.text = dataset.name
-        contentTypeEl = etree.SubElement(covEl, '{%}contentType' % \
+        contentTypeEl = etree.SubElement(covEl, '{%s}contentType' % \
                                          self.ns['gmd'])
         contTypeAttr = contentTypeEl.attrib
         contTypeAttr['{%s}codeList' % self.ns['gmd']] = 'http://' \

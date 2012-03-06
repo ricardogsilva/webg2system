@@ -202,9 +202,9 @@ class CodeClass(models.Model):
         return self.className
 
 class Product(models.Model):
-    RESOURCE_TYPE_CHOICES = (('dataset', 'dataset'), 
-                             ('series', 'series'), 
-                             ('service', 'service'))
+    #RESOURCE_TYPE_CHOICES = (('dataset', 'dataset'), 
+    #                         ('series', 'series'), 
+    #                         ('service', 'service'))
     OVERVIEW_TYPE_CHOICES = (('png', 'png'),)
     name = models.CharField(max_length=100)
     shortName = models.CharField(max_length=20, verbose_name='Short name')
@@ -242,10 +242,10 @@ class Product(models.Model):
                                       help_text='INSPIRE metadata element: '\
                                       'Brief narrative summary of the '\
                                       'contents of the resource(s).')
-    iResourceType = models.CharField(max_length=20, verbose_name='Resource type', 
-                                      help_text='INSPIRE metadata element: '\
-                                      'Scope to which metadata applies.',
-                                      choices=RESOURCE_TYPE_CHOICES)
+    #resource_type = models.CharField(max_length=20, help_text='INSPIRE '\
+    #                                 'metadata element: Scope to which '\
+    #                                 'metadata applies.',
+    #                                 choices=RESOURCE_TYPE_CHOICES)
     iParentIdentifier = models.CharField(max_length=255, verbose_name='Parent'\
                                          ' Identifier', help_text='INSPIRE '\
                                          'metadata element: UUID of the '\
@@ -273,6 +273,19 @@ class Product(models.Model):
     supplemental_info = models.CharField(max_length=255, help_text='INSPIRE '\
                                          'metadata element. URL for the '\
                                          'product page.')
+    validation_report = models.CharField(max_length=255, help_text='INSPIRE '\
+                                         'metadata element. URL for the '\
+                                         'validation report.')
+    lineage = models.TextField(help_text="INSPIRE metadata element. General "\
+                               "explanation of the data producer's "\
+                               "knowledge about the lineage of a dataset. "\
+                               "Apart from describing the process history, "\
+                               "the overall quality of the dataset (series) "\
+                               "should be included in the Lineage metadata "\
+                               "element. This statement should contain any "\
+                               "quality information required for "\
+                               "interoperability and/or valuable for use and "\
+                               "evaluation of the data set (series).")
 
     def __unicode__(self):
         return self.shortName
