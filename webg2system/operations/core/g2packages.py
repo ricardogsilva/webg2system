@@ -1193,7 +1193,7 @@ class WebDisseminator(ProcessingPackage):
             A string with the full path to the newly generated mapfile.
         '''
 
-        globalTifName = '%s_%s%s%s%s%s.tif' % (self.mapper.product.shortName,
+        globalTifName = '%s_%s%s%s%s%s.tif' % (self.mapper.product.short_name,
                                                self.year, self.month, 
                                                self.day, self.hour, 
                                                self.minute)

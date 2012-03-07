@@ -230,7 +230,7 @@ class MetadataGenerator(object):
     def _sort_keywords(self, productSettings):
         vocabularies = {None : []}
         for k in productSettings.keywords.all():
-            vocab = k.controlledVocabulary
+            vocab = k.controlled_vocabulary
             if vocab is None:
                 vocabularies[None].append(k)
             else:
@@ -264,7 +264,7 @@ class MetadataGenerator(object):
                                                 self.ns['gco'])
                 charStringEl.text = keySett.name
             if vocab is not None:
-                vocSettings = keySett.controlledVocabulary
+                vocSettings = keySett.controlled_vocabulary
                 thesaurusEl = etree.SubElement(mdKeywordsEl, 
                                                '{%s}thesaurusName' % \
                                                self.ns['gmd'])
@@ -293,8 +293,8 @@ class MetadataGenerator(object):
                         'standards.iso.org/ittf/PubliclyAvailableStandards/'\
                         'ISO_19139_Schemas/resources/Codelist/'\
                         'ML_gmxCodelists.xml#CI_DateTypeCode'
-                codeElAttribs['{%s}codeListValue' % self.ns['gmd']] = vocSettings.dateType
-                dateTypeCodeEl.text = vocSettings.dateType
+                codeElAttribs['{%s}codeListValue' % self.ns['gmd']] = vocSettings.date_type
+                dateTypeCodeEl.text = vocSettings.date_type
 
     def _apply_INSPIRE_keyword(self, productSettings):
         '''
@@ -351,7 +351,7 @@ class MetadataGenerator(object):
         codeElAttribs['{%s}codeListValue' % self.ns['gmd']] = dateType
         dateTypeCodeEl.text = dateType
 
-    def apply_keywords(self):
+    def _apply_keywords(self, productSettings):
         self._remove_original_keywords()
         self._apply_INSPIRE_keyword(productSettings)
         self._apply_other_keywords(productSettings)
@@ -386,7 +386,7 @@ class MetadataGenerator(object):
         '''
 
         self._remove_original_topic_categories()
-        topicCategories = [t.name for f in product.topicCategories.all()]
+        topicCategories = [t.name for t in product.topicCategories.all()]
         topicCategories.append(product.inspireKeyword.isoTopicCategory.name)
         parentElement = self.tree.xpath('gmd:identificationInfo/'\
                                         'gmd:MD_DataIdentification', 
@@ -569,7 +569,7 @@ class MetadataGenerator(object):
         cornerPoint = '%.1f %.1f' % (maxy, minx)
         self.update_element('cornerPoint', cornerPoint)
         self.update_element('referenceSystemIdentifier', 
-                            fs.product.ireferenceSystemID)
+                            'EPSG:%s' % fs.product.ireferenceSystemID)
         self.update_element('title', fs.product.iResourceTitle)
         # For now, assuming the metadata is being created on the same day
         # that the products got generated. This assumption is not good.
@@ -582,7 +582,7 @@ class MetadataGenerator(object):
         self.update_element('credit', fs.product.iCredit)
         identInfoEl = self.tree.xpath('gmd:identificationInfo/'\
                                       'gmd:MD_DataIdentification', 
-                                      namespaces=self.ns)
+                                      namespaces=self.ns)[0]
         self._remove_contact_info(identInfoEl, 'pointOfContact')
         self._apply_contact_info(identInfoEl, 'pointOfContact', 
                                  role='principalInvestigator', 
@@ -601,10 +601,11 @@ class MetadataGenerator(object):
         self.update_element('southLatitude', '%.2f' % miny)
         self.update_element('northLatitude', '%.2f' % maxy)
         self.update_element('supplemental', fs.product.supplemental_info)
+        self._remove_contentInfo()
         for dataset in fs.product.dataset_set.all():
             self._apply_contentInfo(dataset)
         distributorEl = self.tree.xpath('gmd:distributionInfo/*/' \
-            'gmd:distributor/gmd:MD_Distributor', namespaces=self.ns)
+            'gmd:distributor/gmd:MD_Distributor', namespaces=self.ns)[0]
         self._apply_contact_info(distributorEl, 'distributorContact', 
                                  role='distributor',
                                  positionName='IM Geoland-2 Helpdesk',
@@ -621,15 +622,20 @@ class MetadataGenerator(object):
                                      namespaces=self.ns)[0]
         fileNameEl.text = '%s.png' % os.path.basename(filePath)
         fileDescEl = self.tree.xpath('gmd:identificationInfo/*/'\
-                                     'gmd:fileDescription/*/'\
-                                     'gmd:fileName/gco:CharacterString',
+                                     'gmd:graphicOverview/*/'\
+                                     'gmd:fileDescription/gco:CharacterString',
                                      namespaces=self.ns)[0]
         fileDescEl.text = product.graphic_overview_description
         fileTypeEl = self.tree.xpath('gmd:identificationInfo/*/'\
-                                     'gmd:fileType/*/'\
-                                     'gmd:fileName/gco:CharacterString',
+                                     'gmd:graphicOverview/*/'\
+                                     'gmd:fileType/gco:CharacterString',
                                      namespaces=self.ns)[0]
         fileTypeEl.text = product.graphic_overview_type
+
+    def _remove_contentInfo(self):
+        contentInfos = self.tree.xpath('gmd:contentInfo', namespaces=self.ns)
+        for c in contentInfos:
+            self.tree.getroot().remove(c)
 
     def _apply_contentInfo(self, dataset):
         ciEl = etree.SubElement(self.tree.getroot(), '{%s}contentInfo' % \
@@ -657,10 +663,10 @@ class MetadataGenerator(object):
         seqIDName = 'Digital Number'
         seqIDType = 'value type'
         descriptor = 'Significant digital value range'
-        maxVal = dataset.max_value * dataset.scalingFactor
-        minVal = dataset.min_value * dataset.scalingFactor
-        bitDepth = dataset.bit_depth
-        scaleFactor = dataset.scalingFactor
+        maxVal = str(dataset.max_value * dataset.scalingFactor)
+        minVal = str(dataset.min_value * dataset.scalingFactor)
+        bitDepth = str(dataset.bit_depth)
+        scaleFactor = str(dataset.scalingFactor)
         offset = '0.0'
         self._apply_content_info_dimension(parent, seqIDName, seqIDType, 
                                            descriptor, maxVal, minVal,
@@ -669,9 +675,9 @@ class MetadataGenerator(object):
     def _apply_content_info_dimension_physical_value(self, parent, dataset):
         seqIDName = 'Physical Value'
         seqIDType = 'value type'
-        descriptor = self.dataset.name
-        maxVal = dataset.max_value
-        minVal = dataset.min_value
+        descriptor = dataset.name
+        maxVal = str(dataset.max_value)
+        minVal = str(dataset.min_value)
         #units are missing
         self._apply_content_info_dimension(parent, seqIDName, seqIDType,
                                            descriptor, maxVal, minVal)
@@ -680,9 +686,9 @@ class MetadataGenerator(object):
         seqIDName = 'Invalid'
         seqIDType = 'flag type'
         descriptor = 'Invalid'
-        maxVal = dataset.missingValue
-        minVal = dataset.missingValue
-        bitDepth = dataset.bit_depth
+        maxVal = str(dataset.missingValue)
+        minVal = str(dataset.missingValue)
+        bitDepth = str(dataset.bit_depth)
         self._apply_content_info_dimension(parent, seqIDName, seqIDType,
                                            descriptor, maxVal, minVal, 
                                            bitDepth=bitDepth)
@@ -692,58 +698,57 @@ class MetadataGenerator(object):
                                       bitDepth=None, scaleFactor=None, 
                                       offset=None):
 
-        dimEl = self.etree.SubElement(parent, '{%s}dimension' % self.ns['gmd'])
-        bandEl = self.etree.SubElement(dimEl, '{%s}MD_Band' % self.ns['gmd'])
-        seqIdEl = self.etree.SubElement(bandEl, '{%s}sequenceIdentifier' % \
+        dimEl = etree.SubElement(parent, '{%s}dimension' % self.ns['gmd'])
+        bandEl = etree.SubElement(dimEl, '{%s}MD_Band' % self.ns['gmd'])
+        seqIdEl = etree.SubElement(bandEl, '{%s}sequenceIdentifier' % \
                                         self.ns['gmd'])
-        memberNameEl = self.etree.SubElement(seqIdEl, '{%s}MemberName' % \
+        memberNameEl = etree.SubElement(seqIdEl, '{%s}MemberName' % \
                                              self.ns['gco'])
-        aNameEl = self.etree.SubElement(memberNameEl, '{%s}aName' % \
+        aNameEl = etree.SubElement(memberNameEl, '{%s}aName' % \
                                         self.ns['gco'])
-        aNameGcoEl = self.etree.SubElement(aNameEl, '{%s}CharacterString' % \
+        aNameGcoEl = etree.SubElement(aNameEl, '{%s}CharacterString' % \
                                            self.ns['gco'])
         aNameGcoEl.text = seqIDName
-        attribTypeEl = self.etree.SubElement(memberNameEl, '{%s}attributeType'\
+        attribTypeEl = etree.SubElement(memberNameEl, '{%s}attributeType'\
                                              % self.ns['gco'])
-        typeNameEl = self.etree.SubElement(attribTypeEl, '{%s}TypeName'\
+        typeNameEl = etree.SubElement(attribTypeEl, '{%s}TypeName'\
                                            % self.ns['gco'])
-        aNameEl2 = self.etree.SubElement(typeNameEl, '{%s}aName' % \
+        aNameEl2 = etree.SubElement(typeNameEl, '{%s}aName' % \
                                          self.ns['gco'])
-        aNameGcoEl2 = self.etree.SubElement(aNameEl2, '{%s}CharacterString' % \
+        aNameGcoEl2 = etree.SubElement(aNameEl2, '{%s}CharacterString' % \
                                            self.ns['gco'])
         aNameGcoEl2.text = seqIDType
-        descriptorEl = self.etree.SubElement(bandEl, '{%s}descriptor' % \
+        descriptorEl = etree.SubElement(bandEl, '{%s}descriptor' % \
                                              self.ns['gmd'])
-        descGco = self.etree.SubElement(descriptorEl, '{%s}CharacterString' % \
+        descGco = etree.SubElement(descriptorEl, '{%s}CharacterString' % \
                                         self.ns['gco'])
         descGco.text = descriptor
-        maxValEl = self.etree.SubElement(bandEl, '{%s}maxValue' % \
+        maxValEl = etree.SubElement(bandEl, '{%s}maxValue' % \
                                          self.ns['gmd'])
-        maxGco = self.etree.SubElement(maxValEl, '{%s}Real' % self.ns['gco'])
+        maxGco = etree.SubElement(maxValEl, '{%s}Real' % self.ns['gco'])
         maxGco.text = maxVal
-        minValEl = self.etree.SubElement(bandEl, '{%s}minValue' % \
+        minValEl = etree.SubElement(bandEl, '{%s}minValue' % \
                                          self.ns['gmd'])
-        minGco = self.etree.SubElement(minValEl, '{%s}Real' % self.ns['gco'])
+        minGco = etree.SubElement(minValEl, '{%s}Real' % self.ns['gco'])
         minGco.text = minVal
         if bitDepth is not None:
-            bitsEl = self.etree.SubElement(bandEl, '{%s}bitsPerValue' % \
+            bitsEl = etree.SubElement(bandEl, '{%s}bitsPerValue' % \
                                            self.ns['gmd'])
-            bitDepthGco = self.etree.SubElement(bitsEl, '{%s}Integer' % \
+            bitDepthGco = etree.SubElement(bitsEl, '{%s}Integer' % \
                                                 self.ns['gco'])
             bitDepthGco.text = bitDepth
         if scaleFactor is not None:
-            scaleFactorEl = self.etree.SubElement(bandEl, '{%s}scaleFactor' % \
+            scaleFactorEl = etree.SubElement(bandEl, '{%s}scaleFactor' % \
                                                   self.ns['gmd'])
-            scaleFactorGco = self.etree.SubElement(scaleFactorEl, '{%s}Real' %\
+            scaleFactorGco = etree.SubElement(scaleFactorEl, '{%s}Real' %\
                                                    self.ns['gco'])
             scaleFactorGco.text = scaleFactor
         if offset is not None:
-            offsetEl = self.etree.SubElement(bandEl, '{%s}offset' % \
+            offsetEl = etree.SubElement(bandEl, '{%s}offset' % \
                                              self.ns['gmd'])
-            offsetGco = self.etree.SubElement(offsetEl, '{%s}Real' % \
+            offsetGco = etree.SubElement(offsetEl, '{%s}Real' % \
                                               self.ns['gco'])
             offsetGco.text = offset
-
         
     # FIXME
     # this code is adapted from

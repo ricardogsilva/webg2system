@@ -74,9 +74,9 @@ class SourceAdmin(admin.ModelAdmin):
     list_display = ('name', 'areas', 'specific_names')
 
 class ProductAdmin(admin.ModelAdmin):
-    radio_fields = {'iResourceType' : admin.HORIZONTAL}
+    #radio_fields = {'iResourceType' : admin.HORIZONTAL}
     inlines = [DatasetInline]
-    list_display = ('shortName', 'name')
+    list_display = ('short_name', 'name')
     filter_horizontal = ('keywords', 'topicCategories',)
 
 

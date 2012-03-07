@@ -207,7 +207,7 @@ class Product(models.Model):
     #                         ('service', 'service'))
     OVERVIEW_TYPE_CHOICES = (('png', 'png'),)
     name = models.CharField(max_length=100)
-    shortName = models.CharField(max_length=20, verbose_name='Short name')
+    short_name = models.CharField(max_length=20)
     originator_collaborator = models.ForeignKey(
             Collaborator,
             related_name='product_%(app_label)s_%(class)s_related',
@@ -288,7 +288,7 @@ class Product(models.Model):
                                "evaluation of the data set (series).")
 
     def __unicode__(self):
-        return self.shortName
+        return self.short_name
 
 class Dataset(models.Model):
     COVERAGE_CONTENT_TYPE_CHOICES = (
