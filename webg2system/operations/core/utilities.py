@@ -179,3 +179,16 @@ def get_file_settings(filePath):
         logger.warning('Couldn\'t find any file settings for the supplied path.')
         result = None
     return result
+
+def get_host_path(oldHost, oldPath, newHost):
+    '''
+    Adapt a path to a new host.
+    '''
+
+    relativePath = oldPath.replace(oldHost.dataPath, '')
+    pathType = 'dataPath'
+    if relativePath == oldPath:
+        relativePath = oldPath.replace(oldHost.codePath, '')
+        pathType = 'codePath'
+    newPath = os.path.join(eval('newHost.%s' % pathType), relativePath[1:])
+    return newPath

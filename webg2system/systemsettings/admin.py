@@ -2,7 +2,7 @@ from models import *
 from django.contrib import admin
 
 class HostAdmin(admin.ModelAdmin):
-    list_display = ('name', 'dataPath', 'codePath', 'ip')
+    list_display = ('name', 'dataPath', 'codePath', 'ip', 'web_server')
 
 class SpecificSourceInline(admin.StackedInline):
     model = SpecificSource

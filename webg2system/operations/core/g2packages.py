@@ -9,6 +9,7 @@ import systemsettings.models as ss
 
 from g2item import GenericItem
 from g2files import G2File
+from g2hosts import HostFactory
 import mappers
 import metadatas
 import utilities
@@ -1178,6 +1179,8 @@ class WebDisseminator(ProcessingPackage):
         return quicklooks
         #xmlMetadata = self.generate_xml_metadata(fileList)
         #self.populate_csw_server(xmlMetadata)
+        #self.send_quicklooks_to_web_server(quicklooks)
+        #self.send_product_to_web_server(fileList)
 
     def generate_quicklooks_mapfile(self, fileList):
         '''
@@ -1269,3 +1272,35 @@ class WebDisseminator(ProcessingPackage):
         '''
 
         raise NotImplementedError
+
+    def send_quicklooks_to_web_server(self, fileList):
+        destinationDir = utilities.get_host_path(self.host, 
+                                                 self.quickviewOutDir, 
+                                                 webServerHost)
+        self._send_to_web_server(fileList, destinationDir, webServerHost)
+
+    def send_product_to_web_server(self, fileList):
+        destinationDir = utilities.get_host_path(self.host, 
+                                                 self.hdf5WebDir, 
+                                                 webServerHost)
+        self._send_to_web_server(fileList, destinationDir, webServerHost)
+
+    def _send_to_web_server(self, fileList, destinationDir):
+        '''
+        Send files to the web server.
+
+        Inputs:
+
+            fileList - A list of file paths.
+
+            destinationDir - The directory on the target host where
+                the files should be sent to.
+
+        The web server is a special Host object, that has the 'web_server' 
+        attribute set to True.
+        '''
+
+        hostSettings = ss.Host.objects.filter(web_server=True)[0]
+        hf = HostFactory()
+        webServerHost = hf.create_host(hostSettings)
+        self.host.send(fileList, destinationDir, webServerHost)

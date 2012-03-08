@@ -383,7 +383,9 @@ class G2LocalHost(G2Host):
         return result
 
     def _send_to_remote(self, paths, destDir, destHost):
-        raise NotImplementedError
+        connection = self._get_connection(destHost, 'ftp')
+        returnCode = connection.send(paths, destDir)
+        return returnCode
 
     # FIXME
     # launch several subprocesses simultaneously in order to speed up

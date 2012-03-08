@@ -17,6 +17,7 @@ class Host(models.Model):
     ip = models.IPAddressField()
     username = models.CharField(max_length=50)
     password = models.CharField(max_length=50)
+    web_server = models.BooleanField(default=False)
 
     def __unicode__(self):
         return self.name

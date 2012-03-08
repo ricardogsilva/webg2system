@@ -165,8 +165,6 @@ class FTPProxy(object):
             self.localHost.change_dir(oldDir)
         return copiedPaths
 
-    # FIXME
-    #   - this method hasn't been tested yet.
     def send(self, paths, destination):
         '''
         Put the local paths to the remote server.
@@ -192,10 +190,11 @@ class FTPProxy(object):
             results = []
             for path in paths:
                 dirPath, fname = os.path.split(path)
+                self.logger.info('path: %s' % path)
                 if os.path.isdir(dirPath):
                     os.chdir(dirPath)
                     self._create_remote_dirs(destination)
-                    self.connection.cwd(path)
+                    self.connection.cwd(destination)
                     result = self.connection.storbinary("STOR %s" % fname,
                                                         open(fname, "rb"))
                     results.append(float(result.split()[0]))
@@ -206,8 +205,6 @@ class FTPProxy(object):
                 endResult = 0
         return endResult
 
-    # FIXME
-    #   - this method hasn't been tested yet.
     def _create_remote_dirs(self, path):
         """
         Create the directory structure specified by 'path' on the remote host.
@@ -218,7 +215,7 @@ class FTPProxy(object):
         for part in path.split("/"):
             try:
                 self.connection.cwd(part)
-            except ftplib.error_perm:
+            except error_perm:
                 self.connection.mkd(part)
                 self.connection.cwd(part)
         self.connection.cwd(oldDir)
