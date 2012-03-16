@@ -7,6 +7,7 @@ processing system.
 """
 
 import os
+import re
 import logging
 from lxml import etree
 import urllib
@@ -547,12 +548,15 @@ class MetadataGenerator(object):
                 accessible.
         '''
 
+        productVersion = re.search(r'GEO_(v\d)$', filePath).groups()[0]
         today = dt.date.today().strftime('%Y-%m-%d')
         fileName = os.path.basename(filePath)
         fs = utilities.get_file_settings(filePath)
         minx, miny, maxx, maxy = mapper.get_bounds(filePath)
-        uuid = uuid1()
-        self.update_element('fileIdentifier', str(uuid))
+        uuid = str(uuid1())
+        rootAttribs = self.tree.getroot().attrib
+        rootAttribs['id'] = '%sMetadata' % fs.product.short_name
+        self.update_element('fileIdentifier', uuid)
         self.update_element('parentIdentifier', fs.product.iParentIdentifier)
         self.update_element('hierarchyLevel', 'dataset')
         self._remove_contact_info(self.tree.getroot(), 'contact')
@@ -570,14 +574,7 @@ class MetadataGenerator(object):
         self.update_element('cornerPoint', cornerPoint)
         self.update_element('referenceSystemIdentifier', 
                             'EPSG:%s' % fs.product.ireferenceSystemID)
-        self.update_element('title', fs.product.iResourceTitle)
-        # For now, assuming the metadata is being created on the same day
-        # that the products got generated. This assumption is not good.
-        # A better solution would be to move this method (and the 
-        # quicklooks too, for similar reason) to the class that actually 
-        # generates the product and have it be generated right after the
-        # product.
-        self.update_element('date', today)
+        self._apply_citation(fs.product, productVersion, uuid)
         self.update_element('abstract', fs.product.iResourceAbstract)
         self.update_element('credit', fs.product.iCredit)
         identInfoEl = self.tree.xpath('gmd:identificationInfo/'\
@@ -749,6 +746,44 @@ class MetadataGenerator(object):
             offsetGco = etree.SubElement(offsetEl, '{%s}Real' % \
                                               self.ns['gco'])
             offsetGco.text = offset
+
+    def _apply_citation(self, productSettings, ProdVersion, uuid):
+        today = dt.date.today().strftime('%Y-%m-%d')
+        citationEl = self.tree.xpath('gmd:identificationInfo/*/gmd:citation/*',
+                                     namespaces=self.ns)[0]
+        titleEl = citationEl.xpath('gmd:title/gco:CharacterString', namespaces=self.ns)[0]
+        titleEl.text = productSettings.iResourceTitle
+
+        theDateEl = citationEl.xpath('gmd:date/*', namespaces=self.ns)[0]
+        dateEl = theDateEl.xpath('gmd:date/gco:Date', namespaces=self.ns)[0]
+        dateEl.text = today
+        #dateTypeEl = theDateEl.xpath('gmd:dateType/gmd:CI_DateTypeCode', namespaces=self.ns)[0]
+        editionEl = citationEl.xpath('gmd:edition/gco:CharacterString', namespaces=self.ns)[0]
+        editionEl.text = ProdVersion
+        editionDateEl = citationEl.xpath('gmd:editionDate/gco:Date', namespaces=self.ns)[0]
+        editionDateEl.text = today
+
+        identifierEl = citationEl.xpath('gmd:identifier/*', namespaces=self.ns)[0]
+        authTitleEl = identifierEl.xpath('gmd:authority/gmd:CI_Citation/'\
+                                            'gmd:title/gco:CharacterString', 
+                                            namespaces=self.ns)[0]
+        authTitleEl.text = productSettings.originator_collaborator.organization.name
+
+        authDateEl = identifierEl.xpath('gmd:authority/*/gmd:date/*/gmd:date/'\
+                                      'gco:Date', namespaces=self.ns)[0]
+        authDateEl.text = today
+        authDateTypeEl = identifierEl.xpath('gmd:authority/*/gmd:date/*/'\
+                                            'gmd:dateType/gmd:CI_DateTypeCode', 
+                                            namespaces=self.ns)[0]
+        authDateTypeEl.attrib['{%s}codeListValue' % self.ns['gmd']] = 'publication'
+        authDateTypeEl.text = 'publication'
+        identifierCodeEl = identifierEl.xpath('gmd:code/gco:CharacterString', 
+                                              namespaces=self.ns)[0]
+        identifierCodeEl.text = uuid
+        otherDetailsEl = citationEl.xpath('gmd:otherCitationDetails/'\
+                                          'gco:CharacterString', 
+                                          namespaces=self.ns)[0]
+        otherDetailsEl.text = productSettings.iOtherDetails
         
     # FIXME
     # this code is adapted from

@@ -1254,7 +1254,7 @@ class WebDisseminator(ProcessingPackage):
 
         if not self.host.is_dir(self.xmlOutDir):
             self.host.make_dir(self.xmlOutDir)
-        for fNum, path in enumerate(fileList):
+        for fNum, path in enumerate(fileList[0:1]):
             self.logger.debug('(%i/%i) - Creating xml...' % 
                               (fNum+1, len(fileList)))
             self.mdGenerator.apply_changes(path, self.mapper, self.hdf5WebDir)
