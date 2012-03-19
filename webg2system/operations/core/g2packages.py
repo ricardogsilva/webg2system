@@ -1315,21 +1315,61 @@ class WebDisseminator(ProcessingPackage):
         metadata = self.generate_xml(tileName)
         #bundle the product, quickLook and metadata
 
+    # TODO -  test this method out
     def _get_tile(self, tileName, useArchive=False):
         '''
         Return the full path to the tile.
+
+        Inputs:
+
+            tileName
+
+            useArchive - A boolean specifying if the archives should be used
+                when fetching the file.
+
         '''
 
-        pass
+        tilePattern = re.compile(r'(?P<tile_name>%s)' % tileName)
+        patternSearch = re.compile(r'\(\?<tile_name>.*\)')
+        for g2f in [f for f in self.inputs if f.fileType == 'hdf5']:
+            for patt in g2f.searchPatterns:
+                #save the old pattern
+                oldPatt = patt.pattern[:] # copying the string
+                #replace the 'tile_name' group with the tileName argument
+                newPatt = patternSearch.sub(patt.pattern, oldPatt)
+                patt.pattern = newPatt
+                found = self._fetch_files([g2f], self.workingDir, useArchive, decompress=True)
+                #after processing is done, restore the old pattern
+                patt.pattern = oldPatt
+        return found
+
 
     def generate_quicklook(self, mapfile, tileName):
         '''
         Process a single tile and generate the quicklook.
 
-        Returns the fullpath to the newly generated quicklook
+        Inputs:
+
+            mapfile - The full path to the mapfile to use for generating
+                the quicklook.
+
+            tileName - The name of the tile to be processed.
+
+        Returns the fullpath to the newly generated quicklook.
         '''
 
-        pass
+        self.host.make_dir(self.workingDir)
+        legendPath = self._generate_quicklooks_legend(self.workingDir, mapfile)
+        #quickLooks = []
+        #for fNum, path in enumerate(fileList):
+        #    self.logger.debug('(%i/%i) - Creating quicklook...' % 
+        #                      (fNum+1, len(fileList)))
+        #    quickPath = self.mapper.generate_quicklook(self.quickviewOutDir, 
+        #                                               mapfile, path, 
+        #                                               legendPath)
+        #    quickLooks.append(quickPath)
+        #self.mapper.remove_temps([legendPath])
+        #return quicklooks
 
     def generate_xml(self, tileName):
         '''

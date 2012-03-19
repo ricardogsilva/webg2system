@@ -16,5 +16,5 @@ urlpatterns = patterns('',
 )
 urlpatterns += patterns('operations.views',
         url(r'^create/$', 'create_running_package'),
-        url(r'^products/(?P<prodName>\w+)/(?P<area>\w+-?\w*)/(?P<timeslot>\d{12})/product$', 'get_product'),
+        url(r'^products/(?P<prodName>\w+)/(?P<area>\w+-?\w*)/(?P<timeslot>\d{12})/product$', 'get_product_bundle'),
 )

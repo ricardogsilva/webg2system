@@ -26,7 +26,7 @@ def create_running_package(request):
                               {'form' : form,},
                               context_instance=RequestContext(request))
 
-def get_product(request):
+def get_product_bundle(request):
     ts = dt.datetime.strptime(request.timeslot, '%Y%m%d%H%M')
     name = request.prodName
     theArea = '.*' # temporary hack
@@ -45,4 +45,7 @@ def get_product(request):
     if tileZip is not None:
         # make django return a zip file
         pass
+    pass
+
+def get_quicklook(request):
     pass
