@@ -1304,3 +1304,38 @@ class WebDisseminator(ProcessingPackage):
         hf = HostFactory()
         webServerHost = hf.create_host(hostSettings)
         self.host.send(fileList, destinationDir, webServerHost)
+
+    def get_zip_bundle(self, tileName):
+        '''
+        Return a zip file with the product, quicklook and xml.
+        '''
+
+        product = self._get_tile(tileName, useArchive=True)
+        quickLook = self.generate_quicklook(tileName)
+        metadata = self.generate_xml(tileName)
+        #bundle the product, quickLook and metadata
+
+    def _get_tile(self, tileName, useArchive=False):
+        '''
+        Return the full path to the tile.
+        '''
+
+        pass
+
+    def generate_quicklook(self, mapfile, tileName):
+        '''
+        Process a single tile and generate the quicklook.
+
+        Returns the fullpath to the newly generated quicklook
+        '''
+
+        pass
+
+    def generate_xml(self, tileName):
+        '''
+        Process a single tile and generate the quicklook.
+
+        Returns the fullpath to the newly generated xml metadata file.
+        '''
+
+        pass
