@@ -282,21 +282,67 @@ class NGPMapper(Mapper): #crappy name
         mapWMSMetadata.set('wms_onlineresource', 
                         'http://%s/cgi-bin/mapserv?map=%s&' \
                         % (self.host.host, outputPath))
-        layer = mapfile.getLayerByName(self.product.shortName)
+        layer = mapfile.getLayerByName(self.product.short_name)
         if layer is None:
             layerIndex = mapfile.insertLayer(templateMap.getLayerByName(
-                                             self.product.shortName))
+                                             self.product.short_name))
             layer = mapfile.getLayer(layerIndex)
         layer.data = geotifRelativePath
         layer.status = mapscript.MS_ON
         layerWMSMetadata = layer.metadata
-        layerWMSMetadata.set('wms_title', self.product.shortName)
+        layerWMSMetadata.set('wms_title', self.product.short_name)
         for i in range(mapfile.numlayers):
             otherLayer = mapfile.getLayer(i)
             if otherLayer.name != layer.name:
                 otherLayer.status = mapscript.MS_OFF
         mapfile.save(outputPath)
         return outputPath
+
+    def generate_legend(self, mapfile, layers, outputDir):
+        '''
+        Generate a legend png for the input mapfile.
+
+        Inputs:
+
+            mapfile - The path to the mapfile.
+
+            layers - A list of layer names that are to be included in the 
+                legend.
+
+            outputDir - The directory where the legend file is to be created.
+
+        Returns:
+
+            The full path to the newly generated legend file.
+        '''
+
+        self._select_mapfile_layers(mapfile, layers)
+        legendPath = os.path.join(outputDir, 'legend.png')
+        legendCommand = 'legend %s %s' % (mapfile, legendPath)
+        mapfileDir = os.path.dirname(mapfile)
+        self.host.run_program(legendCommand, mapfileDir)
+        return legendPath
+
+    def _select_mapfile_layers(self, mapfile, layers):
+        '''
+        Turn the selected layers ON and all the others OFF.
+
+        Inputs:
+
+            mapfile - The path to the mapfile.
+
+            layers - A list of layer names that are to be included in the 
+                legend.
+        '''
+            
+        mapfileObj = mapscript.mapObj(mapfile)
+        for i in range(mapfileObj.numlayers):
+            layer = mapfileObj.getLayer(i)
+            if layer.name in layers:
+                layer.status = mapscript.MS_ON
+            else:
+                layer.status = mapscript.MS_OFF
+        mapfileObj.save(mapfile)
 
     # FIXME
     # - Use mapscript.imageObj to generate the quicklooks instead of
@@ -326,7 +372,7 @@ class NGPMapper(Mapper): #crappy name
         rawQuickPath = os.path.join(outputDir, 'rawquicklook_%s.png' % fname)
         command = 'shp2img -m %s -o %s -e %i %i %i %i -s '\
                   '400 400 -l %s' % (mapfile, rawQuickPath, minx, miny, 
-                                     maxx, maxy, self.product.shortName)
+                                     maxx, maxy, self.product.short_name)
         stdout, stderr, retcode = self.host.run_program(command)
         outPath = self._complete_quicklook(rawQuickPath, legendPath)
         self.remove_temps([rawQuickPath])

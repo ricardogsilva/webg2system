@@ -503,7 +503,8 @@ class G2LocalHost(G2Host):
         else:
             basePath = self.codePath
         fullPath = os.path.join(basePath, directory)
-        os.makedirs(fullPath)
+        if not self.is_dir(fullPath):
+            os.makedirs(fullPath)
 
     def remove_dir(self, directory, relativeTo='data'):
         '''
