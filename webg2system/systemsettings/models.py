@@ -17,7 +17,7 @@ class Host(models.Model):
     ip = models.IPAddressField()
     username = models.CharField(max_length=50)
     password = models.CharField(max_length=50)
-    web_server = models.BooleanField(default=False)
+    #web_server = models.BooleanField(default=False)
 
     def __unicode__(self):
         return self.name
@@ -287,6 +287,11 @@ class Product(models.Model):
                                "quality information required for "\
                                "interoperability and/or valuable for use and "\
                                "evaluation of the data set (series).")
+    sources = models.ManyToManyField(Source, help_text='Sources that are '\
+                                     'used in the data fusion process for'\
+                                     'generating this product.')
+    temporal_extent = models.TextField(help_text='Description of the '\
+                                       'temporal extent.')
 
     def __unicode__(self):
         return self.short_name
@@ -322,3 +327,7 @@ class Dataset(models.Model):
 
     def __unicode__(self):
         return self.name
+
+class WebServer(models.Model):
+    host = models.ForeignKey(Host)
+    public_URL = models.CharField(max_length=255)

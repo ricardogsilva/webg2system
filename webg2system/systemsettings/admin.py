@@ -2,7 +2,7 @@ from models import *
 from django.contrib import admin
 
 class HostAdmin(admin.ModelAdmin):
-    list_display = ('name', 'dataPath', 'codePath', 'ip', 'web_server')
+    list_display = ('name', 'dataPath', 'codePath', 'ip')
 
 class SpecificSourceInline(admin.StackedInline):
     model = SpecificSource
@@ -77,7 +77,10 @@ class ProductAdmin(admin.ModelAdmin):
     #radio_fields = {'iResourceType' : admin.HORIZONTAL}
     inlines = [DatasetInline]
     list_display = ('short_name', 'name')
-    filter_horizontal = ('keywords', 'topicCategories',)
+    filter_horizontal = ('keywords', 'topicCategories', 'sources',)
+
+class WebServerAdmin(admin.ModelAdmin):
+    list_display = ('host', 'public_URL')
 
 
 #admin.site.register(ExceptHour)
@@ -88,3 +91,4 @@ admin.site.register(Package, PackageAdmin)
 admin.site.register(File, FileAdmin)
 admin.site.register(Source, SourceAdmin)
 admin.site.register(Product, ProductAdmin)
+admin.site.register(WebServer, WebServerAdmin)

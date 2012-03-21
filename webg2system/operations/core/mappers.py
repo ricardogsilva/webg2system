@@ -251,6 +251,23 @@ class NGPMapper(Mapper): #crappy name
             v = None
         return h, v
 
+    def get_area(self, fileName):
+        hvPatt = re.compile(r'H(\d{2})V(\d{2})')
+        reObj = hvPatt.search(fileName)
+        if reObj is not None:
+            area = reObj.group()
+        else:
+            try:
+                area = os.path.baseName(fileName).split('_')[4]
+            except IndexError:
+                self.logger.error('Couldn\'t find area from the file name.')
+                area = None
+        return area
+
+
+
+
+
     def create_mapfile(self, geotifRelativePath, geotifCommonDir, outputPath, template):
         '''
         Create a new mapfile for UMN Mapserver based on the template.

@@ -1158,7 +1158,7 @@ class WebDisseminator(ProcessingPackage):
         )
         self.quicklooksMapfileName = 'quicklooks.map'
         self.mapper = mappers.NGPMapper(self.inputs[0]) # <- badly defined
-        self.mdGenerator = metadatas.MetadataGenerator(self.xmlTemplate)
+        self.mdGenerator = metadatas.MetadataGenerator(self.xmlTemplate, self.timeslot)
 
     def clean_up(self, callback=None):
         self._delete_directories([self.workingDir])

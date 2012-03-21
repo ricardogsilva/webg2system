@@ -19,12 +19,14 @@ import datetime as dt
 import pycountry
 
 import utilities
+import systemsettings.models as ss
 
 class MetadataGenerator(object):
 
-    def __init__(self, template):
+    def __init__(self, template, timeslot):
         self.logger = logging.getLogger(
                 '.'.join((__name__, self.__class__.__name__)))
+        self.timeslot = timeslot
         self.tree = etree.parse(template)
         self.ns = self.tree.getroot().nsmap.copy()
         # in order to use this dictionary for XPATH queries the default 
@@ -551,8 +553,10 @@ class MetadataGenerator(object):
         productVersion = re.search(r'GEO_(v\d)$', filePath).groups()[0]
         today = dt.date.today().strftime('%Y-%m-%d')
         fileName = os.path.basename(filePath)
+        fileTimeslot = utilities.extract_timeslot(filePath)
         fs = utilities.get_file_settings(filePath)
         minx, miny, maxx, maxy = mapper.get_bounds(filePath)
+        tileName = mapper.get_area(filePath)
         uuid = str(uuid1())
         rootAttribs = self.tree.getroot().attrib
         rootAttribs['id'] = '%sMetadata' % fs.product.short_name
@@ -574,7 +578,7 @@ class MetadataGenerator(object):
         self.update_element('cornerPoint', cornerPoint)
         self.update_element('referenceSystemIdentifier', 
                             'EPSG:%s' % fs.product.ireferenceSystemID)
-        self._apply_citation(fs.product, productVersion, uuid)
+        self._apply_citation(fs.product, fileName, productVersion, uuid)
         self.update_element('abstract', fs.product.iResourceAbstract)
         self.update_element('credit', fs.product.iCredit)
         identInfoEl = self.tree.xpath('gmd:identificationInfo/'\
@@ -589,7 +593,9 @@ class MetadataGenerator(object):
                                  role='originator', 
                                  positionName='Geoland2 Help Desk',
                                  contact=fs.product.originator_collaborator)
-        self._apply_graphic_overview(filePath, fs.product)
+        self._apply_graphic_overview(tileName, fs.product)
+        self._apply_aggregation_infos(mapper)
+        self._apply_temporal_extent(fs.product, fileTimeslot)
         self._apply_keywords(fs.product)
         self.update_element('resolution', '%.2f' % fs.product.pixelSize)
         self._apply_topic_categories(fs.product)
@@ -612,12 +618,18 @@ class MetadataGenerator(object):
         self.update_element('valReport', fs.product.validation_report)
         self.update_element('lineage', fs.product.lineage)
 
-    def _apply_graphic_overview(self, filePath, product):
+    def _apply_graphic_overview(self, tileName, product):
         fileNameEl = self.tree.xpath('gmd:identificationInfo/*/'\
                                      'gmd:graphicOverview/*/'\
                                      'gmd:fileName/gco:CharacterString',
                                      namespaces=self.ns)[0]
-        fileNameEl.text = '%s.png' % os.path.basename(filePath)
+
+        #filename is an URL that should mimic the regex in operations.urls.py
+        baseURL = ss.WebServer.objects.get().public_URL
+        ts = self.timeslot.strftime('%Y%m%d%H%M')
+        url = '%s/operations/products/%s/%s/%s/quicklook' % \
+                (baseURL, product.short_name, tileName, ts)
+        fileNameEl.text = url
         fileDescEl = self.tree.xpath('gmd:identificationInfo/*/'\
                                      'gmd:graphicOverview/*/'\
                                      'gmd:fileDescription/gco:CharacterString',
@@ -628,6 +640,62 @@ class MetadataGenerator(object):
                                      'gmd:fileType/gco:CharacterString',
                                      namespaces=self.ns)[0]
         fileTypeEl.text = product.graphic_overview_type
+
+    def _apply_aggregation_infos(self, mapper):
+        parentEl = self.tree.xpath('gmd:identificationInfo/'\
+                                        'gmd:MD_DataIdentification', 
+                                        namespaces=self.ns)[0]
+        for previousAggInfo in parentEl.xpath('gmd:aggregationInfo', 
+                namespaces=self.ns):
+            dsAssocTypeCode = previousAggInfo.xpath(
+                    'gmd:MD_AggregateInformation/gmd:associationType/gmd:'\
+                        'DS_AssociationTypeCode', 
+                    namespaces=self.ns)[0]
+            if dsAssocTypeCode.text != 'partOfSeamlessDatabase':
+                parentEl.remove(previousAggInfo)
+        for sourceSett in mapper.product.sources.all():
+            sourceName = sourceSett.name
+            sensor = sourceSett.sourceextrainfo_set.get(name='sensor').string
+            self._apply_aggreg_info(parentEl, 'platform', sourceName)
+            self._apply_aggreg_info(parentEl, 'sensor', sensor)
+
+    def _apply_aggreg_info(self, parentEl, initiative, initiativeValue): 
+        '''
+        Create new aggregationInfo elements.
+
+        Inputs:
+
+            parentEl - 
+
+            initiative - The text that goes into the DS_InitiativeTypeCode 
+                element. Should be either 'platform' or 'sensor'.
+
+            initiativeValue - The value of the initiative.
+
+        '''
+
+        AggEl = etree.SubElement(parentEl, '{%s}aggregationInfo' % \
+                                 self.ns['gmd'])
+        mdEl = etree.SubElement(AggEl, '{%s}MD_AggregateInformation' % \
+                                self.ns['gmd'])
+        assocEl = etree.SubElement(mdEl, '{%s}associationType' % \
+                                   self.ns['gmd'])
+        dsAssocEl = etree.SubElement(assocEl, '{%s}DS_AssociationTypeCode'\
+                                     % self.ns['gmd'])
+        dsAssocEl.attrib['{%s}codeList' % self.ns['gmd']] = 'http://'\
+                'www.isotc211.org/2005/resources/codelist/'\
+                'gmxCodelists.xml#DS_AssociationTypeCode'
+        dsAssocEl.attrib['{%s}codeListValue' % self.ns['gmd']] = 'source'
+        dsAssocEl.text = 'source'
+        initiEl = etree.SubElement(mdEl, '{%s}initiativeType'\
+                                   % self.ns['gmd'])
+        dsInitiEl = etree.SubElement(initiEl, '{%s}DS_InitiativeTypeCode'\
+                                     % self.ns['gmd'])
+        dsInitiEl.attrib['{%s}codeList' % self.ns['gmd']] = 'http://'\
+                'www.isotc211.org/2005/resources/codelist/'\
+                'gmxCodelists.xml#DS_InitiativeTypeCode'
+        dsInitiEl.attrib['{%s}codeListValue' % self.ns['gmd']] = initiative
+        dsInitiEl.text = initiativeValue
 
     def _remove_contentInfo(self):
         contentInfos = self.tree.xpath('gmd:contentInfo', namespaces=self.ns)
@@ -747,19 +815,20 @@ class MetadataGenerator(object):
                                               self.ns['gco'])
             offsetGco.text = offset
 
-    def _apply_citation(self, productSettings, ProdVersion, uuid):
+    def _apply_citation(self, productSettings, fileName, prodVersion, uuid):
         today = dt.date.today().strftime('%Y-%m-%d')
         citationEl = self.tree.xpath('gmd:identificationInfo/*/gmd:citation/*',
                                      namespaces=self.ns)[0]
         titleEl = citationEl.xpath('gmd:title/gco:CharacterString', namespaces=self.ns)[0]
-        titleEl.text = productSettings.iResourceTitle
+        #titleEl.text = productSettings.iResourceTitle
+        titleEl.text = fileName
 
         theDateEl = citationEl.xpath('gmd:date/*', namespaces=self.ns)[0]
         dateEl = theDateEl.xpath('gmd:date/gco:Date', namespaces=self.ns)[0]
         dateEl.text = today
         #dateTypeEl = theDateEl.xpath('gmd:dateType/gmd:CI_DateTypeCode', namespaces=self.ns)[0]
         editionEl = citationEl.xpath('gmd:edition/gco:CharacterString', namespaces=self.ns)[0]
-        editionEl.text = ProdVersion
+        editionEl.text = prodVersion
         editionDateEl = citationEl.xpath('gmd:editionDate/gco:Date', namespaces=self.ns)[0]
         editionDateEl.text = today
 
@@ -784,6 +853,21 @@ class MetadataGenerator(object):
                                           'gco:CharacterString', 
                                           namespaces=self.ns)[0]
         otherDetailsEl.text = productSettings.iOtherDetails
+
+    def _apply_temporal_extent(self, productSettings, timeslot):
+        parentEl = self.tree.xpath('gmd:identificationInfo/*/gmd:extent/'\
+                                   'gmd:EX_Extent/gmd:temporalElement/'\
+                                   'gmd:EX_TemporalExtent/gmd:extent/'\
+                                   'gml:TimePeriod', namespaces=self.ns)[0]
+        descriptionEl = parentEl.xpath('gml:description', namespaces=self.ns)[0]
+        descriptionEl.text = productSettings.temporal_extent
+        nameEl = parentEl.xpath('gml:name', namespaces=self.ns)[0]
+        nameEl.text = 'timeslot'
+        beginEl = parentEl.xpath('gml:beginPosition', namespaces=self.ns)[0]
+        theTimeslot = timeslot.strftime('%Y-%m-%dT%H:%M:%S')
+        beginEl.text = theTimeslot
+        endEl = parentEl.xpath('gml:endPosition', namespaces=self.ns)[0]
+        endEl.text = theTimeslot
         
     # FIXME
     # this code is adapted from
