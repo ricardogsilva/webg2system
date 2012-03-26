@@ -23,10 +23,11 @@ import systemsettings.models as ss
 
 class MetadataGenerator(object):
 
-    def __init__(self, template, timeslot):
+    def __init__(self, template, timeslot, product):
         self.logger = logging.getLogger(
                 '.'.join((__name__, self.__class__.__name__)))
         self.timeslot = timeslot
+        self.product = product
         self.tree = etree.parse(template)
         self.ns = self.tree.getroot().nsmap.copy()
         # in order to use this dictionary for XPATH queries the default 
@@ -253,12 +254,13 @@ class MetadataGenerator(object):
                                         namespaces=self.ns)[0]
         vocabularyDict = self._sort_keywords(productSettings)
         for vocab, keywordSettings in vocabularyDict.iteritems():
-            descKeywordsEl = etree.SubElement(parentElement, 
-                                              '{%s}descriptiveKeywords' % \
-                                              self.ns['gmd'])
-            mdKeywordsEl = etree.SubElement(descKeywordsEl, 
-                                            '{%s}MD_Keywords' % \
-                                            self.ns['gmd'])
+            if len(keywordSettings) != 0:
+                descKeywordsEl = etree.SubElement(parentElement, 
+                                                  '{%s}descriptiveKeywords' % \
+                                                  self.ns['gmd'])
+                mdKeywordsEl = etree.SubElement(descKeywordsEl, 
+                                                '{%s}MD_Keywords' % \
+                                                self.ns['gmd'])
             for keySett in keywordSettings:
                 keywordEl = etree.SubElement(mdKeywordsEl, '{%s}keyword' % \
                                              self.ns['gmd'])
@@ -292,11 +294,11 @@ class MetadataGenerator(object):
                                                   '{%s}CI_DateTypeCode' % \
                                                   self.ns['gmd'])
                 codeElAttribs = dateTypeCodeEl.attrib
-                codeElAttribs['{%s}codeList' % self.ns['gmd']] = 'http://'\
+                codeElAttribs['codeList']= 'http://'\
                         'standards.iso.org/ittf/PubliclyAvailableStandards/'\
                         'ISO_19139_Schemas/resources/Codelist/'\
                         'ML_gmxCodelists.xml#CI_DateTypeCode'
-                codeElAttribs['{%s}codeListValue' % self.ns['gmd']] = vocSettings.date_type
+                codeElAttribs['codeListValue'] = vocSettings.date_type
                 dateTypeCodeEl.text = vocSettings.date_type
 
     def _apply_INSPIRE_keyword(self, productSettings):
@@ -346,12 +348,12 @@ class MetadataGenerator(object):
                                           '{%s}CI_DateTypeCode' % \
                                           self.ns['gmd'])
         codeElAttribs = dateTypeCodeEl.attrib
-        codeElAttribs['{%s}codeList' % self.ns['gmd']] = 'http://'\
+        codeElAttribs['codeList'] = 'http://'\
                 'standards.iso.org/ittf/PubliclyAvailableStandards/'\
                 'ISO_19139_Schemas/resources/Codelist/'\
                 'ML_gmxCodelists.xml#CI_DateTypeCode'
         dateType = 'publication'
-        codeElAttribs['{%s}codeListValue' % self.ns['gmd']] = dateType
+        codeElAttribs['codeListValue'] = dateType
         dateTypeCodeEl.text = dateType
 
     def _apply_keywords(self, productSettings):
@@ -465,12 +467,12 @@ class MetadataGenerator(object):
         countryListEl = etree.SubElement(countryEl, '{%s}Country' \
                                        % self.ns['gmd'])
         countryListElAttribs = countryListEl.attrib
-        countryListElAttribs['{%s}codeList' % self.ns['gmd']] = 'http://'\
+        countryListElAttribs['codeList'] = 'http://'\
             'www.iso.org/iso/en/prods-services/iso3166ma/'\
             '02iso-3166-code-lists/index.html'
-        countryListElAttribs['{%s}codeSpace' % self.ns['gmd']] = 'ISO 3166-1'
+        countryListElAttribs['codeSpace'] = 'ISO 3166-1'
         countryCode = contact.organization.country
-        countryListElAttribs['{%s}codeListValue' % self.ns['gmd']] = countryCode
+        countryListElAttribs['codeListValue'] = countryCode
         countryListEl.text = pycountry.countries.get(alpha2=countryCode).name
         emailEl = etree.SubElement(ciAddressEl, '{%s}electronicMailAddress' \
                                    % self.ns['gmd'])
@@ -502,11 +504,11 @@ class MetadataGenerator(object):
         functionListEl = etree.SubElement(functionEl, '{%s}CI_OnlineFunctionCode' \
                                           % self.ns['gmd'])
         functionListElAttribs = functionListEl.attrib
-        functionListElAttribs['{%s}codeList' % self.ns['gmd']] = 'http://'\
+        functionListElAttribs['codeList'] = 'http://'\
             'standards.iso.org/ittf/PubliclyAvailableStandards/'\
             'ISO_19139_Schemas/resources/Codelist/'\
             'ML_gmxCodelists.xml#CI_OnlineFunctionCode'
-        functionListElAttribs['{%s}codeListValue' % self.ns['gmd']] = 'information'
+        functionListElAttribs['codeListValue'] = 'information'
         functionListEl.text = 'information'
         hoursServEl = etree.SubElement(ciContactEl, '{%s}hoursOfService' \
                                        % self.ns['gmd'])
@@ -521,10 +523,11 @@ class MetadataGenerator(object):
         roleEl = etree.SubElement(ciRespPartyEl, '{%s}role' % self.ns['gmd'])
         roleListEl = etree.SubElement(roleEl, '{%s}CI_RoleCode' % self.ns['gmd'])
         roleListAttribs = roleListEl.attrib
-        roleListAttribs['{%s}codeList' % self.ns['gmd']] = 'http://standards.'\
+        roleListAttribs['codeList'] = 'http://standards.'\
                 'iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/'\
                 'resources/Codelist/ML_gmxCodelists.xml#CI_RoleCode'
-        roleListAttribs['{%s}codeListValue' % self.ns['gmd']] = role
+        roleListAttribs['codeListValue'] = role
+        roleListEl.text = role
 
     def _remove_contact_info(self, parentElement, contactElName):
         '''
@@ -559,28 +562,28 @@ class MetadataGenerator(object):
         tileName = mapper.get_area(filePath)
         uuid = str(uuid1())
         rootAttribs = self.tree.getroot().attrib
-        rootAttribs['id'] = '%sMetadata' % fs.product.short_name
+        rootAttribs['id'] = '%sMetadata' % self.product.short_name
         self.update_element('fileIdentifier', uuid)
-        self.update_element('parentIdentifier', fs.product.iParentIdentifier)
+        self.update_element('parentIdentifier', self.product.iParentIdentifier)
         self.update_element('hierarchyLevel', 'dataset')
         self._remove_contact_info(self.tree.getroot(), 'contact')
         self._apply_contact_info(self.tree.getroot(), 'contact', 
                                  role='pointOfContact', 
-                                 contact=fs.product.originator_collaborator)
+                                 contact=self.product.originator_collaborator)
         self.update_element('dateStamp', today)
         rowSize = fs.fileextrainfo_set.get(name='nLines').string
         self.update_element('rowSize', rowSize)
-        self.update_element('rowResolution', '%.2f' % fs.product.pixelSize)
+        self.update_element('rowResolution', '%.2f' % self.product.pixelSize)
         colSize = fs.fileextrainfo_set.get(name='nCols').string
         self.update_element('colSize', colSize)
-        self.update_element('colResolution', '%.2f' % fs.product.pixelSize)
+        self.update_element('colResolution', '%.2f' % self.product.pixelSize)
         cornerPoint = '%.1f %.1f' % (maxy, minx)
         self.update_element('cornerPoint', cornerPoint)
         self.update_element('referenceSystemIdentifier', 
-                            'EPSG:%s' % fs.product.ireferenceSystemID)
-        self._apply_citation(fs.product, fileName, productVersion, uuid)
-        self.update_element('abstract', fs.product.iResourceAbstract)
-        self.update_element('credit', fs.product.iCredit)
+                            'EPSG:%s' % self.product.ireferenceSystemID)
+        self._apply_citation(self.product, fileName, productVersion, uuid)
+        self.update_element('abstract', self.product.iResourceAbstract)
+        self.update_element('credit', self.product.iCredit)
         identInfoEl = self.tree.xpath('gmd:identificationInfo/'\
                                       'gmd:MD_DataIdentification', 
                                       namespaces=self.ns)[0]
@@ -588,35 +591,43 @@ class MetadataGenerator(object):
         self._apply_contact_info(identInfoEl, 'pointOfContact', 
                                  role='principalInvestigator', 
                                  positionName='Researcher',
-                                 contact=fs.product.principal_investigator)
+                                 contact=self.product.principal_investigator)
         self._apply_contact_info(identInfoEl, 'pointOfContact', 
                                  role='originator', 
                                  positionName='Geoland2 Help Desk',
-                                 contact=fs.product.originator_collaborator)
-        self._apply_graphic_overview(tileName, fs.product)
+                                 contact=self.product.originator_collaborator)
+        self._apply_graphic_overview(tileName, self.product)
         self._apply_aggregation_infos(mapper)
-        self._apply_temporal_extent(fs.product, fileTimeslot)
-        self._apply_keywords(fs.product)
-        self.update_element('resolution', '%.2f' % fs.product.pixelSize)
-        self._apply_topic_categories(fs.product)
+        self._apply_temporal_extent(self.product, fileTimeslot)
+        self._apply_keywords(self.product)
+        self.update_element('resolution', '%.2f' % self.product.pixelSize)
+        self._apply_topic_categories(self.product)
         self.update_element('westLongitude', '%.2f' % minx)
         self.update_element('eastLongitude', '%.2f' % maxx)
         self.update_element('southLatitude', '%.2f' % miny)
         self.update_element('northLatitude', '%.2f' % maxy)
-        self.update_element('supplemental', fs.product.supplemental_info)
+        self.update_element('supplemental', self.product.supplemental_info)
         self._remove_contentInfo()
-        for dataset in fs.product.dataset_set.all():
+        for dataset in self.product.dataset_set.all():
             self._apply_contentInfo(dataset)
         distributorEl = self.tree.xpath('gmd:distributionInfo/*/' \
             'gmd:distributor/gmd:MD_Distributor', namespaces=self.ns)[0]
+        self._remove_contact_info(distributorEl, 'distributorContact')
         self._apply_contact_info(distributorEl, 'distributorContact', 
                                  role='distributor',
                                  positionName='IM Geoland-2 Helpdesk',
-                                 contact=fs.product.distributor)
-        self.update_element('linkage', os.path.join(outputDir, fileName))
+                                 contact=self.product.distributor)
+        self._apply_linkage(tileName, self.product)
         self.update_element('thematicAccuracyTitle', 'Internal validation report')
-        self.update_element('valReport', fs.product.validation_report)
-        self.update_element('lineage', fs.product.lineage)
+        self.update_element('valReport', self.product.validation_report)
+        self.update_element('lineage', self.product.lineage)
+
+    def _apply_linkage(self, tileName, product):
+        baseURL = ss.WebServer.objects.get().public_URL
+        ts = self.timeslot.strftime('%Y%m%d%H%M')
+        url = '%s/operations/products/%s/%s/%s/product' % \
+                (baseURL, product.short_name, tileName, ts)
+        self.update_element('linkage', url)
 
     def _apply_graphic_overview(self, tileName, product):
         fileNameEl = self.tree.xpath('gmd:identificationInfo/*/'\
@@ -682,19 +693,19 @@ class MetadataGenerator(object):
                                    self.ns['gmd'])
         dsAssocEl = etree.SubElement(assocEl, '{%s}DS_AssociationTypeCode'\
                                      % self.ns['gmd'])
-        dsAssocEl.attrib['{%s}codeList' % self.ns['gmd']] = 'http://'\
+        dsAssocEl.attrib['codeList'] = 'http://'\
                 'www.isotc211.org/2005/resources/codelist/'\
                 'gmxCodelists.xml#DS_AssociationTypeCode'
-        dsAssocEl.attrib['{%s}codeListValue' % self.ns['gmd']] = 'source'
+        dsAssocEl.attrib['codeListValue'] = 'source'
         dsAssocEl.text = 'source'
         initiEl = etree.SubElement(mdEl, '{%s}initiativeType'\
                                    % self.ns['gmd'])
         dsInitiEl = etree.SubElement(initiEl, '{%s}DS_InitiativeTypeCode'\
                                      % self.ns['gmd'])
-        dsInitiEl.attrib['{%s}codeList' % self.ns['gmd']] = 'http://'\
+        dsInitiEl.attrib['codeList'] = 'http://'\
                 'www.isotc211.org/2005/resources/codelist/'\
                 'gmxCodelists.xml#DS_InitiativeTypeCode'
-        dsInitiEl.attrib['{%s}codeListValue' % self.ns['gmd']] = initiative
+        dsInitiEl.attrib['codeListValue'] = initiative
         dsInitiEl.text = initiativeValue
 
     def _remove_contentInfo(self):
@@ -707,7 +718,7 @@ class MetadataGenerator(object):
                                 self.ns['gmd'])
         covEl = etree.SubElement(ciEl, '{%s}MD_CoverageDescription' \
                                  % self.ns['gmd'])
-        covEl.attrib['{%s}uuid' % self.ns['gmd']] = dataset.name
+        covEl.attrib['uuid'] = dataset.name
         attrDescriptionEl = etree.SubElement(covEl, '{%s}attributeDescription' \
                                              % self.ns['gmd'])
         recordTypeEl = etree.SubElement(attrDescriptionEl, '{%s}RecordType' \
@@ -716,10 +727,10 @@ class MetadataGenerator(object):
         contentTypeEl = etree.SubElement(covEl, '{%s}contentType' % \
                                          self.ns['gmd'])
         contTypeAttr = contentTypeEl.attrib
-        contTypeAttr['{%s}codeList' % self.ns['gmd']] = 'http://' \
+        contTypeAttr['codeList'] = 'http://' \
             'www.isotc211.org/2005/resources/codelist/gmxCodelists.xml' \
             '#MD_CoverageContentTypeCode'
-        contTypeAttr['{%s}codeListValue' % self.ns['gmd']] = dataset.coverage_content_type
+        contTypeAttr['codeListValue'] = dataset.coverage_content_type
         self._apply_content_info_dimension_digital_number(covEl, dataset)
         self._apply_content_info_dimension_physical_value(covEl, dataset)
         self._apply_content_info_dimension_invalid(covEl, dataset)
@@ -844,7 +855,7 @@ class MetadataGenerator(object):
         authDateTypeEl = identifierEl.xpath('gmd:authority/*/gmd:date/*/'\
                                             'gmd:dateType/gmd:CI_DateTypeCode', 
                                             namespaces=self.ns)[0]
-        authDateTypeEl.attrib['{%s}codeListValue' % self.ns['gmd']] = 'publication'
+        authDateTypeEl.attrib['codeListValue'] = 'publication'
         authDateTypeEl.text = 'publication'
         identifierCodeEl = identifierEl.xpath('gmd:code/gco:CharacterString', 
                                               namespaces=self.ns)[0]

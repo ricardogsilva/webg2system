@@ -65,6 +65,8 @@ def convert_marks(markList, obj):
             # get rid of any eventual plus or minus signs in the sub satellite 
             # point
             markValue = re.sub(r'[+-]', '', obj.source.subSatellitePoint)
+        elif mark == 'product':
+            markValue = obj.product.short_name
         else:
             try:
                 markValue = eval('obj.%s' % mark)

@@ -31,18 +31,21 @@ class Mapper(object):
     blockXSize = 200
     blockYSize = 200
 
-    def __init__(self, g2File):
+    def __init__(self, g2File, productSettings):
         '''
         Inputs:
 
             g2File - A operations.core.g2files.G2File object.
+
+            productSettings - The settings of the product that is to be
+                generated.
         '''
 
         self.logger = logging.getLogger(
                 '.'.join((__name__, self.__class__.__name__)))
         self.nLines = int(g2File.extraSettings.get(name='nLines').string)
         self.nCols = int(g2File.extraSettings.get(name='nCols').string)
-        self.product = g2File.productSettings
+        self.product = productSettings
         self.host = g2File.host
 
     def create_global_tiff(self, fileList, outDir, outName):

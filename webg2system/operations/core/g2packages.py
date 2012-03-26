@@ -1397,3 +1397,167 @@ class WebDisseminator(ProcessingPackage):
         '''
 
         pass
+
+class OWSPreparator(ProcessingPackage):
+    '''
+    This class prepares the Web Map Service.
+
+    It will create the global geotiff file with the main dataset of the 
+    product and update the relevant WMS mapfiles.
+    '''
+
+    def __init__(self, settings, timeslot, area, host, createIO=True):
+        pass
+        '''
+        Inputs:
+
+            settings - A systemsettings.models.Package object
+
+            timeslot - A datetime.datetime object
+
+            area - A systemsettings.models.Area object
+
+            host - A systemsettings.models.Host object
+        '''
+
+        super(OWSPreparator, self).__init__(settings, timeslot, area, host)
+        self.rawSettings = settings
+        self.name = settings.name
+        self.product = settings.product
+        relCodeDir = utilities.parse_marked(
+                settings.packagepath_set.get(name='codeDir'), self)
+        self.codeDir = os.path.join(self.host.codePath, relCodeDir)
+        relWorkDir = utilities.parse_marked(
+                settings.packagepath_set.get(name='workingDir'), self)
+        self.workingDir = os.path.join(self.host.dataPath, relWorkDir)
+        relMapfileOutDir = utilities.parse_marked(
+                settings.packagepath_set.get(name='mapfileOutDir'), self)
+        self.mapfileOutDir = os.path.join(self.host.dataPath, 
+                                          relMapfileOutDir)
+        relMapfileTemplateDir = utilities.parse_marked(
+                settings.packagepath_set.get(name='mapfileTemplateDir'), self)
+        self.mapfileTemplateDir = os.path.join(self.host.codePath, 
+                                               relMapfileTemplateDir)
+        relGeotifOutDir = utilities.parse_marked(
+                settings.packagepath_set.get(name='geotifOutDir'), self)
+        self.geotifOutDir = os.path.join(self.host.dataPath, 
+                                         relGeotifOutDir)
+        self.inputs = self._create_files(
+            'input', 
+            settings.packageInput_systemsettings_packageinput_related.all()
+        )
+        self.outputs = self._create_files(
+            'output', 
+            settings.packageOutput_systemsettings_packageoutput_related.all()
+        )
+        self.mapper = mappers.NGPMapper(self.inputs[0], self.product)
+
+    def update_latest_mapfile(self):
+        '''
+        This method updates the 'latest' mapfile with this product.
+        '''
+
+        # this method probably shouldn't be called by the run method
+        pass
+
+    def update_specific_mapfile(self):
+        '''
+        This method updates the product specific mapfile with this product.
+        '''
+
+        # this method probably shouldn't be called by the run method
+        pass
+
+    def get_latest_mapfile(self):
+        '''
+        Return the 'latest' mapfile. Create it from the template if needed.
+        '''
+
+        g2f = [i for i in self.inputs if i.fileType=='mapfile' and \
+                'latest' in i.name][0]
+        mapfile = os.path.join(self.mapfileOutDir, g2f.searchPatterns[0])
+        self.logger.info('mapfile: %s' % mapfile)
+        if self.host.is_file(mapfile):
+            result = mapfile
+        else:
+            #self.host.make_dir(self.mapfileOutDir)
+            pass
+        return result
+
+    def delete_outputs(self):
+        '''
+        Delete the package's geotiff output but keep the mapfiles.
+
+        This method overrides the default behaviour of deleting all the
+        outputs because the mapfiles are meant to be kept.
+        '''
+
+        geotiffG2fs = [out for out in self.outputs if out.fileType=='geotiff']
+        foundGeotiffs = self._find_files(geotiffG2fs, useArchive=False)
+        for g2f, foundDict in foundGeotiffs.iteritems():
+            if not (g2f.frequency == 'static' and deleteStatics):
+                foundDict['host'].delete_files(foundDict['paths'])
+
+    def get_specific_mapfile(self):
+        '''
+        Return the product specific mapfile. Create it from the template if needed.
+        '''
+
+        pass
+
+    def generate_geotiff(self, fileList):
+        '''
+        Generate a global geotiff file with the input tiles.
+
+        Inputs:
+
+            fileList - A list of file paths with the files to be included in 
+                the global geotiff.
+
+        Returns:
+
+            A string with the full path to the newly generated geotiff file.
+        '''
+
+        globalTifName = '%s_%s%s%s%s%s.tif' % (self.product.short_name,
+                                               self.year, self.month, 
+                                               self.day, self.hour, 
+                                               self.minute)
+        self.host.make_dir(self.geotifOutDir)
+        globalProd = self.mapper.create_global_tiff(fileList, self.geotifOutDir,
+                                                    globalTifName)
+        return globalProd
+
+    def prepare(self):
+        pass
+
+    def run_main(self):
+        fetched = self.fetch_inputs(useArchive=True)
+        fileList = []
+        for g2f, pathList in fetched.iteritems():
+            fileList += pathList
+        geotiff = self.generate_geotiff(fileList)
+        return geotiff
+
+    def clean_up(self, callback=None):
+        self._delete_directories([self.workingDir])
+        self.host.clean_dirs(self.mapfileOutDir)
+        self.host.clean_dirs(self.geotifOutDir)
+        return 0
+
+
+class Archivor(object):
+    '''
+    This class takes care of the archiving process.
+
+    It will create the relevant packages and archive their outputs.
+    '''
+
+    pass
+
+class Cleaner(object):
+    '''
+    This class will remove old files from the local filesystem.
+    '''
+
+    pass

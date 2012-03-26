@@ -46,7 +46,6 @@ class G2File(GenericItem):
         self.toArchive = fileSettings.toArchive
         self.toDisseminate = fileSettings.toDisseminate
         self.extraSettings = fileSettings.fileextrainfo_set.all()
-        self.productSettings = fileSettings.product
         self.numFiles = fileSettings.numFiles
         self.exceptHours = [eh.hour for eh in fileSettings.exceptHours.all()]
         self.fileType = fileSettings.fileType
@@ -256,6 +255,7 @@ class G2File(GenericItem):
                        latestDiff = absTimeDiff
         return latestPath
 
+    #FIXME - use re.sub to filter out the files with bz2
     def _return_unique_file_names(self, pathList):
         '''
         Return a list with unique filepaths, discarding files that apear more
@@ -267,8 +267,11 @@ class G2File(GenericItem):
         uniqueExtensions = []
         for path in pathList:
             basename = os.path.basename(path)
-            name = basename.partition('.')[0]
+            name = basename.rpartition('.')[0]
             ext = basename.rpartition('.')[-1]
+            print('path: %s' % path)
+            print('name: %s' % name)
+            print('ext: %s' % ext)
             if name in uniqueNames:
                 nameIndex = uniqueNames.index(name)
                 previousExtension = uniqueExtensions[uniqueNames.index(name)]
@@ -279,6 +282,9 @@ class G2File(GenericItem):
                 uniquePathList.append(path)
                 uniqueNames.append(name)
                 uniqueExtensions.append(ext)
+            print('---------------------------')
+        print('pathList: %s' % pathList)
+        print('uniquePathList: %s' % uniquePathList)
         return uniquePathList
 
     def get_path(self, markedString, obj):
