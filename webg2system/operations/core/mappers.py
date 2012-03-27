@@ -43,8 +43,8 @@ class Mapper(object):
 
         self.logger = logging.getLogger(
                 '.'.join((__name__, self.__class__.__name__)))
-        self.nLines = int(g2File.extraSettings.get(name='nLines').string)
-        self.nCols = int(g2File.extraSettings.get(name='nCols').string)
+        self.nLines = int(g2File.nLines)
+        self.nCols = int(g2File.nCols)
         self.product = productSettings
         self.host = g2File.host
 
@@ -267,10 +267,6 @@ class NGPMapper(Mapper): #crappy name
                 area = None
         return area
 
-
-
-
-
     def create_mapfile(self, geotifRelativePath, geotifCommonDir, outputPath, template):
         '''
         Create a new mapfile for UMN Mapserver based on the template.
@@ -317,6 +313,33 @@ class NGPMapper(Mapper): #crappy name
                 otherLayer.status = mapscript.MS_OFF
         mapfile.save(outputPath)
         return outputPath
+
+    def update_latest_mapfile(self, mapfile, shapePath, geotifRelativePath):
+        '''
+        Update the 'latest' mapfile.
+
+        Inputs:
+
+            mapfile - Full path to the mapfile.
+
+            shapePath - Value to attribute to the mapfile's 'shapepath' 
+                variable.
+
+            geotifRelativePath - Relative path to the geotiff. This path 
+                is relative to the shapePath argument.
+        '''
+
+        
+        mapObj = mapscript.mapObj(mapfile)
+        mapObj.shapepath = shapePath
+        mapWMSMetadata = mapObj.web.metadata
+        mapWMSMetadata.set('wms_onlineresource', 
+                           'http://%s/cgi-bin/mapserv?map=%s&' \
+                            % (self.host.host, mapfile))
+        layer = mapObj.getLayerByName(self.product.short_name)
+        layer.data = geotifRelativePath
+        mapObj.save(mapfile)
+        return mapfile
 
     def generate_legend(self, mapfile, layers, outputDir):
         '''

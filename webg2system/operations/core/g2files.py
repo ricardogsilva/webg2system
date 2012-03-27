@@ -45,7 +45,8 @@ class G2File(GenericItem):
         self.toCompress = fileSettings.toCompress
         self.toArchive = fileSettings.toArchive
         self.toDisseminate = fileSettings.toDisseminate
-        self.extraSettings = fileSettings.fileextrainfo_set.all()
+        for extraInfo in fileSettings.fileextrainfo_set.all():
+            exec('self.%s = utilities.parse_marked(extraInfo, self)' % extraInfo.name)
         self.numFiles = fileSettings.numFiles
         self.exceptHours = [eh.hour for eh in fileSettings.exceptHours.all()]
         self.fileType = fileSettings.fileType
@@ -255,37 +256,27 @@ class G2File(GenericItem):
                        latestDiff = absTimeDiff
         return latestPath
 
-    #FIXME - use re.sub to filter out the files with bz2
     def _return_unique_file_names(self, pathList):
         '''
-        Return a list with unique filepaths, discarding files that apear more
-        than once, but on different directories.
+        Remove duplicate filepaths from the list even if some are bzipped.
+
+        When the same file is present in both bzipped2 and normal form, the 
+        normal file is prefered.
         '''
 
-        uniquePathList = []
-        uniqueNames = []
-        uniqueExtensions = []
+        uniquePaths = []
+        uniqueBasenames = []
         for path in pathList:
             basename = os.path.basename(path)
-            name = basename.rpartition('.')[0]
-            ext = basename.rpartition('.')[-1]
-            print('path: %s' % path)
-            print('name: %s' % name)
-            print('ext: %s' % ext)
-            if name in uniqueNames:
-                nameIndex = uniqueNames.index(name)
-                previousExtension = uniqueExtensions[uniqueNames.index(name)]
-                if previousExtension == 'bz2':
-                    uniquePathList[nameIndex] = path
-                    uniqueExtensions[uniqueNames.index(name)] = ext
+            noExtension = re.sub(r'\.bz2$', '', basename)
+            if basename not in uniqueBasenames:
+                uniqueBasenames.append(basename)
+                uniquePaths.append(path)
             else:
-                uniquePathList.append(path)
-                uniqueNames.append(name)
-                uniqueExtensions.append(ext)
-            print('---------------------------')
-        print('pathList: %s' % pathList)
-        print('uniquePathList: %s' % uniquePathList)
-        return uniquePathList
+                index = uniqueBasenames.index(basename)
+                if uniquePaths[index].endswith('.bz2'):
+                    uniquePaths[index] = path
+        return uniquePaths
 
     def get_path(self, markedString, obj):
         '''

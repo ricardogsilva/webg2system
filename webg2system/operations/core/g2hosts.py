@@ -339,7 +339,7 @@ class G2LocalHost(G2Host):
                                                               remoteHost=host)
         return self.connections[host.name][protocol]
 
-    def send(self, fullPaths, destDir, destHost):
+    def send(self, fullPaths, destDir, destHost=None):
         '''
         Copy files to another directory, located on a G2Host machine.
 
@@ -357,7 +357,7 @@ class G2LocalHost(G2Host):
         Returns:
         '''
 
-        if destHost is self:
+        if (destHost is self) or (destHost is None):
             self.logger.debug('About to perform a local send...')
             result = self._send_to_local(fullPaths, destDir)
         else:

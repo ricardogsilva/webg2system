@@ -1435,6 +1435,10 @@ class OWSPreparator(ProcessingPackage):
                 settings.packagepath_set.get(name='mapfileOutDir'), self)
         self.mapfileOutDir = os.path.join(self.host.dataPath, 
                                           relMapfileOutDir)
+        relShapePath = utilities.parse_marked(
+                settings.packagepath_set.get(name='shapePath'), self)
+        self.mapfileShapePath = os.path.join(self.host.dataPath, 
+                                          relShapePath)
         relMapfileTemplateDir = utilities.parse_marked(
                 settings.packagepath_set.get(name='mapfileTemplateDir'), self)
         self.mapfileTemplateDir = os.path.join(self.host.codePath, 
@@ -1453,13 +1457,17 @@ class OWSPreparator(ProcessingPackage):
         )
         self.mapper = mappers.NGPMapper(self.inputs[0], self.product)
 
-    def update_latest_mapfile(self):
+    def update_latest_mapfile(self, geotifPath):
         '''
         This method updates the 'latest' mapfile with this product.
         '''
 
-        # this method probably shouldn't be called by the run method
-        pass
+        mapfile = self.get_latest_mapfile()
+        rp = geotifPath.replace(self.mapfileShapePath, '').partition('/')[-1]
+        updatedMapfile = self.mapper.update_latest_mapfile(mapfile, 
+                                                           self.mapfileShapePath, 
+                                                           rp)
+        return updatedMapfile
 
     def update_specific_mapfile(self):
         '''
@@ -1475,14 +1483,15 @@ class OWSPreparator(ProcessingPackage):
         '''
 
         g2f = [i for i in self.inputs if i.fileType=='mapfile' and \
-                'latest' in i.name][0]
-        mapfile = os.path.join(self.mapfileOutDir, g2f.searchPatterns[0])
-        self.logger.info('mapfile: %s' % mapfile)
+                hasattr(i, 'latest')][0]
+        mapName = g2f.searchPatterns[0]
+        mapfile = os.path.join(self.mapfileOutDir, mapName)
         if self.host.is_file(mapfile):
             result = mapfile
         else:
-            #self.host.make_dir(self.mapfileOutDir)
-            pass
+            self.host.make_dir(self.mapfileOutDir)
+            template = os.path.join(self.mapfileTemplateDir, mapName)
+            result = self.host.send([template], self.mapfileOutDir)[0]
         return result
 
     def delete_outputs(self):
@@ -1532,12 +1541,29 @@ class OWSPreparator(ProcessingPackage):
     def prepare(self):
         pass
 
-    def run_main(self):
+    def run_main(self, generate=True, update=None):
+        '''
+        Inputs:
+
+            generate - A boolean flag indicating if the global geotif is to 
+                be generated.
+
+            update - Controls whether the WMS mapfiles are to be updated.
+                Accepted values:
+                    None - Don't update.
+                    'latest' - Update only the 'latest' mapfile.
+                    'product' - Update only the 'product' mapfile.
+                    'all' - Update both the 'latest' and 'product' mapfiles.
+        '''
+
         fetched = self.fetch_inputs(useArchive=True)
         fileList = []
         for g2f, pathList in fetched.iteritems():
-            fileList += pathList
+            if g2f.fileType == 'hdf5':
+                fileList += pathList
         geotiff = self.generate_geotiff(fileList)
+        if update == 'latest':
+            self.update_latest_mapfile(geotiff)
         return geotiff
 
     def clean_up(self, callback=None):
