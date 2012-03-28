@@ -21,7 +21,6 @@ class RunningPackage(models.Model):
     result = models.BooleanField(default=False, editable=False)
 
     def __unicode__(self):
-        #return '%s (%s, %s)' % (self.timeslot, self.settings, self.source)
         return unicode(self.settings)
 
     def show_timeslot(self):
@@ -70,7 +69,7 @@ class RunningPackage(models.Model):
             #sys.exit(0)
         print('Aqui')
 
-    def run(self, callback=None):
+    def run(self, callback=None, *args, **kwargs):
         '''
         Interfaces with the core packages, calling their public
         delete_outputs(), prepare(), run_main() and clean_up() 
@@ -79,58 +78,57 @@ class RunningPackage(models.Model):
 
         Accepts a callback function that should be used to supply
         progress information to the client code.
-        The callback must expect a result in the form of a two-element
-        tuple.
         '''
 
         if callback is None:
-            def callback(msg, step):
+            def callback((msg, step)):
                 pass
         #try:
         self.status = 'running'
         self.save()
         processSteps = 8
-        callback('Creating package for processing...', 
-                 self.progress(1, processSteps))
+        callback(('Creating package for processing...', 
+                 self.progress(1, processSteps)))
         pack = self._initialize()
-        callback('Looking for previously available outputs...', 
-                 self.progress(2, processSteps))
+        callback(('Looking for previously available outputs...', 
+                 self.progress(2, processSteps)))
         outputsAvailable = pack.outputs_available()
         if outputsAvailable:
             if self.force:
                 runPackage = True
-                callback('Deleting any previously present output files...',
-                         self.progress(3, processSteps))
+                callback(('Deleting any previously present output files...',
+                         self.progress(3, processSteps)))
                 pack.delete_outputs()
             else:
                 runPackage = False
         else:
             runPackage = True
         if runPackage:
-            callback('Preparing files...', 
-                     self.progress(4, processSteps))
+            callback(('Preparing files...', 
+                     self.progress(4, processSteps)))
             prepareResult = pack.prepare(callback)
-            callback('Running main process...', 
-                     self.progress(5, processSteps))
-            mainResult = pack.run_main()
+            callback(('Running main process...', 
+                     self.progress(5, processSteps)))
+            mainResult = pack.run_main(callback, *args, **kwargs)
             # Will be able to add other error codes later
             if mainResult not in (1,):
                 self.result = True
-            callback('Cleaning up...', 
-                     self.progress(6, processSteps))
+            callback(('Cleaning up...', 
+                     self.progress(6, processSteps)))
             cleanResult = pack.clean_up()
         else:
-            callback('Outputs are already available.', 
-                     self.progress(7, processSteps))
+            callback(('Outputs are already available.', 
+                     self.progress(7, processSteps)))
             self.result = True
         self.status = 'stopped'
         self.save()
-        callback('All done!', self.progress(8, processSteps))
+        callback(('All done!', self.progress(8, processSteps)))
         #except:
         #    print('something went wrong')
         #    self.status = 'stopped'
         #    self.result = False
         #    self.save()
+        return self.result
 
     def progress(self, currentStep, totalSteps=100):
         '''

@@ -40,13 +40,26 @@ class Outra(object):
     def run_main(self, callback=None, sleepSecs=5, sleepSteps=3):
         import time
         counter = 1
-        self.logger.info('About to sleep for %i seconds...' % (sleepSecs * sleepSteps))
+        self._use_callback(
+            callback, 
+            'About to sleep for %i seconds...' % (sleepSecs * sleepSteps), 
+        )
         while counter <= sleepSteps:
             time.sleep(sleepSecs)
-            self.logger.info('Still asleep - %i seconds have passed' % (counter * sleepSecs))
+            self._use_callback(
+                callback,
+                'Still asleep - %i seconds have passed' % (counter * sleepSecs),
+            )
             counter += 1
-        self.logger.info('Not sleeping anymore, yeah!')
+        self._use_callback(callback, 'Not sleeping anymore, yeah!')
         return 0
+
+    def _use_callback(self, theCallback, *args):
+        msg = []
+        for msgBit in args:
+            msg.append(msgBit)
+        theCallback(msg)
+
 
 
 class GenericPackage(GenericItem):
