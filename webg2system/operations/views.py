@@ -12,24 +12,24 @@ from models import RunningPackage
 from systemsettings.models import Package, Area, Host, File
 from forms import PartialRunningPackageForm, CreatePackageForm
 
-def create_running_package(request):
-    if request.method == 'POST':
-        print(request)
-        form = PartialRunningPackageForm(request.POST)
-        if form.is_valid():
-            pack = Package.objects.get(name=form.cleaned_data['settings'])
-            host = Host.objects.get(name=form.cleaned_data['host'])
-            area = Area.objects.get(name=form.cleaned_data['area'])
-            timeslot = form.cleaned_data['timeslot']
-            rp = RunningPackage(settings=pack, timeslot=timeslot, area=area, 
-                                host=host)
-            rp.save()
-            return HttpResponseRedirect(reverse('operations_list'))
-    else:
-        form = PartialRunningPackageForm()
-    return render_to_response('create_running_package.html', 
-                              {'form' : form,},
-                              context_instance=RequestContext(request))
+#def create_running_package(request):
+#    if request.method == 'POST':
+#        print(request)
+#        form = PartialRunningPackageForm(request.POST)
+#        if form.is_valid():
+#            pack = Package.objects.get(name=form.cleaned_data['settings'])
+#            host = Host.objects.get(name=form.cleaned_data['host'])
+#            area = Area.objects.get(name=form.cleaned_data['area'])
+#            timeslot = form.cleaned_data['timeslot']
+#            rp = RunningPackage(settings=pack, timeslot=timeslot, area=area, 
+#                                host=host)
+#            rp.save()
+#            return HttpResponseRedirect(reverse('operations_list'))
+#    else:
+#        form = PartialRunningPackageForm()
+#    return render_to_response('create_running_package.html', 
+#                              {'form' : form,},
+#                              context_instance=RequestContext(request))
 
 @csrf_exempt
 def execute_package(request):
@@ -46,22 +46,18 @@ def execute_package(request):
                     login(request, user)
                     try:
                         p = Package.objects.get(name=f.cleaned_data['package'])
-                        h = Host.objects.get(name=f.cleaned_data['host'])
                         a = Area.objects.get(name=f.cleaned_data['area'])
                         rp = RunningPackage.objects.get(settings=p, 
-                                                        host=h,
                                                         area=a, 
                                                         timeslot=timeslot)
-                    except (Package.DoesNotExist, Host.DoesNotExist, 
-                            Area.DoesNotExist):
+                    except (Package.DoesNotExist, Area.DoesNotExist):
                         print('Some of the input arguments are invalid: ' \
-                              'package, host, or area inexistent.')
+                              'package or area inexistent.')
                         rp = None
                     except RunningPackage.DoesNotExist:
                         print('The package does not exist. It will be ' \
                               'created.')
-                        rp = RunningPackage(settings=pack, host=host, 
-                                            area=area, timeslot=timeslot)
+                        rp = RunningPackage(settings=p, area=a, timeslot=timeslot)
                     if rp is not None:
                         runOutputList = []
                         callback = runOutputList.append
@@ -95,10 +91,6 @@ def execute_package(request):
                     context_instance = RequestContext(request)
                  )
     return result
-
-def run_package(request):
-    if request.method == 'POST':
-        form = None
 
 #FIXME - This view is not done yet
 def get_product_zip(request):
@@ -147,8 +139,6 @@ def get_quicklook(request, prodName, area, timeslot):
         raise Http404
     return response
 
-
-
 #FIXME - use django's get_list_or_404 to handle undefined packages
 def _create_package(prodName, timeslot):
     '''
@@ -170,4 +160,3 @@ def _create_package(prodName, timeslot):
         # couldn't find the package
         pack = None
     return pack
-

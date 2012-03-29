@@ -32,6 +32,7 @@ MAP
             'wms_srs' 'EPSG:4326'
             'wms_include_items' 'all'
             'gml_include_items' 'all'
+            'wms_abstract' 'to be defined by the processinglines'
         END
         DATA 'to be defined by the processinglines'
 
@@ -131,6 +132,7 @@ MAP
             'wms_srs' 'EPSG:4326'
             'wms_include_items' 'all'
             'gml_include_items' 'all'
+            'wms_abstract' 'to be defined by the processinglines'
         END
         DATA 'to be defined by the processinglines'
 
@@ -230,6 +232,7 @@ MAP
             'wms_srs' 'EPSG:4326'
             'wms_include_items' 'all'
             'gml_include_items' 'all'
+            'wms_abstract' 'to be defined by the processinglines'
         END
         DATA 'to be defined by the processinglines'
 

@@ -47,6 +47,7 @@ class Mapper(object):
         self.nCols = int(g2File.nCols)
         self.product = productSettings
         self.host = g2File.host
+        self.timeslot = g2File.timeslot
 
     def create_global_tiff(self, fileList, outDir, outName):
         raise NotImplementedError
@@ -338,6 +339,10 @@ class NGPMapper(Mapper): #crappy name
                             % (self.host.host, mapfile))
         layer = mapObj.getLayerByName(self.product.short_name)
         layer.data = geotifRelativePath
+        layerAbstract = '%s product generated for the %s timeslot.' % \
+                        (self.product.short_name, 
+                         self.timeslot.strftime('%Y-%m-%d %H:%M'))
+        layer.metadata.set('wms_abstract', layerAbstract)
         mapObj.save(mapfile)
         return mapfile
 

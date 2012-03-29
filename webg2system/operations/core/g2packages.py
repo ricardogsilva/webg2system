@@ -17,6 +17,9 @@ import utilities
 # to be deleted!
 import logging
 
+# TODO
+# - Add a archive_ouputs() method to the package classes, that should use a _send_files
+
 class Outra(object):
     '''
     A dummy class that just sleeps for two minutes.
@@ -33,9 +36,6 @@ class Outra(object):
 
     def outputs_available(self):
         return False
-
-    def prepare(self, callback=None):
-        return 0
 
     def run_main(self, callback=None, sleepSecs=5, sleepSteps=3):
         import time
@@ -61,7 +61,6 @@ class Outra(object):
         theCallback(msg)
 
 
-
 class GenericPackage(GenericItem):
     '''
     Base class for ALL G2Packages.
@@ -74,9 +73,6 @@ class GenericPackage(GenericItem):
     '''
 
     name = ''
-
-    def prepare(self, callback=None):
-        pass
 
     def delete_outputs(self, callback=None):
         raise NotImplementedError
@@ -216,10 +212,47 @@ class GenericPackage(GenericItem):
         for dirPath in dirPaths:
             self.host.remove_dir(dirPath)
 
+    def _compress_files(self, g2files):
+        '''
+        Compress the input g2files with bzip2.
+
+        Returns:
+        
+        A dictionary with the input g2files as keys and a list with the full 
+        paths to the newly compressed files.
+        '''
+
+        theG2Files = [f for f in g2files if f.toCompress==True]
+        for g2f in [f for f in g2files if f.toCompress==False]:
+            self.logger.info('%s is not marked as \'compress\' in the '\
+                             'settings. Skipping...' % g2f)
+        foundFiles = self._find_files(theG2Files, useArchive=False)
+        toCompress = []
+        for g2f, foundDict in foundFiles.iteritems():
+            for p in foundDict['paths']:
+                toCompress.append(p)
+        # we send them in bulk for compression but have to separate them 
+        # afterwards
+        compressedPaths = self.host.compress(toCompress)
+        compressed = dict()
+        pathPairs = []
+        for path in compressedPaths:
+            for g2f in foundFiles.keys():
+                for pattern in g2f.searchPatterns:
+                    reObj = re.search(pattern, path)
+                    if reObj is not None:
+                        pathPairs.append((g2f, path))
+        for g2f, path in pathPairs:
+            if compressed.get(g2f) is None:
+                compressed[g2f] = [path]
+            else:
+                compressed[g2f].append(path)
+        return compressed
+
 
 class ProcessingPackage(GenericPackage):
 
-    def __init__(self, settings, timeslot, area, host):
+    def __init__(self, settings, timeslot, area, host=None):
         '''
         This class inherits all the extra variables and has the 'normal'
         implementation for find_inputs, find_outputs, fetch_inputs and
@@ -303,17 +336,8 @@ class ProcessingPackage(GenericPackage):
         Compress the outputs of this package with bzip2.
         '''
 
-        foundOutputs = self.find_outputs(useArchive=False)
-        toCompress = []
-        for g2f, foundDict in foundOutputs.iteritems():
-            if g2f.toCompress:
-                for p in foundDict['paths']:
-                    toCompress.append(p)
-            else:
-                self.logger.debug('%s is not marked as \'Compress\' in the '\
-                                  'settings, skipping...' % g2f.name)
         self.logger.info('Compressing %s outputs...' % self.name)
-        self.host.compress(toCompress)
+        return self._compress_files(self.outputs)
 
     def decompress_outputs(self):
         '''
@@ -336,7 +360,7 @@ class FetchData(ProcessingPackage):
         - outputDir
     '''
 
-    def __init__(self, settings, timeslot, area, host, createIO=True):
+    def __init__(self, settings, timeslot, area, host=None, createIO=True):
         '''
         Inputs:
 
@@ -346,7 +370,8 @@ class FetchData(ProcessingPackage):
 
             area - A systemsettings.models.Area object
 
-            host - A systemsettings.models.Host object
+            host - A systemsettings.models.Host object. If None (the default
+                the current host will be used).
 
             createIO - A boolean indicating if the inputs and outputs
                 are to be created. Defaults to True.
@@ -416,19 +441,6 @@ class FetchData(ProcessingPackage):
             result = self._fetch_files(self.inputs, self.outputDir, useArchive,
                                        decompress=True)
         return result
-
-    def prepare(self, callback=None):
-        '''
-        Prepare the inputs for running the main code.
-
-        The fetchData class has no real use for this method, as it only
-        moves files from their temporary input location to their final 
-        destination.
-        '''
-        #import time
-        #callback('sleeping a bit...', 1)
-        #time.sleep(20)
-        return 0
 
     def run_main(self, callback=None, retries=0, interval=10):
         '''
@@ -665,7 +677,7 @@ class GRIBPreprocessor(PreProcessor):
 
 class Processor(ProcessingPackage):
 
-    def __init__(self, settings, timeslot, area, host, createIO=True):
+    def __init__(self, settings, timeslot, area, host=None, createIO=True):
         '''
         Inputs:
 
@@ -805,7 +817,7 @@ class Processor(ProcessingPackage):
 
 class GSAProcessor(ProcessingPackage):
     
-    def __init__(self, settings, timeslot, area, host, createIO=True):
+    def __init__(self, settings, timeslot, area, host=None, createIO=True):
         super(GSAProcessor, self).__init__(settings, timeslot, area, host)
         self.rawSettings = settings
         self.name = settings.name
@@ -838,7 +850,7 @@ class GSAProcessor(ProcessingPackage):
 
 class SWIProcessor(ProcessingPackage):
 
-    def __init__(self, settings, timeslot, area, host, createIO=True):
+    def __init__(self, settings, timeslot, area, host=None, createIO=True):
         '''
         Inputs:
 
@@ -1072,7 +1084,7 @@ class DataFusion(ProcessingPackage):
             version
     '''
 
-    def __init__(self, settings, timeslot, area, host, createIO=True):
+    def __init__(self, settings, timeslot, area, host=None, createIO=True):
         '''
         Inputs:
 
@@ -1116,7 +1128,7 @@ class WebDisseminator(ProcessingPackage):
     This class takes care of creating quickviews, WMS and CSW integration.
     '''
 
-    def __init__(self, settings, timeslot, area, host, createIO=True):
+    def __init__(self, settings, timeslot, area, host=None, createIO=True):
         '''
         Inputs:
 
@@ -1167,14 +1179,15 @@ class WebDisseminator(ProcessingPackage):
         relWebDir = utilities.parse_marked(
                 settings.packagepath_set.get(name='hdf5WebDir'), self)
         self.hdf5WebDir = os.path.join(self.host.dataPath, relWebDir)
-        self.inputs = self._create_files(
-            'input', 
-            settings.packageInput_systemsettings_packageinput_related.all()
-        )
-        self.outputs = self._create_files(
-            'output', 
-            settings.packageOutput_systemsettings_packageoutput_related.all()
-        )
+        if createIO:
+            self.inputs = self._create_files(
+                'input', 
+                settings.packageInput_systemsettings_packageinput_related.all()
+            )
+            self.outputs = self._create_files(
+                'output', 
+                settings.packageOutput_systemsettings_packageoutput_related.all()
+            )
         self.quicklooksMapfileName = 'quicklooks.map'
         self.mapper = mappers.NGPMapper(self.inputs[0]) # <- badly defined
         self.mdGenerator = metadatas.MetadataGenerator(self.xmlTemplate, self.timeslot)
@@ -1185,9 +1198,6 @@ class WebDisseminator(ProcessingPackage):
         self.host.clean_dirs(self.quickviewOutDir)
         self.host.clean_dirs(self.xmlOutDir)
         return 0
-
-    def prepare(self, callback=None):
-        pass
 
     def run_main(self, callback=None):
         fetched = self.fetch_inputs(useArchive=True)
@@ -1433,7 +1443,7 @@ class OWSPreparator(ProcessingPackage):
         - update the mapfiles
     '''
 
-    def __init__(self, settings, timeslot, area, host, createIO=True):
+    def __init__(self, settings, timeslot, area, host=None, createIO=True):
         pass
         '''
         Inputs:
@@ -1473,14 +1483,15 @@ class OWSPreparator(ProcessingPackage):
                 settings.packagepath_set.get(name='geotifOutDir'), self)
         self.geotifOutDir = os.path.join(self.host.dataPath, 
                                          relGeotifOutDir)
-        self.inputs = self._create_files(
-            'input', 
-            settings.packageInput_systemsettings_packageinput_related.all()
-        )
-        self.outputs = self._create_files(
-            'output', 
-            settings.packageOutput_systemsettings_packageoutput_related.all()
-        )
+        if createIO:
+            self.inputs = self._create_files(
+                'input', 
+                settings.packageInput_systemsettings_packageinput_related.all()
+            )
+            self.outputs = self._create_files(
+                'output', 
+                settings.packageOutput_systemsettings_packageoutput_related.all()
+            )
         self.mapper = mappers.NGPMapper(self.inputs[0], self.product)
 
     def update_latest_mapfile(self, geotifPath):
@@ -1619,15 +1630,91 @@ class OWSPreparator(ProcessingPackage):
         self.host.clean_dirs(self.geotifOutDir)
         return 0
 
+class GenericAggregationPackage(GenericItem):
+    '''
+    Base class for ALL G2Packages that have other packages as input.
+    '''
 
-class Archivor(object):
+    name = ''
+
+    def run_main(self, callback=None):
+        raise NotImplementedError
+
+    def clean_up(self, callback=None):
+        raise NotImplementedError
+
+    def __unicode__(self):
+        return unicode(self.name)
+
+    def _use_callback(self, theCallback, *args):
+        msg = []
+        for msgBit in args:
+            msg.append(msgBit)
+        theCallback(msg)
+
+    def _create_packages(self, packRole, packSettings):
+
+        objects = []
+        hostSettings = ss.Host.objects.get(name=self.host.name)
+        for specificSettings in packSettings:
+            timeslots = []
+            for tsDisplacement in specificSettings.specificTimeslots.all():
+                timeslots += utilities.displace_timeslot(self.timeslot, 
+                                                         tsDisplacement)
+            if len(timeslots) == 0:
+                timeslots.append(self.timeslot)
+            specificAreas = [a for a in specificSettings.specificAreas.all()]
+            if len(specificAreas) == 0:
+                specificAreas = ss.Source.objects.get(\
+                                name=self.source.generalName).area_set.all()
+            for spArea in specificAreas:
+                for spTimeslot in timeslots:
+                    # create a new package
+                    generalPackSettings = eval('specificSettings.%sItem.package' \
+                                               % packRole)
+                    #self.logger.debug('Creating package: %s ' % generalPackSettings.name)
+                    #self.logger.debug('timeslot: %s' % spTimeslot)
+                    #self.logger.debug('area: %s' % spArea) 
+                    className = eval(generalPackSettings.codeClass.className)
+                    newObject = className(generalPackSettings, spTimeslot, spArea,
+                                          hostSettings)
+                    #self.logger.debug('----------') 
+                    objects.append(newObject)
+        return objects
+
+class Archivor(GenericAggregationPackage):
     '''
     This class takes care of the archiving process.
 
     It will create the relevant packages and archive their outputs.
     '''
 
-    pass
+    def __init__(self, settings, timeslot, area, host=None):
+
+        super(Archivor, self).__init__(timeslot, area.name, host)
+        for extraInfo in settings.packageextrainfo_set.all():
+            #exec('self.%s = "%s"' % (extraInfo.name, extraInfo.string))
+            exec('self.%s = utilities.parse_marked(extraInfo, self)' % extraInfo.name)
+        self.inputPackages = self._create_packages(
+            'input', 
+            settings.packageInput_systemsettings_packageinput_related.all()
+        )
+
+    def clean_up(self):
+        for subPackage in self.inputPackages:
+            subPackage.clean_up()
+
+    def archive_output_files(self):
+        '''
+        Archive the outputs of this package's input packages.
+
+        The files are only archive if their respective 'toArchive'
+        attribute is True.
+        '''
+        pass
+
+    def run_main(self):
+        self.archive_output_files()
 
 class Cleaner(object):
     '''

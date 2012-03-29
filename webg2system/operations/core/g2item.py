@@ -20,7 +20,7 @@ class GenericItem(object):
         - host
     '''
 
-    def __init__(self, timeslot, area, hostSettings):
+    def __init__(self, timeslot, area, hostSettings=None):
         '''
         Inputs:
 
@@ -28,7 +28,8 @@ class GenericItem(object):
 
             area - A string with the name of the area
 
-            hostSettings - A systemsettings.models.Host object
+            hostSettings - A systemsettings.models.Host object. If None, the
+                current host will be used.
         '''
 
         self.logger = logging.getLogger(

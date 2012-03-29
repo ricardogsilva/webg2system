@@ -2,7 +2,7 @@ import os
 import sys
 
 from django.db import models
-from systemsettings.models import Package, Area, Host
+from systemsettings.models import Package, Area
 
 from core import g2packages, rpdaemon
 
@@ -12,7 +12,6 @@ class RunningPackage(models.Model):
     settings = models.ForeignKey(Package)
     area = models.ForeignKey(Area, verbose_name='Default Area', help_text='The name '\
                              '(or regular expression) for the area.')
-    host = models.ForeignKey(Host)
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, 
                               default='stopped', editable=False)
     force = models.BooleanField(default=False, help_text='Should the package'\
@@ -35,10 +34,6 @@ class RunningPackage(models.Model):
         return self.area.name
     show_area.short_description = 'Default area'
 
-    def show_host(self):
-        return self.host.name
-    show_host.short_description = 'Host'
-
     def _initialize(self):
         '''
         Temporary method to facilitate sharing some code between
@@ -46,7 +41,7 @@ class RunningPackage(models.Model):
         '''
 
         packClass = eval('g2packages.%s' % self.settings.codeClass.className)
-        pack = packClass(self.settings, self.timeslot, self.area, self.host)
+        pack = packClass(self.settings, self.timeslot, self.area)
         return pack
 
     def create_package(self):
@@ -72,12 +67,26 @@ class RunningPackage(models.Model):
     def run(self, callback=None, *args, **kwargs):
         '''
         Interfaces with the core packages, calling their public
-        delete_outputs(), prepare(), run_main() and clean_up() 
-        methods sequentially.
+        delete_outputs(), run_main() and clean_up() methods sequentially.
         It MUSTN'T call any other method from the core packages.
 
         Accepts a callback function that should be used to supply
-        progress information to the client code.
+        progress information to the client code. The callback function
+        is expected to accept a variable number of inputs, as if they were
+        a sequence of messages.
+        Example callback function:
+
+            def callback(*args):
+                for arg in args:
+                    print(arg)
+
+        Also accepts other arguments and keyword arguments that get passed
+        to the packages' run_main method. Available choices are:
+
+            Package:
+                OWSPreparator 
+                    - generate (bool)
+                    - update (string)
         '''
 
         if callback is None:
@@ -86,43 +95,38 @@ class RunningPackage(models.Model):
         #try:
         self.status = 'running'
         self.save()
-        processSteps = 8
-        callback(('Creating package for processing...', 
-                 self.progress(1, processSteps)))
+        processSteps = 7
+        callback(self.progress(1, processSteps), 
+                 'Creating package for processing...')
         pack = self._initialize()
-        callback(('Looking for previously available outputs...', 
-                 self.progress(2, processSteps)))
+        callback(self.progress(2, processSteps), 
+                 'Looking for previously available outputs...')
         outputsAvailable = pack.outputs_available()
         if outputsAvailable:
             if self.force:
                 runPackage = True
-                callback(('Deleting any previously present output files...',
-                         self.progress(3, processSteps)))
+                callback(self.progress(3, processSteps), 
+                         'Deleting any previously present output files...')
                 pack.delete_outputs()
             else:
                 runPackage = False
         else:
             runPackage = True
         if runPackage:
-            callback(('Preparing files...', 
-                     self.progress(4, processSteps)))
-            prepareResult = pack.prepare(callback)
-            callback(('Running main process...', 
-                     self.progress(5, processSteps)))
+            callback(self.progress(4, processSteps), 'Running main process...')
             mainResult = pack.run_main(callback, *args, **kwargs)
             # Will be able to add other error codes later
             if mainResult not in (1,):
                 self.result = True
-            callback(('Cleaning up...', 
-                     self.progress(6, processSteps)))
+            callback(self.progress(5, processSteps), 'Cleaning up...')
             cleanResult = pack.clean_up()
         else:
-            callback(('Outputs are already available.', 
-                     self.progress(7, processSteps)))
+            callback(self.progress(6, processSteps), 
+                     'Outputs are already available.')
             self.result = True
         self.status = 'stopped'
         self.save()
-        callback(('All done!', self.progress(8, processSteps)))
+        callback(self.progress(7, processSteps), 'All done!')
         #except:
         #    print('something went wrong')
         #    self.status = 'stopped'
@@ -136,4 +140,3 @@ class RunningPackage(models.Model):
         '''
 
         return currentStep * 100 / totalSteps
-
