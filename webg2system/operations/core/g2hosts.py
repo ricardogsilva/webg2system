@@ -259,7 +259,10 @@ class G2LocalHost(G2Host):
         if not self.is_dir(outputDir):
                 self.make_dir(outputDir)
         for path in fullPaths:
-            shutil.copy(path, outputDir)
+            try:
+                shutil.copy(path, outputDir)
+            except shutil.Error:
+                pass
             newPath = os.path.join(outputDir, os.path.basename(path))
             fullDestPaths.append(newPath)
         return fullDestPaths

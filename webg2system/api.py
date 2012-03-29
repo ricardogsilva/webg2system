@@ -1,6 +1,14 @@
 #!/usr/bin/env python
 #-*- coding: utf-8 -*-
 
+'''
+THE API APPROACH IS, FOR NOW, ABANDONED. AT A LATER STAGE THIS WILL 
+BE REVISITED.
+
+The api will be nice to have because it has builtin authentication,
+usage limits and other good things.
+'''
+
 import logging
 
 from tastypie.authorization import Authorization

@@ -40,13 +40,26 @@ class Outra(object):
     def run_main(self, callback=None, sleepSecs=5, sleepSteps=3):
         import time
         counter = 1
-        self.logger.info('About to sleep for %i seconds...' % (sleepSecs * sleepSteps))
+        self._use_callback(
+            callback, 
+            'About to sleep for %i seconds...' % (sleepSecs * sleepSteps), 
+        )
         while counter <= sleepSteps:
             time.sleep(sleepSecs)
-            self.logger.info('Still asleep - %i seconds have passed' % (counter * sleepSecs))
+            self._use_callback(
+                callback,
+                'Still asleep - %i seconds have passed' % (counter * sleepSecs),
+            )
             counter += 1
-        self.logger.info('Not sleeping anymore, yeah!')
+        self._use_callback(callback, 'Not sleeping anymore, yeah!')
         return 0
+
+    def _use_callback(self, theCallback, *args):
+        msg = []
+        for msgBit in args:
+            msg.append(msgBit)
+        theCallback(msg)
+
 
 
 class GenericPackage(GenericItem):
@@ -76,6 +89,12 @@ class GenericPackage(GenericItem):
 
     def __unicode__(self):
         return unicode(self.name)
+
+    def _use_callback(self, theCallback, *args):
+        msg = []
+        for msgBit in args:
+            msg.append(msgBit)
+        theCallback(msg)
 
     def _create_files(self, fileRole, filesSettings):
         '''
@@ -1405,6 +1424,13 @@ class OWSPreparator(ProcessingPackage):
 
     It will create the global geotiff file with the main dataset of the 
     product and update the relevant WMS mapfiles.
+
+    Instances of this class can be called in order to:
+
+        - generate the global geotiff files that serve as a basis for the WMS
+            service
+
+        - update the mapfiles
     '''
 
     def __init__(self, settings, timeslot, area, host, createIO=True):
@@ -1538,32 +1564,53 @@ class OWSPreparator(ProcessingPackage):
                                                     globalTifName)
         return globalProd
 
-    def prepare(self):
-        pass
-
-    def run_main(self, generate=True, update=None):
+    def run_main(self, callback=None, generate=True, update=None):
         '''
         Inputs:
 
             generate - A boolean flag indicating if the global geotif is to 
-                be generated.
+                be generated. Defaults to True.
 
             update - Controls whether the WMS mapfiles are to be updated.
                 Accepted values:
-                    None - Don't update.
+                    None - Don't update. This is the default.
                     'latest' - Update only the 'latest' mapfile.
                     'product' - Update only the 'product' mapfile.
                     'all' - Update both the 'latest' and 'product' mapfiles.
         '''
 
-        fetched = self.fetch_inputs(useArchive=True)
-        fileList = []
-        for g2f, pathList in fetched.iteritems():
-            if g2f.fileType == 'hdf5':
-                fileList += pathList
-        geotiff = self.generate_geotiff(fileList)
-        if update == 'latest':
-            self.update_latest_mapfile(geotiff)
+        if generate:
+            fetched = self.fetch_inputs(useArchive=True)
+            fileList = []
+            for g2f, pathList in fetched.iteritems():
+                if g2f.fileType == 'hdf5':
+                    fileList += pathList
+            geotiff = self.generate_geotiff(fileList)
+        else:
+            geotiff = self.fetch_geotiff(useArchive=True)
+        if geotiff is not None:
+            if update == 'latest':
+                self.update_latest_mapfile(geotiff)
+        else:
+            self.logger.warning('Couldn\'t find the geotiff files.')
+        return geotiff
+
+    def fetch_geotiff(self, useArchive=True):
+        g2f = [inp for inp in self.outputs if inp.fileType=='geotiff'][0]
+        fetched = self._fetch_files([g2f], self.geotifOutDir, useArchive, 
+                                    decompress=True)
+        settings = ss.File.objects.get(name=g2f.name)
+        # we want to return the actual geotiff's path, not the overhead
+        # (the overhead has to be fetched too though)
+        pattern = settings.filepattern_set.get(name='actual data').string
+        pattern = pattern.replace('#', '')
+        geotiff = None
+        for filePath in fetched[g2f]:
+            print('pattern: %s' % pattern)
+            print('filePath: %s' % filePath)
+            reObj = re.search(pattern, filePath)
+            if reObj is not None:
+                geotiff = filePath
         return geotiff
 
     def clean_up(self, callback=None):

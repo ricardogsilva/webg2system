@@ -4,18 +4,22 @@ import os
 from django.http import HttpResponseRedirect, HttpResponse, Http404
 from django.shortcuts import render_to_response, get_object_or_404, get_list_or_404
 from django.core.urlresolvers import reverse
+from django.core.exceptions import ObjectDoesNotExist
 from django.template import RequestContext
+from django.contrib.auth import authenticate, login, logout
+from django.views.decorators.csrf import csrf_exempt
 from models import RunningPackage
 from systemsettings.models import Package, Area, Host, File
-from forms import PartialRunningPackageForm
+from forms import PartialRunningPackageForm, CreatePackageForm
 
 def create_running_package(request):
     if request.method == 'POST':
+        print(request)
         form = PartialRunningPackageForm(request.POST)
         if form.is_valid():
-            pack = Package.objects.get(name=form.cleaned_data['package'])
+            pack = Package.objects.get(name=form.cleaned_data['settings'])
             host = Host.objects.get(name=form.cleaned_data['host'])
-            area = Area.objects.get(name=form.cleaned_data['defaultArea'])
+            area = Area.objects.get(name=form.cleaned_data['area'])
             timeslot = form.cleaned_data['timeslot']
             rp = RunningPackage(settings=pack, timeslot=timeslot, area=area, 
                                 host=host)
@@ -26,6 +30,75 @@ def create_running_package(request):
     return render_to_response('create_running_package.html', 
                               {'form' : form,},
                               context_instance=RequestContext(request))
+
+@csrf_exempt
+def execute_package(request):
+    if request.method == 'POST':
+        f = CreatePackageForm(request.POST)
+        if f.is_valid():
+            timeslot = f.cleaned_data['timeslot']
+            force = f.cleaned_data['force']
+            username = request.POST['username']
+            password = request.POST['password']
+            user = authenticate(username=username, password=password)
+            if user is not None:
+                if user.is_active:
+                    login(request, user)
+                    try:
+                        p = Package.objects.get(name=f.cleaned_data['package'])
+                        h = Host.objects.get(name=f.cleaned_data['host'])
+                        a = Area.objects.get(name=f.cleaned_data['area'])
+                        rp = RunningPackage.objects.get(settings=p, 
+                                                        host=h,
+                                                        area=a, 
+                                                        timeslot=timeslot)
+                    except (Package.DoesNotExist, Host.DoesNotExist, 
+                            Area.DoesNotExist):
+                        print('Some of the input arguments are invalid: ' \
+                              'package, host, or area inexistent.')
+                        rp = None
+                    except RunningPackage.DoesNotExist:
+                        print('The package does not exist. It will be ' \
+                              'created.')
+                        rp = RunningPackage(settings=pack, host=host, 
+                                            area=area, timeslot=timeslot)
+                    if rp is not None:
+                        runOutputList = []
+                        callback = runOutputList.append
+                        rp.force = force
+                        runResult = rp.run(callback=callback)
+                        result = render_to_response(
+                                    'run_output.html',
+                                    {
+                                        'result' : runResult, 
+                                        'output' : runOutputList
+                                    },
+                                    context_instance=RequestContext(request)
+                                 )
+                    else:
+                        pass
+                    logout(request)
+                else:
+                    # user is not valid
+                    pass
+            else:
+                # user is none
+                pass
+        else:
+            # form was invalid
+            pass
+    else:
+        f = CreatePackageForm()
+        result = render_to_response(
+                    'create_running_package.html',
+                    {'form' : f,},
+                    context_instance = RequestContext(request)
+                 )
+    return result
+
+def run_package(request):
+    if request.method == 'POST':
+        form = None
 
 #FIXME - This view is not done yet
 def get_product_zip(request):
