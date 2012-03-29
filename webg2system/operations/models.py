@@ -81,7 +81,7 @@ class RunningPackage(models.Model):
         '''
 
         if callback is None:
-            def callback((msg, step)):
+            def callback(*args):
                 pass
         #try:
         self.status = 'running'
