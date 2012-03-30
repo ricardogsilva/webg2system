@@ -368,13 +368,17 @@ class G2LocalHost(G2Host):
             result = self._send_to_remote(fullPaths, destDir, destHost)
         return result
 
+    # FIXME
+    # - return the actual returncode, and not a hardcoded zero
     def _send_to_local(self, paths, destDir):
         '''
         Perform a local copy operation.
 
         Returns:
 
-            A list of full paths to the newly sent files' location.
+            A tuple with:
+                - The returncode of the send operation
+                - A list of full paths to the newly sent files' location.
         '''
 
         fullDestDir = os.path.join(self.dataPath, destDir)
@@ -383,12 +387,23 @@ class G2LocalHost(G2Host):
             fullPath = os.path.join(self.dataPath, path)
             shutil.copy(path, fullDestDir)
             result.append(os.path.join(fullDestDir, os.path.basename(path)))
-        return result
+        return (0, result)
 
     def _send_to_remote(self, paths, destDir, destHost):
         connection = self._get_connection(destHost, 'ftp')
         returnCode = connection.send(paths, destDir)
-        return returnCode
+        if returnCode == 0: # sending went OK
+            remotePaths = [
+                os.path.join(
+                    destHost.dataPath, 
+                    destDir, 
+                    os.path.basename(p)
+                ) for p in paths
+            ]
+            result = (returnCode, remotePaths)
+        else: # something went wrong
+            result = (returnCode, [])
+        return result
 
     # FIXME
     # launch several subprocesses simultaneously in order to speed up

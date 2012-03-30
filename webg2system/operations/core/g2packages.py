@@ -202,6 +202,48 @@ class GenericPackage(GenericItem):
                 result[g2f] = localPathList
         return result
 
+    # FIXME
+    # - Test this method out
+    def _send_files(self, g2files, destDir=None, destHost=None, filePath=0):
+        '''
+        Send the input g2files to destinationDir.
+
+        Inputs:
+
+            g2files - A list of operations.core.g2files.G2File objects
+
+            destDir - A relative directory where the files will be put. 
+                If specified, the files will be sent to: 
+                    
+                    <destHost.basePath>/<destDir>/<g2file.searchPaths[filePath]>
+
+                If None, the files are sent to:
+
+                    <destHost.basePath>/<g2file.searchPaths[filePath]>
+
+            destHost - A G2Host instance specifying the host that will receive
+                the files. A value of None (the default) is interpreted as 
+                meaning the local host.
+
+            filePath - The number of the searchPath that will be used for
+                specifying where on the destHost the files will be put.
+                Should be left at the default value (zero) for most cases.
+
+        Returns:
+        
+        A dictionary with the input g2files as keys and a list with the full 
+        paths to the newly sent files on the destinationHost.
+        '''
+
+        sentResult = dict()
+        for g2f in g2files:
+            sent = g2f.send(destHost, destDir, filePath)
+            if sent[0] != 0:
+                self.logger.warning('There has been an error sending %s' \
+                                    % g2f.name)
+            sentResult[g2f] = sent[1]
+        return sentResult
+
     def _delete_directories(self, dirPaths):
         '''
         Delete the directories specified and any contents they may have.
@@ -351,6 +393,18 @@ class ProcessingPackage(GenericPackage):
             for p in foundDict['paths']:
                 toDecompress.append(p)
         self.host.decompress(toDecompress)
+
+    def archive_outputs(self, compress=True):
+        if compress:
+            self.compress_outputs()
+        archived = dict()
+        for g2f in self.outputs:
+            sent = g2f.archive()
+            if sent[0] != 0:
+                self.logger.warning('There has been an error archiving %s' \
+                                    % g2f.name)
+            archived[g2f] = sent[1]
+        return archived
 
 
 class FetchData(ProcessingPackage):
@@ -1528,7 +1582,7 @@ class OWSPreparator(ProcessingPackage):
         else:
             self.host.make_dir(self.mapfileOutDir)
             template = os.path.join(self.mapfileTemplateDir, mapName)
-            result = self.host.send([template], self.mapfileOutDir)[0]
+            returnCode, result = self.host.send([template], self.mapfileOutDir)[0]
         return result
 
     def delete_outputs(self):
@@ -1707,11 +1761,12 @@ class Archivor(GenericAggregationPackage):
     def archive_output_files(self):
         '''
         Archive the outputs of this package's input packages.
-
-        The files are only archive if their respective 'toArchive'
-        attribute is True.
         '''
-        pass
+
+        result = dict()
+        for inp in self.inputPackages:
+            result[inp] = inp.archive_outputs(compress=True)
+        return result
 
     def run_main(self):
         self.archive_output_files()

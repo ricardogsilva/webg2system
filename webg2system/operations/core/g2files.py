@@ -196,6 +196,53 @@ class G2File(GenericItem):
                               % self.name)
         return result
 
+    def send(self, destHost=None, destDir=None, filePath=0):
+        '''
+        Send files from their own host to destHost.
+        '''
+
+        if destHost is None:
+            destHost = self.host
+        found = self.find(useArchive=False)['paths']
+        if len(found) > 0:
+            if destDir is None:
+                relDir = os.path.join(destHost.dataPath, 
+                                      self.searchPaths[filePath])
+            else:
+                relDir = os.path.join(destHost.dataPath, destDir, 
+                                      self.searchPaths[filePath])
+            sent = self.host.send(found, relDir, destHost)
+        else:
+            self.logger.warning('Couldn\'t send. Files are not found '\
+                                'in the host.')
+            sent = None
+        return sent
+
+    def archive(self, activeArchive=0):
+        '''
+        Sends files to the archive.
+
+        Inputs:
+
+            activeArchive - An integer specifying the index in the list of
+                available archives.
+
+        Returns:
+
+            A two-element tuple. The first element is the return code of the
+            sending operation (zero means success). The second element is a 
+            list of paths to the sent files on their respective host.
+        '''
+
+        if self.toArchive:
+            theArchive = self.archives[activeArchive]
+            sent = self.send(theArchive)
+        else:
+            self.logger.info('%s is not marked as \'archive\' in the '\
+                             'settings. Skipping...' % self.name)
+            sent = (0, [])
+        return sent
+
     def _filter_file_list(self, paths, behaviour):
         '''
         Filters a list of paths according to the input behaviour.
