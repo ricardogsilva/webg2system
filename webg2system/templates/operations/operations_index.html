@@ -1,0 +1,13 @@
+{% if latest_package_list %}
+	<h1>Running Packages</h1>
+    <ul>
+    {% for package in latest_package_list %}
+    <!--<li><a href="/operations/{{ package.id }}/">{{ package.pk }}</a></li>-->
+    <li><a href="{% url package_details pk=package.pk %}">{{ package.pk }}</a></li>
+    {% endfor %}
+    </ul>
+{% else %}
+    <p>No packages are available</p>
+{% endif %}
+<!--<p><a href="/operations/create/">Create a new Running Package</a></p>-->
+<p><a href="{% url operations.views.execute_package %}">Create a new Running Package</a></p>

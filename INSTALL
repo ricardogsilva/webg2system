@@ -1,0 +1,4 @@
+
+for monitoring apache2 logs:
+
+tail -f /var/log/apache2/error.log

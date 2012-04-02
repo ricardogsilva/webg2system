@@ -12,25 +12,6 @@ from models import RunningPackage
 from systemsettings.models import Package, Area, Host, File
 from forms import PartialRunningPackageForm, CreatePackageForm
 
-#def create_running_package(request):
-#    if request.method == 'POST':
-#        print(request)
-#        form = PartialRunningPackageForm(request.POST)
-#        if form.is_valid():
-#            pack = Package.objects.get(name=form.cleaned_data['settings'])
-#            host = Host.objects.get(name=form.cleaned_data['host'])
-#            area = Area.objects.get(name=form.cleaned_data['area'])
-#            timeslot = form.cleaned_data['timeslot']
-#            rp = RunningPackage(settings=pack, timeslot=timeslot, area=area, 
-#                                host=host)
-#            rp.save()
-#            return HttpResponseRedirect(reverse('operations_list'))
-#    else:
-#        form = PartialRunningPackageForm()
-#    return render_to_response('create_running_package.html', 
-#                              {'form' : form,},
-#                              context_instance=RequestContext(request))
-
 @csrf_exempt
 def execute_package(request):
     if request.method == 'POST':
@@ -64,7 +45,7 @@ def execute_package(request):
                         rp.force = force
                         runResult = rp.run(callback=callback)
                         result = render_to_response(
-                                    'run_output.html',
+                                    'operations/run_output.html',
                                     {
                                         'result' : runResult, 
                                         'output' : runOutputList
@@ -86,7 +67,7 @@ def execute_package(request):
     else:
         f = CreatePackageForm()
         result = render_to_response(
-                    'create_running_package.html',
+                    'operations/create_running_package.html',
                     {'form' : f,},
                     context_instance = RequestContext(request)
                  )
@@ -138,25 +119,3 @@ def get_quicklook(request, prodName, area, timeslot):
     else:
         raise Http404
     return response
-
-#FIXME - use django's get_list_or_404 to handle undefined packages
-def _create_package(prodName, timeslot):
-    '''
-    Create an operations.core.g2packages.G2Package
-    '''
-
-    ts = dt.datetime.strptime(timeslot, '%Y%m%d%H%M')
-    name = prodName
-    theArea = '.*' # temporary hack
-    files = File.objects.filter(product__short_name=name, fileType='hdf5')
-    try:
-        rp = RunningPackage.objects.filter(
-                timeslot=ts, 
-                area__name=theArea,
-                settings__codeClass__className='WebDisseminator',
-                settings__packageOutput_systemsettings_packageoutput_related__outputItem__file__product__short_name=name).distinct()[0]
-        pack = rp.create_package()
-    except IndexError:
-        # couldn't find the package
-        pack = None
-    return pack

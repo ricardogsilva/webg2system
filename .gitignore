@@ -9,3 +9,4 @@ python/*
 *.zip
 *.tar.gz
 *.tgz
+sitestatic/*
