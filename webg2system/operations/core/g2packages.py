@@ -1684,6 +1684,7 @@ class OWSPreparator(ProcessingPackage):
         self.host.clean_dirs(self.geotifOutDir)
         return 0
 
+
 class GenericAggregationPackage(GenericItem):
     '''
     Base class for ALL G2Packages that have other packages as input.
@@ -1699,12 +1700,6 @@ class GenericAggregationPackage(GenericItem):
 
     def __unicode__(self):
         return unicode(self.name)
-
-    def _use_callback(self, theCallback, *args):
-        msg = []
-        for msgBit in args:
-            msg.append(msgBit)
-        theCallback(msg)
 
     def _create_packages(self, packRole, packSettings):
 
@@ -1735,6 +1730,7 @@ class GenericAggregationPackage(GenericItem):
                     #self.logger.debug('----------') 
                     objects.append(newObject)
         return objects
+
 
 class Archivor(GenericAggregationPackage):
     '''

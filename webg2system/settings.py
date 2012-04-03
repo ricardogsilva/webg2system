@@ -189,7 +189,7 @@ LOGGING = {
         },
         'loggers': {
             'django' : {
-                'handlers' : ['null'],
+                'handlers' : ['null',],
                 'propagate' : True,
                 'level' : 'INFO',
             },
@@ -197,6 +197,10 @@ LOGGING = {
                 'handlers' : ['mail_admins'],
                 'propagate' : False,
                 'level' : 'ERROR',
+            },
+            'operations.views' : {
+                'handlers' : ['console'],
+                'level' : 'DEBUG',
             },
             'operations.core' : {
                 'handlers' : ['console', 'mail_admins'],

@@ -9,7 +9,7 @@
 	</head>
 	<body>
 		<h1>Create running package:</h1>
-		<form action="/operations/create/" method="post">
+		<form action="{% url operations.views.execute_package %}" method="post">
 			{% csrf_token %}
 			{{ form.as_p }}
 			<input type="submit" value="Create" />

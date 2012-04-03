@@ -1,5 +1,8 @@
 import datetime as dt
 import os
+import json
+
+import logging
 
 from django.http import HttpResponseRedirect, HttpResponse, Http404
 from django.shortcuts import render_to_response, get_object_or_404, get_list_or_404
@@ -10,7 +13,9 @@ from django.contrib.auth import authenticate, login, logout
 from django.views.decorators.csrf import csrf_exempt
 from models import RunningPackage
 from systemsettings.models import Package, Area, Host, File
-from forms import PartialRunningPackageForm, CreatePackageForm
+from forms import CreatePackageForm
+
+logger = logging.getLogger(__name__)
 
 @csrf_exempt
 def execute_package(request):
@@ -25,6 +30,7 @@ def execute_package(request):
             if user is not None:
                 if user.is_active:
                     login(request, user)
+                    logger.debug(f.cleaned_data)
                     try:
                         p = Package.objects.get(name=f.cleaned_data['package'])
                         a = Area.objects.get(name=f.cleaned_data['area'])
@@ -32,18 +38,23 @@ def execute_package(request):
                                                         area=a, 
                                                         timeslot=timeslot)
                     except (Package.DoesNotExist, Area.DoesNotExist):
-                        print('Some of the input arguments are invalid: ' \
-                              'package or area inexistent.')
+                        logger.debug('Some of the input arguments are invalid: ' \
+                                     'package or area inexistent.')
                         rp = None
                     except RunningPackage.DoesNotExist:
-                        print('The package does not exist. It will be ' \
-                              'created.')
+                        logger.info('The package does not exist. It will be ' \
+                                    'created.')
                         rp = RunningPackage(settings=p, area=a, timeslot=timeslot)
                     if rp is not None:
                         runOutputList = []
                         callback = runOutputList.append
                         rp.force = force
-                        runResult = rp.run(callback=callback)
+                        runArgs = f.cleaned_data['extra']
+                        if runArgs != '':
+                            runkwargs = json.loads(runArgs)
+                        else:
+                            runkwargs = dict()
+                        runResult = rp.run(callback=callback, **runkwargs)
                         result = render_to_response(
                                     'operations/run_output.html',
                                     {
@@ -57,13 +68,21 @@ def execute_package(request):
                     logout(request)
                 else:
                     # user is not valid
+                    logger.debug('Invalid user')
                     pass
             else:
                 # user is none
+                logger.debug('User is None')
                 pass
         else:
             # form was invalid
-            pass
+            logger.debug('form was invalid')
+            f = CreatePackageForm()
+            result = render_to_response(
+                        'operations/create_running_package.html',
+                        {'form' : f,},
+                        context_instance = RequestContext(request)
+                     )
     else:
         f = CreatePackageForm()
         result = render_to_response(

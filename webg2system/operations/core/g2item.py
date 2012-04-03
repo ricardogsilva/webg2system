@@ -64,3 +64,9 @@ class GenericItem(object):
     def minute(self):
         return self.timeslot.strftime('%M')
 
+    def _use_callback(self, theCallback, *args):
+        msg = []
+        for msgBit in args:
+            msg.append(msgBit)
+        theCallback(msg)
+

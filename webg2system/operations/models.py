@@ -1,5 +1,6 @@
 import os
 import sys
+import datetime as dt
 
 from django.db import models
 from systemsettings.models import Package, Area
@@ -18,6 +19,7 @@ class RunningPackage(models.Model):
                                 ' run even if its outputs are already '\
                                 'available?')
     result = models.BooleanField(default=False, editable=False)
+    timestamp = models.DateTimeField(editable=False)
 
     def __unicode__(self):
         return unicode(self.settings)
@@ -25,6 +27,10 @@ class RunningPackage(models.Model):
     def show_timeslot(self):
         return self.timeslot.strftime('%Y-%m-%d %H:%M')
     show_timeslot.short_description = 'Timeslot'
+
+    def show_timestamp(self):
+        return self.timestamp.strftime('%Y-%m-%d %H:%M')
+    show_timestamp.short_description = 'Timestamp'
 
     def show_settings(self):
         return self.settings.package.name
@@ -84,9 +90,12 @@ class RunningPackage(models.Model):
         to the packages' run_main method. Available choices are:
 
             Package:
+                Outra
+                    - sleepSecs (int): 5
+                    - sleepSteps (int): 3
                 OWSPreparator 
-                    - generate (bool)
-                    - update (string)
+                    - generate (bool): True
+                    - update (string): None
         '''
 
         if callback is None:
@@ -94,39 +103,44 @@ class RunningPackage(models.Model):
                 pass
         #try:
         self.status = 'running'
+        self.timestamp = dt.datetime.utcnow()
+        self.result = False
         self.save()
         processSteps = 7
-        callback(self.progress(1, processSteps), 
-                 'Creating package for processing...')
+        callback((self.progress(1, processSteps), 
+                 'Creating package for processing...'))
         pack = self._initialize()
-        callback(self.progress(2, processSteps), 
-                 'Looking for previously available outputs...')
+        callback((self.progress(2, processSteps), 
+                 'Looking for previously available outputs...'))
         outputsAvailable = pack.outputs_available()
         if outputsAvailable:
             if self.force:
                 runPackage = True
-                callback(self.progress(3, processSteps), 
-                         'Deleting any previously present output files...')
+                callback((self.progress(3, processSteps), 
+                         'Deleting any previously present output files...'))
                 pack.delete_outputs()
             else:
                 runPackage = False
         else:
             runPackage = True
         if runPackage:
-            callback(self.progress(4, processSteps), 'Running main process...')
+            callback((self.progress(4, processSteps), 
+                     'Running main process...'))
             mainResult = pack.run_main(callback, *args, **kwargs)
             # Will be able to add other error codes later
             if mainResult not in (1,):
                 self.result = True
-            callback(self.progress(5, processSteps), 'Cleaning up...')
+            else:
+                self.result = False
+            callback((self.progress(5, processSteps), 'Cleaning up...'))
             cleanResult = pack.clean_up()
         else:
-            callback(self.progress(6, processSteps), 
-                     'Outputs are already available.')
+            callback((self.progress(6, processSteps),
+                     'Outputs are already available.'))
             self.result = True
         self.status = 'stopped'
         self.save()
-        callback(self.progress(7, processSteps), 'All done!')
+        callback((self.progress(7, processSteps), 'All done!'))
         #except:
         #    print('something went wrong')
         #    self.status = 'stopped'

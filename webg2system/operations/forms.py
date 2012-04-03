@@ -1,13 +1,7 @@
 import datetime as dt
 
 from django import forms
-from models import RunningPackage
     
-class PartialRunningPackageForm(forms.ModelForm):
-    class Meta:
-        model = RunningPackage
-        fields = ('settings', 'timeslot', 'area')
-
 class CreatePackageForm(forms.Form):
     username = forms.CharField(max_length=255)
     password = forms.CharField(max_length=255, 
@@ -16,3 +10,9 @@ class CreatePackageForm(forms.Form):
     area = forms.CharField(max_length=255)
     timeslot = forms.DateTimeField()
     force = forms.BooleanField(required=False)
+    extra = forms.CharField(
+                max_length=255, 
+                required=False, 
+                help_text='Extra keyword arguments for the task. They ' \
+                          'should be given in JSON object format.'
+            )
