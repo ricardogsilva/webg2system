@@ -1,0 +1,121 @@
+# Mapfile tutorial
+
+MAP
+    SHAPEPATH 'to be replaced'
+    NAME 'Quicklooks'
+    PROJECTION
+        'init=epsg:4326'
+    END
+    WEB
+        METADATA
+            'wms_title' 'Quicklooks'
+            #'wms_onlineresource' 'http://localhost/cgi-bin/mapserv?map=/home/geo2/dev/mapfiles/mapa_big.map&'
+            'wms_onlineresource' 'to be replaced'
+            'wms_srs' 'EPSG:4326'
+            'wms_enable_request' '*'
+        END
+    END
+    IMAGETYPE PNG
+    EXTENT -180 -90 180 90
+    SIZE 800 600
+    IMAGECOLOR 0 0 0
+    LAYER
+        NAME 'DSSF'
+        STATUS OFF
+        TEMPLATE 'templates/blank.html'
+        DUMP TRUE
+        PROJECTION
+            'init=epsg:4326'
+        END
+        METADATA
+            'wms_title' 'to be replaced'
+            'wms_srs' 'EPSG:4326'
+            'wms_include_items' 'all'
+            'gml_include_items' 'all'
+        END
+        DATA 'to be replaced'
+
+        TYPE RASTER
+        
+        #PROCESSING 'SCALE=-1,1200'
+        #PROCESSING 'SCALE_BUCKETS=200'
+        CLASSITEM '[pixel]'
+        CLASS
+            EXPRESSION([pixel] == -1)
+            NAME "Missing value"
+            STYLE
+                COLOR 0 0 0
+            END 
+        END 
+        CLASS
+            EXPRESSION([pixel] == 0)
+            NAME "0 W.m^-2"
+            STYLE
+                COLOR 255 255 217
+            END 
+        END 
+        CLASS
+            EXPRESSION([pixel] > 0 AND [pixel] <= 138)
+            NAME "0 - 138 W.m^-2"
+            STYLE
+                COLOR 237 248 217
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] > 138 AND [pixel] <= 275)
+            NAME "138 - 275 W.m^-2"
+            STYLE
+                COLOR 199 233 180
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] > 275 AND [pixel] <= 412)
+            NAME "275 - 412 W.m^-2"
+            STYLE
+                COLOR 127 205 187
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] > 412 AND [pixel] <= 550)
+            NAME "412 - 550 W.m^-2"
+            STYLE
+                COLOR 65 182 196
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] > 550 AND [pixel] <= 688)
+            NAME "550 - 688 W.m^-2"
+            STYLE
+                COLOR 29 145 192
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] > 688 AND [pixel] <= 825)
+            NAME "688 - 825 W.m^-2"
+            STYLE
+                COLOR 34 94 168
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] > 825 AND [pixel] <= 962)
+            NAME "825 - 962 W.m^-2"
+            STYLE
+                COLOR 37 52 148
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] > 962 AND [pixel] <= 1100)
+            NAME "962 - 1100 W.m^-2"
+            STYLE
+                COLOR 8 29 88
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] > 1100)
+            NAME "> 1100 W.m^-2"
+            STYLE
+                COLOR 255 0 0
+            END
+        END
+    END
+END

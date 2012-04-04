@@ -1498,7 +1498,6 @@ class OWSPreparator(ProcessingPackage):
     '''
 
     def __init__(self, settings, timeslot, area, host=None, createIO=True):
-        pass
         '''
         Inputs:
 
@@ -1546,7 +1545,7 @@ class OWSPreparator(ProcessingPackage):
                 'output', 
                 settings.packageOutput_systemsettings_packageoutput_related.all()
             )
-        self.mapper = mappers.NGPMapper(self.inputs[0], self.product)
+            self.mapper = mappers.NGPMapper(self.inputs[0], self.product)
 
     def update_latest_mapfile(self, geotifPath):
         '''
@@ -1683,6 +1682,99 @@ class OWSPreparator(ProcessingPackage):
         self.host.clean_dirs(self.mapfileOutDir)
         self.host.clean_dirs(self.geotifOutDir)
         return 0
+
+
+class QuickLookGenerator(ProcessingPackage):
+    '''
+    This class will generate the quicklook files using the corresponding
+    mapfile and geotiff.
+
+    The quicklook files can be generated in realtime, but also in bulk.
+
+    The quicklook files must use their own mapfile generating methods in order
+    to prevent clashing with the WMS services.
+
+    1. Get the global geotif
+    2. Get or generate its mapfile from a template
+    3. Generate the quicklook file(s) given the specified coordinates
+    '''
+
+    def __init__(self, settings, timeslot, area, host=None, createIO=True):
+        '''
+        Inputs:
+
+            settings - A systemsettings.models.Package object
+
+            timeslot - A datetime.datetime object
+
+            area - A systemsettings.models.Area object
+        '''
+
+        self.rawSettings = settings
+        self.name = settings.name
+        self.product = settings.product
+        super(QuickLookGenerator, self).__init__(settings, timeslot, area, 
+                                                 host)
+        relCodeDir = utilities.parse_marked(
+                settings.packagepath_set.get(name='codeDir'), self)
+        self.codeDir = os.path.join(self.host.codePath, relCodeDir)
+        relQuickDir = utilities.parse_marked(
+                settings.packagepath_set.get(name='quickviewOutDir'), self)
+        self.quickviewOutDir = os.path.join(self.host.dataPath, relQuickDir)
+        relWorkDir = utilities.parse_marked(
+                settings.packagepath_set.get(name='workingDir'), self)
+        self.workingDir = os.path.join(self.host.dataPath, relWorkDir)
+        relMapfileOutDir = utilities.parse_marked(
+                settings.packagepath_set.get(name='mapfileOutDir'), self)
+        self.mapfileOutDir = os.path.join(self.host.dataPath, 
+                                          relMapfileOutDir)
+        relMapfileTemplateDir = utilities.parse_marked(
+                settings.packagepath_set.get(name='mapfileTemplateDir'), self)
+        self.mapfileTemplateDir = os.path.join(self.host.codePath, 
+                                               relMapfileTemplateDir)
+        if createIO:
+            self.inputs = self._create_files(
+                'input', 
+                settings.packageInput_systemsettings_packageinput_related.all()
+            )
+            self.outputs = self._create_files(
+                'output', 
+                settings.packageOutput_systemsettings_packageoutput_related.all()
+            )
+            self.mapper = mappers.NGPMapper(self.inputs[0]) # <- badly defined
+
+    def get_mapfile(self):
+        '''
+        Return the full path to the quicklooks mapfile.
+
+        The mapfile is created (from the template) in case it cannot be
+        found.
+        '''
+
+        g2f = [f for f in self.outputs if f.fileType=='mapfile'][0]
+        found = self._find_files([g2f], useArchive=False)
+        pathList = found[g2f]['paths']
+        if len(pathList) == 0:
+            template = os.path.join(self.mapfileTemplateDir,
+                                    self.mapfileTemplate)
+            mapfile = self.host.fetch([template], self.mapfileOutDir, 
+                                      self.host)[0]
+        else:
+            mapfile = pathList[1]
+        return mapfile
+
+    def update_mapfile(self, geotiff):
+        filePath = self.get_mapfile()
+
+
+class MetadataGenerator(ProcessingPackage):
+    '''
+    This class will generate and upload the xml metadata files to the 
+    CSW server.
+    '''
+
+    def __init__(self, settings, timeslot, area, host=None, createIO=True):
+        pass
 
 
 class GenericAggregationPackage(GenericItem):

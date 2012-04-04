@@ -18,6 +18,8 @@ from osgeo import gdal
 from osgeo import osr
 import mapscript
 
+import utilities
+
 # FIXME
 #   - Mix this file with some of the code used in the lsasaf georeferencer
 #   project. That sould allow the rescaling of the values and the geotiff
@@ -514,6 +516,76 @@ class NGPMapper(Mapper): #crappy name
         posX = position[0] - font.getsize(txt)[0] / 2
         posY = position[1] - font.getsize(txt)[1] / 2
         im.paste(imgText, (posX, posY))
+
+class NewNGPMapper(object):
+
+    dataType = gdal.GDT_Int16
+    blockXSize = 200
+    blockYSize = 200
+
+    def get_bounds(self, filePath, pixelSize):
+        pass
+        # determine if this is a grid or continental tile
+        # determine the x and y lengths
+        # get first lon and first lat
+        # determine last lon and last lat
+
+    def _get_corner_coordinates(self, filePath, tileXLength, tileYLength):
+        h, v = self.get_h_v(filePath)
+        if h is None:
+            # this is a continental tile
+            raise NotImplementedError
+        else:
+            # this is a small tile
+            firstLat = -v * tileYLength + 90
+            firstLon = tileXLength * h - 180
+        return firstLat, firstLon
+
+    def _get_tile_name(self, fileName)
+        hvPatt = re.compile(r'H(\d{2})V(\d{2})')
+        reObj = hvPatt.search(fileName)
+        if reObj is not None:
+            areaName = reObj.group()
+        else:
+            try:
+                areaName = os.path.baseName(fileName).split('_')[4]
+            except IndexError:
+                self.logger.error('Couldn\'t find area from the file name.')
+                areaName = None
+        return areaName
+
+    def get_first_lat_lon(self, filePath, pixelSize):
+        areaName = self._get_tile_name(filePath)
+        fileSettings = utilities.get_file_settings(filePath)
+        if fileSettings is not None:
+            try:
+                # it's a grid tile
+                nLines = fileSettings.fileextrainfo_set.get(name='nLines')
+                nCols = fileSettings.fileextrainfo_set.get(name='nCols')
+                tileXLength = nCols * float(pixelSize)
+                tileYLength = nLines * float(pixelSize)
+                firstLat, firstLon = self._get_corner_coordinates(path, tileXLength,
+                                                                  tileYLength)
+            except fileSettings.DoesNotExist:
+                # it's a continental tile
+                firstLat = int(
+                    fileSettings.fileextrainfo_set.filter(
+                        name__icontains=areaName
+                    ).get(name__icontains='firstLat').string
+                )
+                firstLon = int(
+                    fileSettings.fileextrainfo_set.filter(
+                        name__icontains=areaName
+                    ).get(name__icontains='firstLon').string
+                )
+        minx = firstLon
+        miny = firstLat - tileYLength
+        maxx = firstLon + tileXLength
+        maxy = firstLat
+
+
+
+
 
 if __name__ == '__main__':
     import sys

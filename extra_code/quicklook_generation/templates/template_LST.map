@@ -1,0 +1,122 @@
+# Mapfile tutorial
+
+MAP
+    SHAPEPATH 'to be replaced'
+    NAME 'Quicklooks'
+    PROJECTION
+        'init=epsg:4326'
+    END
+    WEB
+        METADATA
+            'wms_title' 'Quicklooks'
+            #'wms_onlineresource' 'http://localhost/cgi-bin/mapserv?map=/home/geo2/dev/mapfiles/mapa_big.map&'
+            'wms_onlineresource' 'to be replaced'
+            'wms_srs' 'EPSG:4326'
+            'wms_enable_request' '*'
+        END
+    END
+    IMAGETYPE PNG
+    EXTENT -180 -90 180 90
+    SIZE 800 600
+    IMAGECOLOR 0 0 0
+    
+    LAYER
+        NAME 'LST'
+        STATUS OFF
+        TEMPLATE 'templates/blank.html'
+        DUMP TRUE
+        PROJECTION
+            'init=epsg:4326'
+        END
+        METADATA
+            'wms_title' 'dummy'
+            'wms_srs' 'EPSG:4326'
+            'wms_include_items' 'all'
+            'gml_include_items' 'all'
+        END
+        DATA 'to be replaced'
+
+        TYPE RASTER
+        
+        #PROCESSING 'SCALE=-1,1200'
+        #PROCESSING 'SCALE_BUCKETS=200'
+        CLASSITEM '[pixel]'
+	CLASS
+            EXPRESSION([pixel] == -8000)
+            NAME "Missing value"
+            STYLE
+                COLOR 0 0 0
+            END 
+        END 
+        CLASS
+            EXPRESSION([pixel] == -40)
+            NAME "-40 C"
+            STYLE
+                COLOR 255 255 204
+            END 
+        END 
+        CLASS
+            EXPRESSION([pixel] > -40 AND [pixel] <= -26)
+            NAME "-40 - -26 C"
+            STYLE
+                COLOR 255 237 160
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] > -26 AND [pixel] <= -12)
+            NAME "-26 - -12 C"
+            STYLE
+                COLOR 254 217 118
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] > -12 AND [pixel] <= 1)
+            NAME "-12 - 1 C"
+            STYLE
+                COLOR 254 178 76
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] > 1 AND [pixel] <= 15)
+            NAME "1 - 15 C"
+            STYLE
+                COLOR 253 141 60
+            END
+        END
+	CLASS
+            EXPRESSION([pixel] > 15 AND [pixel] <= 29)
+            NAME "15 - 29 C"
+            STYLE
+                COLOR 252 78 42
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] > 29 AND [pixel] <= 42)
+            NAME "29 - 42 C" 
+            STYLE
+                COLOR 227 26 28
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] > 42 AND [pixel] <= 56)
+            NAME "42 - 56 C" 
+            STYLE
+                COLOR 189 0 38
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] > 56 AND [pixel] <= 70)
+            NAME "56 - 70 C" 
+            STYLE
+                COLOR 128 0 38
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] > 70)
+            NAME "> 70 C"
+            STYLE
+                COLOR 0 100 0
+            END
+        END
+    END
+END

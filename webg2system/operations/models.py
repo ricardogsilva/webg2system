@@ -24,6 +24,18 @@ class RunningPackage(models.Model):
     def __unicode__(self):
         return unicode(self.settings)
 
+    def save(self):
+        '''
+        Provide a chance to update the timestamp field.
+
+        This method overrides Django's own save() method in order
+        to update the 'timestamp' field, which is not editable and
+        cannot have a default value assigned.
+        '''
+
+        self.timestamp = dt.datetime.utcnow()
+        super(RunningPackage, self).save()
+
     def show_timeslot(self):
         return self.timeslot.strftime('%Y-%m-%d %H:%M')
     show_timeslot.short_description = 'Timeslot'
@@ -103,7 +115,6 @@ class RunningPackage(models.Model):
                 pass
         #try:
         self.status = 'running'
-        self.timestamp = dt.datetime.utcnow()
         self.result = False
         self.save()
         processSteps = 7
