@@ -30,7 +30,6 @@ import tables
 import systemsettings.models as ss
 from sshproxy import SSHProxy
 from ftpproxy import FTPProxy
-from twisted.python.dist import relativeTo
 
 # TODO
 # - Review all the methods that have a FIXME tag
@@ -167,6 +166,9 @@ class G2Host(object):
         raise NotImplementedError
 
     def run_program(self):
+        raise NotImplementedError
+
+    def rename_file(self, oldPath, newPath):
         raise NotImplementedError
 
 
@@ -639,6 +641,9 @@ class G2LocalHost(G2Host):
                 'dataset' : dataset
                 }
         return params
+
+    def rename_file(self, oldPath, newPath):
+        return os.rename(oldPath, newPath)
 
 
 class G2RemoteHost(G2Host):

@@ -17,6 +17,8 @@ import utilities
 # to be deleted!
 import logging
 
+import mapscript
+
 # TODO
 # - Add a archive_ouputs() method to the package classes, that should use a _send_files
 
@@ -291,6 +293,39 @@ class GenericPackage(GenericItem):
                 compressed[g2f].append(path)
         return compressed
 
+    def _decompress_files(self, g2files):
+        '''
+        Decompress the input g2files with bunzip2.
+
+        Returns:
+        
+        A dictionary with the input g2files as keys and a list with the full 
+        paths to the newly decompressed files.
+        '''
+
+        foundFiles = self._find_files(g2files, useArchive=False)
+        toDecompress = []
+        for g2f, foundDict in foundFiles.iteritems():
+            for p in foundDict['paths']:
+                toDecompress.append(p)
+        # we send them in bulk for decompression but have to separate them 
+        # afterwards
+        decompressedPaths = self.host.decompress(toDecompress)
+        decompressed = dict()
+        pathPairs = []
+        for path in decompressedPaths:
+            for g2f in foundFiles.keys():
+                for pattern in g2f.searchPatterns:
+                    reObj = re.search(pattern, path)
+                    if reObj is not None:
+                        pathPairs.append((g2f, path))
+        for g2f, path in pathPairs:
+            if decompressed.get(g2f) is None:
+                decompressed[g2f] = [path]
+            else:
+                decompressed[g2f].append(path)
+        return decompressed
+
 
 class ProcessingPackage(GenericPackage):
 
@@ -304,7 +339,8 @@ class ProcessingPackage(GenericPackage):
         super(ProcessingPackage, self).__init__(timeslot, area.name, host)
         for extraInfo in settings.packageextrainfo_set.all():
             #exec('self.%s = "%s"' % (extraInfo.name, extraInfo.string))
-            exec('self.%s = utilities.parse_marked(extraInfo, self)' % extraInfo.name)
+            exec('self.%s = utilities.parse_marked(extraInfo, self)' % 
+                 extraInfo.name)
         # a random number for generating unique working dirs
         self.random = randint(0, 100)
 
@@ -387,12 +423,15 @@ class ProcessingPackage(GenericPackage):
         '''
 
         self.logger.info('Decompressing %s outputs...' % self.name)
-        foundOutputs = self.find_outputs(useArchive=False)
-        toDecompress = []
-        for g2f, foundDict in foundOutputs.iteritems():
-            for p in foundDict['paths']:
-                toDecompress.append(p)
-        self.host.decompress(toDecompress)
+        return self._decompress_files(self.outputs)
+
+    def decompress_inputs(self):
+        '''
+        Decompress the inputs of this package with bunzip2.
+        '''
+
+        self.logger.info('Decompressing %s inputs...' % self.name)
+        return self._decompress_files(self.inputs)
 
     def archive_outputs(self, compress=True):
         if compress:
@@ -1741,7 +1780,7 @@ class QuickLookGenerator(ProcessingPackage):
                 'output', 
                 settings.packageOutput_systemsettings_packageoutput_related.all()
             )
-            self.mapper = mappers.NGPMapper(self.inputs[0]) # <- badly defined
+            self.mapper = mappers.NewNGPMapper()
 
     def get_mapfile(self):
         '''
@@ -1751,20 +1790,162 @@ class QuickLookGenerator(ProcessingPackage):
         found.
         '''
 
-        g2f = [f for f in self.outputs if f.fileType=='mapfile'][0]
+        g2f = [f for f in self.inputs if f.fileType=='mapfile'][0]
         found = self._find_files([g2f], useArchive=False)
         pathList = found[g2f]['paths']
         if len(pathList) == 0:
             template = os.path.join(self.mapfileTemplateDir,
                                     self.mapfileTemplate)
-            mapfile = self.host.fetch([template], self.mapfileOutDir, 
-                                      self.host)[0]
+            newMapfile = self.host.fetch([template], self.mapfileOutDir, 
+                                         self.host)[0]
+            dirname, fileName = os.path.split(newMapfile)
+            mapfile = os.path.join(dirname, g2f.searchPatterns[0])
+            self.host.rename_file(newMapfile, mapfile)
         else:
-            mapfile = pathList[1]
+            mapfile = pathList[0]
         return mapfile
 
+    def find_geotiff(self):
+        '''
+        Return the full path to the geotiff file or None.
+        '''
+
+        g2f = [i for i in self.inputs if i.fileType=='geotiff'][0]
+
+
+        fetched = self._fetch_files([g2f], self.workingDir, useArchive=True, 
+                                    decompress=True)
+        pathList = fetched[g2f]
+        geotiff = None
+        if len(pathList) > 0:
+            geotiff = [f for f in pathList if re.search(r'\.ovr', f) is None][0]
+        else:
+            self.logger.error('Couldn\t find the geotiff input')
+        return geotiff
+
     def update_mapfile(self, geotiff):
-        filePath = self.get_mapfile()
+        '''
+        Update the mapfile with the correct information for the input geotiff.
+
+        Inputs:
+
+            geotiff - path to the geotiff file.
+        '''
+
+        shapePath, tifName = os.path.split(geotiff)
+        mapfile = self.get_mapfile()
+        mapObj = mapscript.mapObj(mapfile)
+        mapObj.shapepath = shapePath
+        mapWMSMetadata = mapObj.web.metadata
+        mapWMSMetadata.set('wms_onlineresource', 
+                           'http://%s/cgi-bin/mapserv?map=%s&' \
+                            % (self.host.host, mapfile))
+        layer = mapObj.getLayerByName(self.product.short_name)
+        layer.data = tifName
+        layerAbstract = '%s product generated for the %s timeslot.' % \
+                        (self.product.short_name, 
+                         self.timeslot.strftime('%Y-%m-%d %H:%M'))
+        layer.metadata.set('wms_abstract', layerAbstract)
+        mapObj.save(mapfile)
+        return mapfile
+
+    def generate_quicklook(self, mapfile, tilePath, outputDir, generate_legend=True):
+        '''
+        Process a single tile and generate the quicklook.
+
+        Inputs:
+
+            mapfile - The full path to the mapfile to use for generating
+                the quicklook.
+
+            tilePath - The full path to the tile to be processed.
+
+            outputDir - 
+
+        Returns the fullpath to the newly generated quicklook.
+        '''
+
+        self.host.make_dir(self.workingDir)
+        self.host.make_dir(outputDir)
+        legPath = self._generate_quicklooks_legend([self.product.short_name], 
+                                                   self.workingDir, 
+                                                   mapfile, 
+                                                   regenerate=generate_legend)
+        quickPath = self.mapper.generate_quicklook(outputDir, mapfile, 
+                                                   tilePath, legPath, 
+                                                   self.product, self.host)
+        #self.mapper.remove_temps([legendPath] + pathList)
+        return quickPath
+
+    def _process_single_tile(self, tile, mapfile):
+        g2fs = [f for f in self.inputs if f.fileType=='hdf5']
+        theFilePath = None
+        current = 0
+        while (theFilePath is None) and (current < len(g2fs)):
+            g2f = g2fs[current]
+            found = self._find_files([g2f], useArchive=True)
+            isPresent = False
+            for patt in g2f.searchPatterns:
+                if not isPresent:
+                    newPatt = re.sub(r'\(.*\)', tile, patt)
+                    for filePath in found[g2f]['paths']:
+                        reObj = re.search(newPatt, filePath)
+                        if reObj is not None:
+                            theFilePath = filePath
+                            isPresent = True
+                            break
+            current += 1
+        if theFilePath is not None:
+            result = self.generate_quicklook(mapfile, theFilePath, 
+                                             self.quickviewOutDir,
+                                             generate_legend=True)
+        else:
+            self.logger.error('The requested tile was not found.')
+            result = None
+        return result
+
+    def _process_all_tiles(self, mapfile):
+        g2fs = [f for f in self.inputs if f.fileType=='hdf5']
+        found = self._find_files(g2fs, useArchive=True)
+        hdfFiles = []
+        quickLooks = []
+        for g2f, foundDict in found.iteritems():
+            hdfFiles += foundDict['paths']
+        if len(hdfFiles) > 0:
+            ql = self.generate_quicklook(mapfile, hdfFiles[0], 
+                                         self.quickviewOutDir,
+                                         generate_legend=True)
+            quickLooks.append(ql)
+        if len(hdfFiles) > 1:
+            for filePath in hdfFiles[1:]:
+                ql = self.generate_quicklook(mapfile, filePath, 
+                                             self.quickviewOutDir,
+                                             generate_legend=False)
+                quickLooks.append(ql)
+        result = quickLooks
+
+    def run_main(self, tile=None):
+        geotiff = self.find_geotiff()
+        mapfile = self.update_mapfile(geotiff)
+        if tile is None:
+            result = self._process_all_tiles(mapfile)
+        else:
+            result = self._process_single_tile(tile, mapfile)
+        return result
+
+    def clean_up(self):
+        self._delete_directories([self.workingDir])
+        self.host.clean_dirs(self.mapfileOutDir)
+        self.host.clean_dirs(self.quickviewOutDir)
+        return 0
+
+    def _generate_quicklooks_legend(self, layers, outputDir, mapfile, 
+                                    regenerate=False):
+        legendPath = os.path.join(outputDir, 'legend.png')
+        if regenerate or (not self.host.is_file(legendPath)):
+            legendPath = self.mapper.generate_legend(mapfile, layers, 
+                                                     outputDir, self.host)
+        return legendPath
 
 
 class MetadataGenerator(ProcessingPackage):

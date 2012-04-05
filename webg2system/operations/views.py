@@ -15,6 +15,9 @@ from models import RunningPackage
 from systemsettings.models import Package, Area, Host, File
 from forms import CreatePackageForm
 
+import systemsettings.models as ss
+from core.g2packages import QuickLookGenerator
+
 logger = logging.getLogger(__name__)
 
 @csrf_exempt
@@ -114,22 +117,16 @@ def get_product_zip(request):
         pass
     pass
 
+# FIXME
+# - test this view
 def get_quicklook(request, prodName, area, timeslot):
-    pack = _create_package(prodName, timeslot)
-    theQuickLook = None
+    pass
+    settings = ss.Package.objects.get(codeClass__className='QuickLookGenerator',
+                                      product__short_name=prodName)
+    area = ss.Area.objects.get(name='.*')
+    pack = QuickLookGenerator(settings, timeslot, area)
     if pack is not None:
-        qLookPattern = os.path.join(pack.quickviewOutDir, 
-                                    '.*%s.*' % area)
-        qLookList = pack.host.find([qLookPattern])
-        if len(qLookList) == 1:
-            # the quicklook is already available
-            theQuickLook = qLookList[0]
-        elif len(qLookList) == 0:
-            # generate a new quicklook
-            mapfile = pack.get_quicklooks_mapfile()
-            tilePath = pack._get_tile(area)[0]
-            theQuickLook = pack.generate_quicklook(mapfile, tilePath, 
-                                                   pack.quickviewOutDir)
+        theQuickLook = pack.run_main(tile=area)
         if theQuickLook is not None:
             imgData = open(theQuickLook).read()
             response = HttpResponse(imgData, mimetype='image/png')

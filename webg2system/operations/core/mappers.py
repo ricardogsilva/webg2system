@@ -517,31 +517,118 @@ class NGPMapper(Mapper): #crappy name
         posY = position[1] - font.getsize(txt)[1] / 2
         im.paste(imgText, (posX, posY))
 
+
 class NewNGPMapper(object):
 
     dataType = gdal.GDT_Int16
     blockXSize = 200
     blockYSize = 200
 
+    def generate_quicklook(self, outputDir, mapfile, filePath, legendPath, 
+                           product, host):
+        '''
+        Generate the quicklook file.
+
+        Inputs:
+
+            outputDir - directory where the quicklook file is to be saved to.
+
+            mapfile - Full path to the mapfile to be used when generating 
+                the quicklooks.
+
+            filePath - The file for which the quicklook is to be created.
+
+            legendPath - Path to the legend file.
+
+            product - systemsettings.Product instance with the settings of
+                the product that this quicklook shows.
+
+            host - operations.core.g2hosts.G2Host instance.
+
+        Returns:
+            
+            A list of full paths to the newly created quicklooks.
+        '''
+
+        dirPath, fname = os.path.split(filePath)
+        minx, miny, maxx, maxy = self.get_bounds(filePath, product.pixelSize)
+        rawQuickPath = os.path.join(outputDir, 'rawquicklook_%s.png' % fname)
+        command = 'shp2img -m %s -o %s -e %i %i %i %i -s '\
+                  '400 400 -l %s' % (mapfile, rawQuickPath, minx, miny, 
+                                     maxx, maxy, product.short_name)
+        stdout, stderr, retcode = host.run_program(command)
+        outPath = self._complete_quicklook(rawQuickPath, legendPath)
+        self.remove_temps([rawQuickPath], host)
+        return outPath
+
+    def generate_legend(self, mapfile, layers, outputDir, host):
+        '''
+        Generate a legend png for the input mapfile.
+
+        Inputs:
+
+            mapfile - The path to the mapfile.
+
+            layers - A list of layer names that are to be included in the 
+                legend.
+
+            outputDir - The directory where the legend file is to be created.
+
+            host - operations.core.g2hosts.G2Host instance.
+
+        Returns:
+
+            The full path to the newly generated legend file.
+        '''
+
+        self._select_mapfile_layers(mapfile, layers)
+        legendPath = os.path.join(outputDir, 'legend.png')
+        legendCommand = 'legend %s %s' % (mapfile, legendPath)
+        mapfileDir = os.path.dirname(mapfile)
+        host.run_program(legendCommand, mapfileDir)
+        return legendPath
+
     def get_bounds(self, filePath, pixelSize):
-        pass
-        # determine if this is a grid or continental tile
-        # determine the x and y lengths
-        # get first lon and first lat
-        # determine last lon and last lat
+        areaName = self._get_tile_name(filePath)
+        fileSettings = utilities.get_file_settings(filePath)
+        if fileSettings is not None:
+            try:
+                # it's a grid tile
+                smallTile = fileSettings.fileextrainfo_set.get(name='smallTile')
+                minx, miny, maxx, maxy = self._get_tile_bbox(filePath, 
+                                                             fileSettings, 
+                                                             pixelSize)
+            except fileSettings.DoesNotExist:
+                # it's a continental tile
+                ulTile = fileSettings.fileextrainfo_set.get(name='%s upper left tile' % areaName)
+                ulTileFile = filePath.replace(areaName, ulTile)
+                ulSettings = utilities.get_file_settings(ulTileFile)
+                lrTile = fileSettings.fileextrainfo_set.get(name='%s lower right tile' % areaName)
+                lrTileFile = filePath.replace(areaName, lrTile)
+                lrSettings = utilities.get_file_settings(lrTileFile)
+                ulBBox = self._get_tile_bbox(ulTileFile, ulSettings, pixelSize)
+                lrBBox = self._get_tile_bbox(lrTileFile, lrSettings, pixelSize)
+                minx = ulBBox[0]
+                miny = lrBBox[1]
+                maxx = lrBBox[2]
+                maxy = ulBBox[3]
+        return minx, miny, maxx, maxy
 
-    def _get_corner_coordinates(self, filePath, tileXLength, tileYLength):
-        h, v = self.get_h_v(filePath)
-        if h is None:
-            # this is a continental tile
-            raise NotImplementedError
+    def get_h_v(self, fileName):
+        hvPatt = re.compile(r'H(\d{2})V(\d{2})')
+        reObj = hvPatt.search(fileName)
+        if reObj is not None:
+            h = int(reObj.group(1))
+            v = int(reObj.group(2))
         else:
-            # this is a small tile
-            firstLat = -v * tileYLength + 90
-            firstLon = tileXLength * h - 180
-        return firstLat, firstLon
+            h = None
+            v = None
+        return h, v
 
-    def _get_tile_name(self, fileName)
+    def remove_temps(self, paths, host):
+        host.delete_files(paths)
+
+    def _get_tile_name(self, fileName):
         hvPatt = re.compile(r'H(\d{2})V(\d{2})')
         reObj = hvPatt.search(fileName)
         if reObj is not None:
@@ -554,42 +641,112 @@ class NewNGPMapper(object):
                 areaName = None
         return areaName
 
-    def get_first_lat_lon(self, filePath, pixelSize):
-        areaName = self._get_tile_name(filePath)
-        fileSettings = utilities.get_file_settings(filePath)
-        if fileSettings is not None:
-            try:
-                # it's a grid tile
-                nLines = fileSettings.fileextrainfo_set.get(name='nLines')
-                nCols = fileSettings.fileextrainfo_set.get(name='nCols')
-                tileXLength = nCols * float(pixelSize)
-                tileYLength = nLines * float(pixelSize)
-                firstLat, firstLon = self._get_corner_coordinates(path, tileXLength,
-                                                                  tileYLength)
-            except fileSettings.DoesNotExist:
-                # it's a continental tile
-                firstLat = int(
-                    fileSettings.fileextrainfo_set.filter(
-                        name__icontains=areaName
-                    ).get(name__icontains='firstLat').string
-                )
-                firstLon = int(
-                    fileSettings.fileextrainfo_set.filter(
-                        name__icontains=areaName
-                    ).get(name__icontains='firstLon').string
-                )
-        minx = firstLon
-        miny = firstLat - tileYLength
-        maxx = firstLon + tileXLength
-        maxy = firstLat
+    def _get_tile_bbox(self, filePath, fileSettings, pixelSize):
+        nLines = int(fileSettings.fileextrainfo_set.get(name='nLines').string)
+        nCols = int(fileSettings.fileextrainfo_set.get(name='nCols').string)
+        tileXLength = nCols * float(pixelSize)
+        tileYLength = nLines * float(pixelSize)
+        h, v = self.get_h_v(filePath)
+        minx = tileXLength * h - 180
+        maxy = -v * tileYLength + 90
+        maxx = minx + tileXLength
+        miny = maxy - tileYLength
+        return minx, miny, maxx, maxy
 
+    def _complete_quicklook(self, filePath, legendPath, title=None, 
+                            cleanRaw=True):
+        '''
+        Create the final quicklook file by incorporating the extra elements.
 
+        Inputs:
 
+            filePath - Full path to the raw quicklook.
 
+            legendPath - Full path to the legend image.
 
-if __name__ == '__main__':
-    import sys
-    outName = sys.argv[1]
-    fileList = sys.argv[2:]
-    mapper = NGPMapper()
-    mapper.create_global_tiff(fileList, '.', outName)
+            title - Title for the quicklook.
+        '''
+
+        rawPatt = re.compile(r'rawquicklook_')
+        if title is None:
+            fname = os.path.basename(filePath).rpartition('.')[0]
+            title = rawPatt.sub('', fname).replace('_', ' ')
+        quicklook = self._stitch_images([img.open(p) for p in filePath, \
+                                        legendPath])
+        quicklook = self._expand_image(quicklook, 0, 30, keep='bl')
+        quicklook = self._expand_image(quicklook, 20, 20, keep='middle')
+        self._write_text(quicklook, title, position=(quicklook.size[0]/2, 20))
+        outPath = rawPatt.sub('', filePath)
+        quicklook.save(outPath)
+        return outPath
+
+    def _stitch_images(self, ims):
+        sizes = np.asarray([i.size for i in ims])
+        newRows = np.max(sizes[:,1])
+        newCols = np.sum(sizes[:,0])
+        final = np.ones((newRows, newCols, 3)) * 255
+        accumRIndex = 0
+        accumCIndex = 0
+        for i in ims:
+            arr = np.asarray(i)
+            endRow = accumRIndex + arr.shape[0]
+            endCol = accumCIndex + arr.shape[1]
+            final[accumRIndex: endRow, accumCIndex:endCol] = arr
+            accumCIndex = endCol
+        return img.fromarray(final.astype(arr.dtype))
+
+    def _expand_image(self, im, width=0, height=0, keep='ul', padValue=255):
+        n1 = np.asarray(im)
+        oldHeight, oldWidth, bands = n1.shape
+        newHeight = oldHeight + height
+        newWidth = oldWidth + width
+        n2 = np.ones((newHeight, newWidth, bands)) * padValue
+        if keep == 'ul':
+            n2[:oldHeight, :oldWidth] = n1
+        elif keep == 'ur':
+            n2[:oldHeight, newWidth-oldWidth:] = n1
+        elif keep == 'bl':
+            n2[newHeight-oldHeight:, :oldWidth] = n1
+        elif keep == 'br':
+            n2[newHeight-oldHeight:, newWidth-oldWidth:] = n1
+        elif keep == 'middle':
+            startHeight = (newHeight - oldHeight) / 2
+            endHeight = startHeight + oldHeight
+            startWidth = (newWidth - oldWidth) / 2
+            endWidth = startWidth + oldWidth
+            n2[startHeight:endHeight, startWidth:endWidth] = n1
+        newIm = img.fromarray(n2.astype(n1.dtype))
+        return newIm
+
+    def _select_mapfile_layers(self, mapfile, layers):
+        '''
+        Turn the selected layers ON and all the others OFF.
+
+        Inputs:
+
+            mapfile - The path to the mapfile.
+
+            layers - A list of layer names that are to be included in the 
+                legend.
+        '''
+            
+        mapfileObj = mapscript.mapObj(mapfile)
+        for i in range(mapfileObj.numlayers):
+            layer = mapfileObj.getLayer(i)
+            if layer.name in layers:
+                layer.status = mapscript.MS_ON
+            else:
+                layer.status = mapscript.MS_OFF
+        mapfileObj.save(mapfile)
+
+    def _write_text(self, im, txt, fontSize=16, position=(0,0)):
+        #font = imgFont.load_default()
+        fontFile = '/usr/share/fonts/truetype/freefont/FreeSans.ttf'
+        font = imgFont.truetype(fontFile, fontSize)
+        imgText = img.new('L', font.getsize(txt), 255)
+        drawText = imgDraw.Draw(imgText)
+        drawText.text((0, 0), txt, font=font, fill=0)
+        posX = position[0] - font.getsize(txt)[0] / 2
+        posY = position[1] - font.getsize(txt)[1] / 2
+        im.paste(imgText, (posX, posY))
+
