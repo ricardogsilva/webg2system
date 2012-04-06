@@ -1878,30 +1878,37 @@ class QuickLookGenerator(ProcessingPackage):
         return quickPath
 
     def _process_single_tile(self, tile, mapfile):
-        g2fs = [f for f in self.inputs if f.fileType=='hdf5']
-        theFilePath = None
-        current = 0
-        while (theFilePath is None) and (current < len(g2fs)):
-            g2f = g2fs[current]
-            found = self._find_files([g2f], useArchive=True)
-            isPresent = False
-            for patt in g2f.searchPatterns:
-                if not isPresent:
-                    newPatt = re.sub(r'\(.*\)', tile, patt)
-                    for filePath in found[g2f]['paths']:
-                        reObj = re.search(newPatt, filePath)
-                        if reObj is not None:
-                            theFilePath = filePath
-                            isPresent = True
-                            break
-            current += 1
-        if theFilePath is not None:
-            result = self.generate_quicklook(mapfile, theFilePath, 
-                                             self.quickviewOutDir,
-                                             generate_legend=True)
-        else:
-            self.logger.error('The requested tile was not found.')
-            result = None
+        result = None
+        alreadyThere = self.host.list_dir(self.quickviewOutDir)
+        for ql in alreadyThere:
+            if tile in ql:
+                self.logger.debug('Found the quicklook. No need to generate.')
+                result = ql
+        if result is None:
+            g2fs = [f for f in self.inputs if f.fileType=='hdf5']
+            theFilePath = None
+            current = 0
+            while (theFilePath is None) and (current < len(g2fs)):
+                g2f = g2fs[current]
+                found = self._find_files([g2f], useArchive=True)
+                isPresent = False
+                for patt in g2f.searchPatterns:
+                    if not isPresent:
+                        newPatt = re.sub(r'\(.*\)', tile, patt)
+                        for filePath in found[g2f]['paths']:
+                            reObj = re.search(newPatt, filePath)
+                            if reObj is not None:
+                                theFilePath = filePath
+                                isPresent = True
+                                break
+                current += 1
+            if theFilePath is not None:
+                self.logger.debug('About to generate a new quicklook.')
+                result = self.generate_quicklook(mapfile, theFilePath, 
+                                                 self.quickviewOutDir,
+                                                 generate_legend=True)
+            else:
+                self.logger.error('The requested tile was not found.')
         return result
 
     def _process_all_tiles(self, mapfile):
@@ -1955,6 +1962,12 @@ class MetadataGenerator(ProcessingPackage):
     '''
 
     def __init__(self, settings, timeslot, area, host=None, createIO=True):
+        pass
+
+    def run_main(self):
+        pass
+
+    def clean_up(self):
         pass
 
 

@@ -119,14 +119,14 @@ def get_product_zip(request):
 
 # FIXME
 # - test this view
-def get_quicklook(request, prodName, area, timeslot):
-    pass
+def get_quicklook(request, prodName, tile, timeslot):
+    ts = dt.datetime.strptime(timeslot, '%Y%m%d%H%M')
     settings = ss.Package.objects.get(codeClass__className='QuickLookGenerator',
                                       product__short_name=prodName)
     area = ss.Area.objects.get(name='.*')
-    pack = QuickLookGenerator(settings, timeslot, area)
+    pack = QuickLookGenerator(settings, ts, area)
     if pack is not None:
-        theQuickLook = pack.run_main(tile=area)
+        theQuickLook = pack.run_main(tile=tile)
         if theQuickLook is not None:
             imgData = open(theQuickLook).read()
             response = HttpResponse(imgData, mimetype='image/png')
