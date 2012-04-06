@@ -445,6 +445,20 @@ class ProcessingPackage(GenericPackage):
             archived[g2f] = sent[1]
         return archived
 
+    def _filter_g2f_list(self, g2fs, attr, val):
+        '''Return a list of G2File instances where attr=val'''
+
+        result = []
+        for g2f in g2fs:
+            try:
+                isEqual = g2f.__getattribute__(attr) == val
+                if isEqual:
+                    result.append(g2f)
+            except AttributeError:
+                pass
+        return result
+
+
 
 class FetchData(ProcessingPackage):
     '''
@@ -1790,7 +1804,7 @@ class QuickLookGenerator(ProcessingPackage):
         found.
         '''
 
-        g2f = [f for f in self.inputs if f.fileType=='mapfile'][0]
+        g2f = self._filter_g2f_list(self.inputs, 'fileType', 'mapfile')[0]
         found = self._find_files([g2f], useArchive=False)
         pathList = found[g2f]['paths']
         if len(pathList) == 0:
@@ -1810,9 +1824,7 @@ class QuickLookGenerator(ProcessingPackage):
         Return the full path to the geotiff file or None.
         '''
 
-        g2f = [i for i in self.inputs if i.fileType=='geotiff'][0]
-
-
+        g2f = self._filter_g2f_list(self.inputs, 'fileType', 'geotiff')[0]
         fetched = self._fetch_files([g2f], self.workingDir, useArchive=True, 
                                     decompress=True)
         pathList = fetched[g2f]
@@ -1885,7 +1897,7 @@ class QuickLookGenerator(ProcessingPackage):
                 self.logger.debug('Found the quicklook. No need to generate.')
                 result = ql
         if result is None:
-            g2fs = [f for f in self.inputs if f.fileType=='hdf5']
+            g2fs = self._filter_g2f_list(self.inputs, 'fileType', 'hdf5')
             theFilePath = None
             current = 0
             while (theFilePath is None) and (current < len(g2fs)):
@@ -1912,7 +1924,7 @@ class QuickLookGenerator(ProcessingPackage):
         return result
 
     def _process_all_tiles(self, mapfile):
-        g2fs = [f for f in self.inputs if f.fileType=='hdf5']
+        g2fs = self._filter_g2f_list(self.inputs, 'fileType', 'hdf5')
         found = self._find_files(g2fs, useArchive=True)
         hdfFiles = []
         quickLooks = []
@@ -1961,12 +1973,75 @@ class MetadataGenerator(ProcessingPackage):
     CSW server.
     '''
 
+    # FIXME
+    # - implement this method
     def __init__(self, settings, timeslot, area, host=None, createIO=True):
+        # fields to include:
+        #   xmlOutDir, ...
         pass
 
-    def run_main(self):
-        pass
+    # FIXME
+    # - incorporate the 'tile' argument
+    def generate_metadatas(self, tile=None):
+        '''
+        Returns a list of xml filepaths.
+        '''
 
+        g2fs = self._filter_g2f_list(self.inputs, 'fileType', 'hdf5')
+        found = self._find_files(g2fs, useArchive=True)
+        result = None
+        for g2f, foundDict in found.iteritems():
+            for tilePath in foundDict['paths']:
+                xmlFile = self.generate_xml_metadata(tilePath)
+                result.append(xmlFile)
+        return result
+
+    # FIXME
+    # - implement this method
+    def generate_xml_metadata(tilePath):
+        '''
+        Returns a string with the path to the xml file or None.
+        '''
+
+        #if not self.host.is_dir(self.xmlOutDir):
+        #    self.host.make_dir(self.xmlOutDir)
+        #self.mdGenerator.apply_changes(tilePath, self.mapper, self.hdf5WebDir)
+        #pathFName = os.path.splitext(os.path.basename(tilePath))[0]
+        #xmlPath = os.path.join(self.xmlOutDir, '%s.xml' % pathFName)
+        #self.mdGenerator.save_xml(xmlPath)
+        return None
+
+    # FIXME
+    # - implement this method
+    def insert_metadata_csw(self, xmlFiles):
+        '''
+        Returns a boolean with the insert operation's result.
+        '''
+
+        return False
+
+    def run_main(self, generate=True, tile=None, populateCSW=True):
+        # find out what tiles are available
+        # for each tile (or just for the requested tile), generate the xml metadata
+        # if requested, send the metadata to the csw server
+        #
+        # Add a csw server model, which should have as fields: name, host, 
+        # serverURL, username, password. There should be only one CSW server
+        #
+        pass
+        if generate:
+            xmlFiles = self.generate_metadatas(tile)
+        else:
+            xmlOut = self._filter_g2f_list(self.outputs, 'fileType', 'xml')
+            found = self._find_files(xmlOut, useArchive=True)
+            xmlFiles = []
+            for g2f, foundDict in found.iteritems():
+                xmlFiles += foundDict['paths']
+        if populateCSW:
+            inserted = self.insert_metadata_csw(xmlFiles)
+
+    # FIXME
+    # - implement this method
     def clean_up(self):
         pass
 
