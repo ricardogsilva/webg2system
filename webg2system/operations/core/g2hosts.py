@@ -464,6 +464,10 @@ class G2LocalHost(G2Host):
                 newPaths += [p.replace('.bz2', '') for p in compressed]
             else:
                 #there has been an error decompressing the files
+                self.logger.error('Error decompressing outputs. '\
+                                  'Return code: %s' % retCode)
+                self.logger.error('stdout: %s' % stdout)
+                self.logger.error('stderr: %s' % stderr)
                 raise Exception
         return newPaths
 

@@ -174,8 +174,8 @@ def get_file_settings(filePath):
     if len(possibleSettings) == 1:
         result = possibleSettings[0]
     elif len(possibleSettings) > 1:
-        logger.warning('Found more than one possible file settings (%s). '\
-                       'Returning the first one...' % possibleSettings)
+        #logger.warning('Found more than one possible file settings (%s). '\
+        #               'Returning the first one...' % possibleSettings)
         result = possibleSettings[0]
     else:
         logger.warning('Couldn\'t find any file settings for the supplied path.')

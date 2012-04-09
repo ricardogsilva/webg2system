@@ -1,0 +1,1373 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--<?xml-stylesheet type="text/xsl" href="g2_BIOPAR_IM_ProductSet.xsl"?>-->
+<MD_Metadata id="VGTFCOVERMetadata" xmlns="http://www.isotc211.org/2005/gmd" xmlns:gmx="http://www.isotc211.org/2005/gmx" xmlns:gmd="http://www.isotc211.org/2005/gmd" xmlns:gco="http://www.isotc211.org/2005/gco" xmlns:gsr="http://www.isotc211.org/2005/gsr" xmlns:gss="http://www.isotc211.org/2005/gss" xmlns:gts="http://www.isotc211.org/2005/gts" xmlns:gml="http://www.opengis.net/gml" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.isotc211.org/2005/gmd http://www.isotc211.org/2005/gmd/gmd.xsd">
+  <fileIdentifier>
+    <gco:CharacterString>1542e309-b483-4623-8e28-d7de768a1212</gco:CharacterString>
+  </fileIdentifier>
+  <language>
+    <LanguageCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/Codelist/ML_gmxCodelists.xml#LanguageCode" codeListValue="eng">eng</LanguageCode>
+  </language>
+  <characterSet>
+    <MD_CharacterSetCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/Codelist/ML_gmxCodelists.xml#MD_CharacterSetCode" codeListValue="utf8">utf8</MD_CharacterSetCode>
+  </characterSet>
+  <parentIdentifier>
+    <gco:CharacterString>0c3fc2d0-a0a8-11e0-8264-0800200c9a66</gco:CharacterString>
+  </parentIdentifier>
+  <hierarchyLevel>
+    <MD_ScopeCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/Codelist/ML_gmxCodelists.xml#MD_ScopeCode" codeListValue="dataset">dataset</MD_ScopeCode>
+  </hierarchyLevel>
+  <contact>
+    <CI_ResponsibleParty>
+      <organisationName>
+        <gco:CharacterString>Flemish Institute for Technological Research (VITO)</gco:CharacterString>
+      </organisationName>
+      <contactInfo>
+        <CI_Contact>
+          <address>
+            <CI_Address>
+              <deliveryPoint>
+                <gco:CharacterString>Boeretang 200</gco:CharacterString>
+              </deliveryPoint>
+              <city>
+                <gco:CharacterString>Mol</gco:CharacterString>
+              </city>
+              <postalCode>
+                <gco:CharacterString>2400</gco:CharacterString>
+              </postalCode>
+              <country>
+                <Country codeList="http://www.iso.org/iso/en/prods-services/iso3166ma/02iso-3166-code-lists/index.html" codeListValue="BE" codeSpace="ISO 3166-1">Belgium </Country>
+              </country>
+              <electronicMailAddress>
+                <gco:CharacterString>helpdesk@vgt.vito.be</gco:CharacterString>
+              </electronicMailAddress>
+            </CI_Address>
+          </address>
+          <onlineResource>
+            <CI_OnlineResource>
+              <linkage>
+                <URL>http://www.gmes-geoland.info/</URL>
+              </linkage>
+              <protocol>
+                <gco:CharacterString>HTTP</gco:CharacterString>
+              </protocol>
+              <name>
+                <gco:CharacterString>Geoland2 project team</gco:CharacterString>
+              </name>
+              <description>
+                <gco:CharacterString>Project project website</gco:CharacterString>
+              </description>
+              <function>
+                <CI_OnLineFunctionCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/Codelist/ML_gmxCodelists.xml#CI_OnLineFunctionCode" codeListValue="information">information</CI_OnLineFunctionCode>
+              </function>
+            </CI_OnlineResource>
+          </onlineResource>
+          <hoursOfService>
+            <gco:CharacterString>Office hours, 7 days per week</gco:CharacterString>
+          </hoursOfService>
+          <contactInstructions>
+            <gco:CharacterString>Preferrably by e-mail</gco:CharacterString>
+          </contactInstructions>
+        </CI_Contact>
+      </contactInfo>
+      <role>
+        <CI_RoleCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/Codelist/ML_gmxCodelists.xml#CI_RoleCode" codeListValue="pointOfContact">pointOfContact</CI_RoleCode>
+      </role>
+    </CI_ResponsibleParty>
+  </contact>
+  <dateStamp>
+    <gco:Date>2011-10-12</gco:Date>
+  </dateStamp>
+  <metadataStandardName>
+    <gco:CharacterString>ISO19115</gco:CharacterString>
+  </metadataStandardName>
+  <metadataStandardVersion>
+    <gco:CharacterString>2003/Cor.1:2006</gco:CharacterString>
+  </metadataStandardVersion>
+  <spatialRepresentationInfo>
+    <MD_Georectified>
+      <numberOfDimensions>
+        <gco:Integer>2</gco:Integer>
+      </numberOfDimensions>
+      <axisDimensionProperties>
+        <MD_Dimension>
+          <dimensionName>
+            <MD_DimensionNameTypeCode codeList="http://www.isotc211.org/2005/resources/codelist/gmxCodelists.xml#MD_DimensionNameTypeCode" codeListValue="row">row</MD_DimensionNameTypeCode>
+          </dimensionName>
+          <dimensionSize>
+            <gco:Integer>8960</gco:Integer>
+          </dimensionSize>
+          <resolution>
+            <gco:Angle uom="deg">0.00892857142857</gco:Angle>
+          </resolution>
+        </MD_Dimension>
+      </axisDimensionProperties>
+      <axisDimensionProperties>
+        <MD_Dimension>
+          <dimensionName>
+            <MD_DimensionNameTypeCode codeList="http://www.isotc211.org/2005/resources/codelist/gmxCodelists.xml#MD_DimensionNameTypeCode" codeListValue="column">column</MD_DimensionNameTypeCode>
+          </dimensionName>
+          <dimensionSize>
+            <gco:Integer>5600</gco:Integer>
+          </dimensionSize>
+          <resolution>
+            <gco:Angle uom="deg">0.00892857142857</gco:Angle>
+          </resolution>
+        </MD_Dimension>
+      </axisDimensionProperties>
+      <cellGeometry>
+        <MD_CellGeometryCode codeList="http://www.isotc211.org/2005/resources/codelist/gmxCodelists.xml#MD_CellGeometryCode" codeListValue="area">area</MD_CellGeometryCode>
+      </cellGeometry>
+      <transformationParameterAvailability>
+        <gco:Boolean>false</gco:Boolean>
+      </transformationParameterAvailability>
+      <checkPointAvailability>
+        <gco:Boolean>true</gco:Boolean>
+      </checkPointAvailability>
+      <checkPointDescription>
+        <gco:CharacterString>Upperleft corner tiepoint</gco:CharacterString>
+      </checkPointDescription>
+      <cornerPoints>
+        <gml:Point gml:id="upperLeftTiePoint_OCEA">
+          <gml:description>Upperleft corner tiepoint</gml:description>
+          <gml:identifier codeSpace="">upperLeftTiePoint</gml:identifier>
+          <gml:name>Tie Point in upper left corner</gml:name>
+          <gml:pos srsName="#WGS_1984">0 100 0.0</gml:pos>
+        </gml:Point>
+      </cornerPoints>
+      <pointInPixel>
+        <MD_PixelOrientationCode>center</MD_PixelOrientationCode>
+      </pointInPixel>
+    </MD_Georectified>
+  </spatialRepresentationInfo>
+  <referenceSystemInfo>
+    <!--Note element MD_CRS is removed as correction of ISO19115-->
+    <MD_ReferenceSystem>
+      <referenceSystemIdentifier>
+        <RS_Identifier>
+          <code>
+            <gco:CharacterString>EPSG:32662</gco:CharacterString>
+          </code>
+          <codeSpace>
+            <gco:CharacterString>EPSG Geodetic Parameter Dataset</gco:CharacterString>
+          </codeSpace>
+        </RS_Identifier>
+      </referenceSystemIdentifier>
+    </MD_ReferenceSystem>
+  </referenceSystemInfo>
+  <identificationInfo>
+    <MD_DataIdentification>
+      <!--id="G2-BIOPAR-FCOVER-2011-03-01-OCEA-VGT-V1"-->
+      <citation>
+        <CI_Citation>
+          <title>
+            <gco:CharacterString>Global 10-daily SPOT-VEGETATION Fraction of Vegetation Cover (FCOVER) : OCEA 2011-03-01</gco:CharacterString>
+          </title>
+          <date>
+            <CI_Date>
+              <date>
+                <gco:Date>2011-03-21</gco:Date>
+              </date>
+              <dateType>
+                <CI_DateTypeCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/Codelist/ML_gmxCodelists.xml#CI_DateTypeCode" codeListValue="creation">creation</CI_DateTypeCode>
+              </dateType>
+            </CI_Date>
+          </date>
+          <edition>
+            <gco:CharacterString>V1.2</gco:CharacterString>
+          </edition>
+          <editionDate>
+            <gco:Date>2011-06-30</gco:Date>
+          </editionDate>
+          <identifier>
+            <MD_Identifier>
+              <authority>
+                <CI_Citation>
+                  <title>
+                    <gco:CharacterString>Flemish Institute for Technological Research (VITO)</gco:CharacterString>
+                  </title>
+                  <date>
+                    <CI_Date>
+                      <date>
+                        <gco:Date>2008-09-01</gco:Date>
+                      </date>
+                      <dateType>
+                        <CI_DateTypeCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/Codelist/ML_gmxCodelists.xml#CI_DateTypeCode" codeListValue="revision">revision</CI_DateTypeCode>
+                      </dateType>
+                    </CI_Date>
+                  </date>
+                </CI_Citation>
+              </authority>
+              <code>
+                <gco:CharacterString>EO:VITO:gl2:bp01:FCOVER:0000</gco:CharacterString>
+              </code>
+            </MD_Identifier>
+          </identifier>
+          <otherCitationDetails>
+            <gco:CharacterString xmlns:gco="http://www.isotc211.org/2005/gco">http://web.vgt.vito.be/documents/BioPar/g2-BP-RP-BP053-ProductUserManual-LAIFAPARFCoverNDVIV1-I1.20.pdf</gco:CharacterString>
+          </otherCitationDetails>
+        </CI_Citation>
+      </citation>
+      <abstract>
+        <CharacterString xmlns="http://www.isotc211.org/2005/gco">Fraction of vegetation Cover (FCOVER) corresponds to the gap fraction for nadir direction. It is used to separate vegetation and soil in energy balance processes, including temperature and evapotranspiration. It is computed from the leaf area index and other canopy structural variables and does not depend on variables such as the geometry of illumination as compared to FAPAR. For this reason, it is a very good candidate for the replacement of classical vegetation indices for the monitoring of green vegetation. Because of the linear relationship with radiometric signal, FCOVER will be only marginally scale dependent. Note that similarly to LAI and FAPAR, only the green elements will be considered, either belonging both to the overstorey and understorey.</CharacterString>
+      </abstract>
+      <purpose>
+        <gco:CharacterString>This product is first designed to fit the requirements of the Core Information Services of the geoland2 project. It can be also useful for all applications related to the environment monitoring. </gco:CharacterString>
+      </purpose>
+      <credit>
+        <CharacterString xmlns="http://www.isotc211.org/2005/gco">“The research leading to these results has received funding from the European Community’s Seventh Framework Program (FP7/2007-2013) under grant agreement n 218795. The BioPar FCOVER product is a joint property of INRA, CNES, and VITO under copyright geoland2. The historic data from 1999 up to 2010 is prepared by CNES for further operation by VITO. It is generated from the SPOT VEGETATION data under copyright Cnes and distribution by VITO. The BioPar FCOVER is available at the address http://www.geoland2.eu. ”</CharacterString>
+      </credit>
+      <status>
+        <MD_ProgressCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/Codelist/ML_gmxCodelists.xml#MD_ProgressCode" codeListValue="completed">completed</MD_ProgressCode>
+      </status>
+      <pointOfContact>
+        <CI_ResponsibleParty>
+          <organisationName>
+            <gco:CharacterString xmlns:gco="http://www.isotc211.org/2005/gco">Institut National de la Recherche Agronomique (INRA) – France</gco:CharacterString>
+          </organisationName>
+          <positionName>
+            <gco:CharacterString xmlns:gco="http://www.isotc211.org/2005/gco">Researcher</gco:CharacterString>
+          </positionName>
+          <contactInfo>
+            <CI_Contact>
+              <address>
+                <CI_Address>
+                  <deliveryPoint>
+                    <gco:CharacterString xmlns:gco="http://www.isotc211.org/2005/gco">UMR1114</gco:CharacterString>
+                  </deliveryPoint>
+                  <city>
+                    <gco:CharacterString xmlns:gco="http://www.isotc211.org/2005/gco">Avignon</gco:CharacterString>
+                  </city>
+                  <postalCode>
+                    <gco:CharacterString xmlns:gco="http://www.isotc211.org/2005/gco">84914</gco:CharacterString>
+                  </postalCode>
+                  <country>
+                    <Country codeList="http://www.iso.org/iso/en/prods-services/iso3166ma/02iso-3166-code-lists/index.html" codeListValue="F" codeSpace="ISO 3166-1">France</Country>
+                  </country>
+                  <electronicMailAddress>
+                    <gco:CharacterString xmlns:gco="http://www.isotc211.org/2005/gco">baret@avignon.inra.fr</gco:CharacterString>
+                  </electronicMailAddress>
+                </CI_Address>
+              </address>
+              <onlineResource>
+                <CI_OnlineResource>
+                  <linkage>
+                    <URL>http://www.inra.fr</URL>
+                  </linkage>
+                  <protocol>
+                    <gco:CharacterString xmlns:gco="http://www.isotc211.org/2005/gco">HTTP</gco:CharacterString>
+                  </protocol>
+                  <name>
+                    <gco:CharacterString xmlns:gco="http://www.isotc211.org/2005/gco">INRA website</gco:CharacterString>
+                  </name>
+                  <description>
+                    <gco:CharacterString xmlns:gco="http://www.isotc211.org/2005/gco">Organization website</gco:CharacterString>
+                  </description>
+                  <function>
+                    <CI_OnLineFunctionCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/Codelist/ML_gmxCodelists.xml#CI_OnLineFunctionCode" codeListValue="information">information</CI_OnLineFunctionCode>
+                  </function>
+                </CI_OnlineResource>
+              </onlineResource>
+              <hoursOfService>
+                <gco:CharacterString xmlns:gco="http://www.isotc211.org/2005/gco">Office hours, 5 days per week</gco:CharacterString>
+              </hoursOfService>
+              <contactInstructions>
+                <gco:CharacterString xmlns:gco="http://www.isotc211.org/2005/gco">Preferrably by e-mail</gco:CharacterString>
+              </contactInstructions>
+            </CI_Contact>
+          </contactInfo>
+          <role>
+            <CI_RoleCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/Codelist/ML_gmxCodelists.xml#CI_RoleCode" codeListValue="principalInvestigator">principalInvestigator</CI_RoleCode>
+          </role>
+        </CI_ResponsibleParty>
+      </pointOfContact>
+      <pointOfContact>
+        <CI_ResponsibleParty>
+          <organisationName>
+            <gco:CharacterString>Flemish Institute for Technological Research (VITO)</gco:CharacterString>
+          </organisationName>
+          <positionName>
+            <gco:CharacterString>Geoland2 Help Desk</gco:CharacterString>
+          </positionName>
+          <contactInfo>
+            <CI_Contact>
+              <address>
+                <CI_Address>
+                  <deliveryPoint>
+                    <gco:CharacterString>Boeretang 200</gco:CharacterString>
+                  </deliveryPoint>
+                  <city>
+                    <gco:CharacterString>Mol</gco:CharacterString>
+                  </city>
+                  <postalCode>
+                    <gco:CharacterString>2400</gco:CharacterString>
+                  </postalCode>
+                  <country>
+                    <Country codeList="http://www.iso.org/iso/en/prods-services/iso3166ma/02iso-3166-code-lists/index.html" codeListValue="BE" codeSpace="ISO 3166-1">Belgium</Country>
+                  </country>
+                  <electronicMailAddress>
+                    <gco:CharacterString>helpdesk@vgt.vito.be</gco:CharacterString>
+                  </electronicMailAddress>
+                </CI_Address>
+              </address>
+              <onlineResource>
+                <CI_OnlineResource>
+                  <linkage>
+                    <URL>http://www.vito.be</URL>
+                  </linkage>
+                  <protocol>
+                    <gco:CharacterString>HTTP</gco:CharacterString>
+                  </protocol>
+                  <name>
+                    <gco:CharacterString>VITO website</gco:CharacterString>
+                  </name>
+                  <description>
+                    <gco:CharacterString>Organization website</gco:CharacterString>
+                  </description>
+                  <function>
+                    <CI_OnLineFunctionCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/Codelist/ML_gmxCodelists.xml#CI_OnLineFunctionCode" codeListValue="information">information</CI_OnLineFunctionCode>
+                  </function>
+                </CI_OnlineResource>
+              </onlineResource>
+              <hoursOfService>
+                <gco:CharacterString>Office hours, 7 days per week</gco:CharacterString>
+              </hoursOfService>
+              <contactInstructions>
+                <gco:CharacterString>Preferrably by e-mail</gco:CharacterString>
+              </contactInstructions>
+            </CI_Contact>
+          </contactInfo>
+          <role>
+            <CI_RoleCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/Codelist/ML_gmxCodelists.xml#CI_RoleCode" codeListValue="originator">originator</CI_RoleCode>
+          </role>
+        </CI_ResponsibleParty>
+      </pointOfContact>
+      <resourceMaintenance>
+        <MD_MaintenanceInformation>
+          <maintenanceAndUpdateFrequency>
+            <MD_MaintenanceFrequencyCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/Codelist/ML_gmxCodelists.xml#MD_MaintenanceFrequencyCode" codeListValue="asNeeded">asNeeded</MD_MaintenanceFrequencyCode>
+          </maintenanceAndUpdateFrequency>
+          <updateScope>
+            <MD_ScopeCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/Codelist/ML_gmxCodelists.xml#MD_ScopeCode" codeListValue="dataset">dataset</MD_ScopeCode>
+          </updateScope>
+        </MD_MaintenanceInformation>
+      </resourceMaintenance>
+      <graphicOverview>
+        <MD_BrowseGraphic>
+          <fileName>
+            <gco:CharacterString>g2_BIOPAR_FCOVER_QL_20110321_OCEA</gco:CharacterString>
+          </fileName>
+          <fileDescription>
+            <gco:CharacterString>Quicklook at 16 times reduced resolution of FCOVER dataset.</gco:CharacterString>
+          </fileDescription>
+          <fileType>
+            <gco:CharacterString>GEOTIFF</gco:CharacterString>
+          </fileType>
+        </MD_BrowseGraphic>
+      </graphicOverview>
+      <resourceFormat>
+        <MD_Format>
+          <name>
+            <gco:CharacterString>HDF</gco:CharacterString>
+          </name>
+          <version>
+            <gco:CharacterString>5</gco:CharacterString>
+          </version>
+          <specification>
+            <gco:CharacterString>Hierarchical Data Format</gco:CharacterString>
+          </specification>
+        </MD_Format>
+      </resourceFormat>
+      <descriptiveKeywords>
+        <MD_Keywords>
+          <keyword>
+            <gco:CharacterString>Orthoimagery</gco:CharacterString>
+          </keyword>
+          <type>
+            <MD_KeywordTypeCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/Codelist/ML_gmxCodelists.xml#MD_KeywordTypeCode" codeListValue="theme">theme</MD_KeywordTypeCode>
+          </type>
+          <thesaurusName>
+            <CI_Citation>
+              <title>
+                <gco:CharacterString>GEMET - INSPIRE themes, version 1.0</gco:CharacterString>
+              </title>
+              <date>
+                <CI_Date>
+                  <date>
+                    <gco:Date>2008-06-01</gco:Date>
+                  </date>
+                  <dateType>
+                    <CI_DateTypeCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/Codelist/ML_gmxCodelists.xml#CI_DateTypeCode" codeListValue="publication">publication</CI_DateTypeCode>
+                  </dateType>
+                </CI_Date>
+              </date>
+            </CI_Citation>
+          </thesaurusName>
+        </MD_Keywords>
+      </descriptiveKeywords>
+      <descriptiveKeywords>
+        <MD_Keywords>
+          <keyword>
+            <gco:CharacterString>geophysical environment</gco:CharacterString>
+          </keyword>
+          <thesaurusName>
+            <CI_Citation>
+              <title>
+                <gco:CharacterString>GEMET - Concepts, version 2.1</gco:CharacterString>
+              </title>
+              <date>
+                <CI_Date>
+                  <date>
+                    <gco:Date>2008-06-13</gco:Date>
+                  </date>
+                  <dateType>
+                    <CI_DateTypeCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/Codelist/ML_gmxCodelists.xml#CI_DateTypeCode" codeListValue="publication">publication</CI_DateTypeCode>
+                  </dateType>
+                </CI_Date>
+              </date>
+            </CI_Citation>
+          </thesaurusName>
+        </MD_Keywords>
+      </descriptiveKeywords>
+      <descriptiveKeywords>
+        <MD_Keywords>
+          <keyword>
+            <gco:CharacterString>biogeophysical</gco:CharacterString>
+          </keyword>
+          <keyword>
+            <gco:CharacterString>vegetation cover</gco:CharacterString>
+          </keyword>
+          <type>
+            <MD_KeywordTypeCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/Codelist/ML_gmxCodelists.xml#MD_KeywordTypeCode" codeListValue="theme">theme</MD_KeywordTypeCode>
+          </type>
+        </MD_Keywords>
+      </descriptiveKeywords>
+      <descriptiveKeywords>
+        <MD_Keywords>
+          <keyword>
+            <gco:CharacterString>OCEA</gco:CharacterString>
+          </keyword>
+          <type>
+            <MD_KeywordTypeCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/Codelist/ML_gmxCodelists.xml#MD_KeywordTypeCode" codeListValue="place">place</MD_KeywordTypeCode>
+          </type>
+        </MD_Keywords>
+      </descriptiveKeywords>
+      <descriptiveKeywords>
+        <MD_Keywords>
+          <keyword>
+            <gco:CharacterString>Dekad</gco:CharacterString>
+          </keyword>
+          <keyword>
+            <gco:CharacterString>30-day composite</gco:CharacterString>
+          </keyword>
+          <type>
+            <MD_KeywordTypeCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/Codelist/ML_gmxCodelists.xml#MD_KeywordTypeCode" codeListValue="temporal">temporal</MD_KeywordTypeCode>
+          </type>
+        </MD_Keywords>
+      </descriptiveKeywords>
+      <resourceConstraints>
+        <MD_Constraints>
+          <useLimitation>
+            <gco:CharacterString>No limitation of use</gco:CharacterString>
+          </useLimitation>
+        </MD_Constraints>
+      </resourceConstraints>
+      <resourceConstraints>
+        <MD_LegalConstraints>
+          <useConstraints>
+            <MD_RestrictionCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/Codelist/ML_gmxCodelists.xml#MD_RestrictionCode" codeListValue="copyright">@geoland2 consortium</MD_RestrictionCode>
+          </useConstraints>
+        </MD_LegalConstraints>
+      </resourceConstraints>
+      <resourceConstraints>
+        <MD_LegalConstraints>
+          <accessConstraints>
+            <MD_RestrictionCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/Codelist/ML_gmxCodelists.xml#MD_RestrictionCode" codeListValue="otherRestrictions">otherRestrictions</MD_RestrictionCode>
+          </accessConstraints>
+          <otherConstraints>
+            <gco:CharacterString>(d) the confidentiality of commercial or industrial information, where such confidentiality is provided for by national or Community law to protect a legitimate economic interest, including the public interest in maintaining statistical confidentiality and tax secrecy.</gco:CharacterString>
+          </otherConstraints>
+        </MD_LegalConstraints>
+      </resourceConstraints>
+      <aggregationInfo>
+        <MD_AggregateInformation>
+          <associationType>
+            <DS_AssociationTypeCode codeList="http://www.isotc211.org/2005/resources/codelist/gmxCodelists.xml#DS_AssociationTypeCode" codeListValue="partOfSeamlessDatabase">partOfSeamlessDatabase</DS_AssociationTypeCode>
+          </associationType>
+          <initiativeType>
+            <DS_InitiativeTypeCode codeList="http://www.isotc211.org/2005/resources/codelist/gmxCodelists.xml#DS_InitiativeTypeCode" codeListValue="project">project</DS_InitiativeTypeCode>
+          </initiativeType>
+        </MD_AggregateInformation>
+      </aggregationInfo>
+      <aggregationInfo>
+        <MD_AggregateInformation>
+          <!--A bit awkward place to use, but no other option seen-->
+          <associationType>
+            <DS_AssociationTypeCode codeList="http://www.isotc211.org/2005/resources/codelist/gmxCodelists.xml#DS_AssociationTypeCode" codeListValue="source">source</DS_AssociationTypeCode>
+          </associationType>
+          <initiativeType>
+            <DS_InitiativeTypeCode codeList="http://www.isotc211.org/2005/resources/codelist/gmxCodelists.xml#DS_AssociationTypeCode" codeListValue="platform">SPOT_5</DS_InitiativeTypeCode>
+          </initiativeType>
+        </MD_AggregateInformation>
+      </aggregationInfo>
+      <aggregationInfo>
+        <MD_AggregateInformation>
+          <!--A bit awkward place to use, but no other option seen-->
+          <associationType>
+            <DS_AssociationTypeCode codeList="http://www.isotc211.org/2005/resources/codelist/gmxCodelists.xml#DS_AssociationTypeCode" codeListValue="source">source</DS_AssociationTypeCode>
+          </associationType>
+          <initiativeType>
+            <DS_InitiativeTypeCode codeList="http://www.isotc211.org/2005/resources/codelist/gmxCodelists.xml#DS_AssociationTypeCode" codeListValue="sensor">VEGETATION_2</DS_InitiativeTypeCode>
+          </initiativeType>
+        </MD_AggregateInformation>
+      </aggregationInfo>
+      <spatialRepresentationType>
+        <MD_SpatialRepresentationTypeCode codeList="MD_SpatialRepresentationTypeCode" codeListValue="grid" />
+      </spatialRepresentationType>
+      <spatialResolution>
+        <MD_Resolution>
+          <distance>
+            <gco:Distance uom="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/uom/ML_gmxUom.xml#deg">0.00892857142857</gco:Distance>
+          </distance>
+        </MD_Resolution>
+      </spatialResolution>
+      <language>
+        <gco:CharacterString>eng</gco:CharacterString>
+      </language>
+      <characterSet>
+        <MD_CharacterSetCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/Codelist/ML_gmxCodelists.xml#MD_CharacterSetCode" codeListValue="utf8">utf8</MD_CharacterSetCode>
+      </characterSet>
+      <topicCategory>
+        <MD_TopicCategoryCode>imageryBaseMapsEarthCover</MD_TopicCategoryCode>
+      </topicCategory>
+      <topicCategory>
+        <MD_TopicCategoryCode>biota</MD_TopicCategoryCode>
+      </topicCategory>
+      <topicCategory>
+        <MD_TopicCategoryCode>farming</MD_TopicCategoryCode>
+      </topicCategory>
+      <topicCategory>
+        <MD_TopicCategoryCode>environment</MD_TopicCategoryCode>
+      </topicCategory>
+      <extent>
+        <EX_Extent>
+          <geographicElement>
+            <EX_GeographicBoundingBox>
+              <westBoundLongitude>
+                <gco:Decimal>100</gco:Decimal>
+              </westBoundLongitude>
+              <eastBoundLongitude>
+                <gco:Decimal>180</gco:Decimal>
+              </eastBoundLongitude>
+              <southBoundLatitude>
+                <gco:Decimal>-50</gco:Decimal>
+              </southBoundLatitude>
+              <northBoundLatitude>
+                <gco:Decimal>0</gco:Decimal>
+              </northBoundLatitude>
+            </EX_GeographicBoundingBox>
+          </geographicElement>
+        </EX_Extent>
+      </extent>
+      <extent>
+        <EX_Extent>
+          <temporalElement>
+            <EX_TemporalExtent>
+              <extent>
+                <gml:TimePeriod gml:id="extent_tp" frame="#ISO-8601">
+                  <gml:description>30-days composite with a sliding window of 10 days</gml:description>
+                  <gml:name>dekad</gml:name>
+                  <gml:beginPosition>2011-03-01T00:00:00</gml:beginPosition>
+                  <gml:endPosition>2011-03-31T23:59:59</gml:endPosition>
+                </gml:TimePeriod>
+              </extent>
+            </EX_TemporalExtent>
+          </temporalElement>
+        </EX_Extent>
+      </extent>
+      <supplementalInformation>
+        <gco:CharacterString>http://www.geoland2.eu/portal/system/vgtextract.html</gco:CharacterString>
+      </supplementalInformation>
+    </MD_DataIdentification>
+  </identificationInfo>
+  <contentInfo>
+    <MD_ImageDescription uuid="">
+      <attributeDescription>
+        <gco:RecordType>FCOVER values with bitwise encoded quality information</gco:RecordType>
+      </attributeDescription>
+      <contentType>
+        <MD_CoverageContentTypeCode codeList="http://www.isotc211.org/2005/resources/codelist/gmxCodelists.xml#MD_CoverageContentTypeCode" codeListValue="image">image</MD_CoverageContentTypeCode>
+      </contentType>
+      <radiometricCalibrationDataAvailability>
+        <gco:Boolean>true</gco:Boolean>
+      </radiometricCalibrationDataAvailability>
+    </MD_ImageDescription>
+    <!--Future releases could add more MD_ImageDescription information-->
+  </contentInfo>
+  <contentInfo>
+    <MD_CoverageDescription uuid="FCOVER">
+      <attributeDescription>
+        <gco:RecordType xmlns:gco="http://www.isotc211.org/2005/gco">FCOVER</gco:RecordType>
+      </attributeDescription>
+      <contentType>
+        <MD_CoverageContentTypeCode codeList="http://www.isotc211.org/2005/resources/codelist/gmxCodelists.xml#MD_CoverageContentTypeCode" codeListValue="image" />
+      </contentType>
+      <dimension>
+        <MD_Band>
+          <sequenceIdentifier>
+            <gco:MemberName xmlns:gco="http://www.isotc211.org/2005/gco">
+              <gco:aName>
+                <gco:CharacterString>Digital Number</gco:CharacterString>
+              </gco:aName>
+              <gco:attributeType>
+                <gco:TypeName>
+                  <gco:aName>
+                    <gco:CharacterString>value type</gco:CharacterString>
+                  </gco:aName>
+                </gco:TypeName>
+              </gco:attributeType>
+            </gco:MemberName>
+          </sequenceIdentifier>
+          <descriptor>
+            <gco:CharacterString xmlns:gco="http://www.isotc211.org/2005/gco">Significant digital value range</gco:CharacterString>
+          </descriptor>
+          <maxValue>
+            <gco:Real xmlns:gco="http://www.isotc211.org/2005/gco">250</gco:Real>
+          </maxValue>
+          <minValue>
+            <gco:Real xmlns:gco="http://www.isotc211.org/2005/gco">0</gco:Real>
+          </minValue>
+          <bitsPerValue>
+            <gco:Integer xmlns:gco="http://www.isotc211.org/2005/gco">8</gco:Integer>
+          </bitsPerValue>
+          <scaleFactor>
+            <gco:Real xmlns:gco="http://www.isotc211.org/2005/gco">250</gco:Real>
+          </scaleFactor>
+          <offset>
+            <gco:Real xmlns:gco="http://www.isotc211.org/2005/gco">0.0</gco:Real>
+          </offset>
+        </MD_Band>
+      </dimension>
+      <dimension>
+        <MD_Band>
+          <sequenceIdentifier>
+            <gco:MemberName xmlns:gco="http://www.isotc211.org/2005/gco">
+              <gco:aName>
+                <gco:CharacterString>Physical Value</gco:CharacterString>
+              </gco:aName>
+              <gco:attributeType>
+                <gco:TypeName>
+                  <gco:aName>
+                    <gco:CharacterString>value type</gco:CharacterString>
+                  </gco:aName>
+                </gco:TypeName>
+              </gco:attributeType>
+            </gco:MemberName>
+          </sequenceIdentifier>
+          <descriptor>
+            <gco:CharacterString xmlns:gco="http://www.isotc211.org/2005/gco">FCOVER</gco:CharacterString>
+          </descriptor>
+          <maxValue>
+            <gco:Real xmlns:gco="http://www.isotc211.org/2005/gco">1.0</gco:Real>
+          </maxValue>
+          <minValue>
+            <gco:Real xmlns:gco="http://www.isotc211.org/2005/gco">0</gco:Real>
+          </minValue>
+          <units>
+            <gml:UnitDefinition gml:id="unitless" xmlns:gml="http://www.opengis.net/gml">
+              <gml:description>Unitless index</gml:description>
+              <gml:identifier codeSpace="">unitless</gml:identifier>
+              <gml:name>-</gml:name>
+              <gml:remarks />
+              <gml:quantityType>Fraction of vegetation Cover</gml:quantityType>
+            </gml:UnitDefinition>
+          </units>
+        </MD_Band>
+      </dimension>
+      <dimension>
+        <MD_Band>
+          <sequenceIdentifier>
+            <gco:MemberName xmlns:gco="http://www.isotc211.org/2005/gco">
+              <gco:aName>
+                <gco:CharacterString>Invalid</gco:CharacterString>
+              </gco:aName>
+              <gco:attributeType>
+                <gco:TypeName>
+                  <gco:aName>
+                    <gco:CharacterString>flag type</gco:CharacterString>
+                  </gco:aName>
+                </gco:TypeName>
+              </gco:attributeType>
+            </gco:MemberName>
+          </sequenceIdentifier>
+          <descriptor>
+            <gco:CharacterString xmlns:gco="http://www.isotc211.org/2005/gco">Invalid</gco:CharacterString>
+          </descriptor>
+          <maxValue>
+            <gco:Real xmlns:gco="http://www.isotc211.org/2005/gco">255</gco:Real>
+          </maxValue>
+          <minValue>
+            <gco:Real xmlns:gco="http://www.isotc211.org/2005/gco">255</gco:Real>
+          </minValue>
+          <bitsPerValue>
+            <gco:Integer xmlns:gco="http://www.isotc211.org/2005/gco">8</gco:Integer>
+          </bitsPerValue>
+        </MD_Band>
+      </dimension>
+      <dimension>
+        <MD_Band>
+          <sequenceIdentifier>
+            <gco:MemberName xmlns:gco="http://www.isotc211.org/2005/gco">
+              <gco:aName>
+                <gco:CharacterString>Out of range inferior</gco:CharacterString>
+              </gco:aName>
+              <gco:attributeType>
+                <gco:TypeName>
+                  <gco:aName>
+                    <gco:CharacterString>flag type</gco:CharacterString>
+                  </gco:aName>
+                </gco:TypeName>
+              </gco:attributeType>
+            </gco:MemberName>
+          </sequenceIdentifier>
+          <descriptor>
+            <gco:CharacterString xmlns:gco="http://www.isotc211.org/2005/gco">OutOfRange_Inf</gco:CharacterString>
+          </descriptor>
+          <maxValue>
+            <gco:Real xmlns:gco="http://www.isotc211.org/2005/gco">254</gco:Real>
+          </maxValue>
+          <minValue>
+            <gco:Real xmlns:gco="http://www.isotc211.org/2005/gco">254</gco:Real>
+          </minValue>
+          <bitsPerValue>
+            <gco:Integer xmlns:gco="http://www.isotc211.org/2005/gco">8</gco:Integer>
+          </bitsPerValue>
+        </MD_Band>
+      </dimension>
+      <dimension>
+        <MD_Band>
+          <sequenceIdentifier>
+            <gco:MemberName xmlns:gco="http://www.isotc211.org/2005/gco">
+              <gco:aName>
+                <gco:CharacterString>Out of range superior</gco:CharacterString>
+              </gco:aName>
+              <gco:attributeType>
+                <gco:TypeName>
+                  <gco:aName>
+                    <gco:CharacterString>flag type</gco:CharacterString>
+                  </gco:aName>
+                </gco:TypeName>
+              </gco:attributeType>
+            </gco:MemberName>
+          </sequenceIdentifier>
+          <descriptor>
+            <gco:CharacterString xmlns:gco="http://www.isotc211.org/2005/gco">OutOfRange_Sup</gco:CharacterString>
+          </descriptor>
+          <maxValue>
+            <gco:Real xmlns:gco="http://www.isotc211.org/2005/gco">253</gco:Real>
+          </maxValue>
+          <minValue>
+            <gco:Real xmlns:gco="http://www.isotc211.org/2005/gco">253</gco:Real>
+          </minValue>
+          <bitsPerValue>
+            <gco:Integer xmlns:gco="http://www.isotc211.org/2005/gco">8</gco:Integer>
+          </bitsPerValue>
+        </MD_Band>
+      </dimension>
+    </MD_CoverageDescription>
+  </contentInfo>
+  <contentInfo>
+    <MD_CoverageDescription uuid="FCOVER-ERR">
+      <attributeDescription>
+        <gco:RecordType xmlns:gco="http://www.isotc211.org/2005/gco">FCOVER-ERR (estimated uncertainty)</gco:RecordType>
+      </attributeDescription>
+      <contentType>
+        <MD_CoverageContentTypeCode codeList="http://www.isotc211.org/2005/resources/codelist/gmxCodelists.xml#MD_CoverageContentTypeCode" codeListValue="image" />
+      </contentType>
+      <dimension>
+        <MD_Band>
+          <sequenceIdentifier>
+            <gco:MemberName xmlns:gco="http://www.isotc211.org/2005/gco">
+              <gco:aName>
+                <gco:CharacterString>Digital Number</gco:CharacterString>
+              </gco:aName>
+              <gco:attributeType>
+                <gco:TypeName>
+                  <gco:aName>
+                    <gco:CharacterString>value type</gco:CharacterString>
+                  </gco:aName>
+                </gco:TypeName>
+              </gco:attributeType>
+            </gco:MemberName>
+          </sequenceIdentifier>
+          <descriptor>
+            <gco:CharacterString xmlns:gco="http://www.isotc211.org/2005/gco">Significant digital value range</gco:CharacterString>
+          </descriptor>
+          <maxValue>
+            <gco:Real xmlns:gco="http://www.isotc211.org/2005/gco">40</gco:Real>
+          </maxValue>
+          <minValue>
+            <gco:Real xmlns:gco="http://www.isotc211.org/2005/gco">0</gco:Real>
+          </minValue>
+          <bitsPerValue>
+            <gco:Integer xmlns:gco="http://www.isotc211.org/2005/gco">8</gco:Integer>
+          </bitsPerValue>
+          <scaleFactor>
+            <gco:Real xmlns:gco="http://www.isotc211.org/2005/gco">200</gco:Real>
+          </scaleFactor>
+          <offset>
+            <gco:Real xmlns:gco="http://www.isotc211.org/2005/gco">0.0</gco:Real>
+          </offset>
+        </MD_Band>
+      </dimension>
+      <dimension>
+        <MD_Band>
+          <sequenceIdentifier>
+            <gco:MemberName xmlns:gco="http://www.isotc211.org/2005/gco">
+              <gco:aName>
+                <gco:CharacterString>Physical Value</gco:CharacterString>
+              </gco:aName>
+              <gco:attributeType>
+                <gco:TypeName>
+                  <gco:aName>
+                    <gco:CharacterString>value type</gco:CharacterString>
+                  </gco:aName>
+                </gco:TypeName>
+              </gco:attributeType>
+            </gco:MemberName>
+          </sequenceIdentifier>
+          <descriptor>
+            <gco:CharacterString xmlns:gco="http://www.isotc211.org/2005/gco">Uncertainty on FCOVER</gco:CharacterString>
+          </descriptor>
+          <maxValue>
+            <gco:Real xmlns:gco="http://www.isotc211.org/2005/gco">0.2</gco:Real>
+          </maxValue>
+          <minValue>
+            <gco:Real xmlns:gco="http://www.isotc211.org/2005/gco">0</gco:Real>
+          </minValue>
+          <units>
+            <gml:UnitDefinition gml:id="unitless2" xmlns:gml="http://www.opengis.net/gml">
+              <gml:description>Unitless uncertainty factor</gml:description>
+              <gml:identifier codeSpace="">unitless</gml:identifier>
+              <gml:name>-</gml:name>
+              <gml:remarks>Multiply with 100 to get uncertainty percentage</gml:remarks>
+              <gml:quantityType>Uncertainty factor</gml:quantityType>
+            </gml:UnitDefinition>
+          </units>
+        </MD_Band>
+      </dimension>
+      <dimension>
+        <MD_Band>
+          <sequenceIdentifier>
+            <gco:MemberName xmlns:gco="http://www.isotc211.org/2005/gco">
+              <gco:aName>
+                <gco:CharacterString>Invalid</gco:CharacterString>
+              </gco:aName>
+              <gco:attributeType>
+                <gco:TypeName>
+                  <gco:aName>
+                    <gco:CharacterString>flag type</gco:CharacterString>
+                  </gco:aName>
+                </gco:TypeName>
+              </gco:attributeType>
+            </gco:MemberName>
+          </sequenceIdentifier>
+          <descriptor>
+            <gco:CharacterString xmlns:gco="http://www.isotc211.org/2005/gco">Invalid</gco:CharacterString>
+          </descriptor>
+          <maxValue>
+            <gco:Real xmlns:gco="http://www.isotc211.org/2005/gco">255</gco:Real>
+          </maxValue>
+          <minValue>
+            <gco:Real xmlns:gco="http://www.isotc211.org/2005/gco">255</gco:Real>
+          </minValue>
+          <bitsPerValue>
+            <gco:Integer xmlns:gco="http://www.isotc211.org/2005/gco">8</gco:Integer>
+          </bitsPerValue>
+        </MD_Band>
+      </dimension>
+    </MD_CoverageDescription>
+  </contentInfo>
+  <contentInfo>
+    <MD_CoverageDescription uuid="FCOVER-QFLAG">
+      <attributeDescription>
+        <gco:RecordType xmlns:gco="http://www.isotc211.org/2005/gco">QFLAG (bitwise encoded quality flag)</gco:RecordType>
+      </attributeDescription>
+      <contentType>
+        <MD_CoverageContentTypeCode codeList="http://www.isotc211.org/2005/resources/codelist/gmxCodelists.xml#MD_CoverageContentTypeCode" codeListValue="image" />
+      </contentType>
+      <dimension>
+        <MD_Band>
+          <sequenceIdentifier>
+            <gco:MemberName xmlns:gco="http://www.isotc211.org/2005/gco">
+              <gco:aName>
+                <gco:CharacterString>Digital Number</gco:CharacterString>
+              </gco:aName>
+              <gco:attributeType>
+                <gco:TypeName>
+                  <gco:aName>
+                    <gco:CharacterString>value type</gco:CharacterString>
+                  </gco:aName>
+                </gco:TypeName>
+              </gco:attributeType>
+            </gco:MemberName>
+          </sequenceIdentifier>
+          <descriptor>
+            <gco:CharacterString xmlns:gco="http://www.isotc211.org/2005/gco">Significant digital value range</gco:CharacterString>
+          </descriptor>
+          <maxValue>
+            <gco:Real xmlns:gco="http://www.isotc211.org/2005/gco">16384</gco:Real>
+          </maxValue>
+          <minValue>
+            <gco:Real xmlns:gco="http://www.isotc211.org/2005/gco">0</gco:Real>
+          </minValue>
+          <bitsPerValue>
+            <gco:Integer xmlns:gco="http://www.isotc211.org/2005/gco">16</gco:Integer>
+          </bitsPerValue>
+          <scaleFactor>
+            <gco:Real xmlns:gco="http://www.isotc211.org/2005/gco">1.0</gco:Real>
+          </scaleFactor>
+          <offset>
+            <gco:Real xmlns:gco="http://www.isotc211.org/2005/gco">0.0</gco:Real>
+          </offset>
+        </MD_Band>
+      </dimension>
+      <dimension>
+        <MD_Band>
+          <sequenceIdentifier>
+            <gco:MemberName xmlns:gco="http://www.isotc211.org/2005/gco">
+              <gco:aName>
+                <gco:CharacterString>Invalid</gco:CharacterString>
+              </gco:aName>
+              <gco:attributeType>
+                <gco:TypeName>
+                  <gco:aName>
+                    <gco:CharacterString>flag type</gco:CharacterString>
+                  </gco:aName>
+                </gco:TypeName>
+              </gco:attributeType>
+            </gco:MemberName>
+          </sequenceIdentifier>
+          <descriptor>
+            <gco:CharacterString xmlns:gco="http://www.isotc211.org/2005/gco">Invalid</gco:CharacterString>
+          </descriptor>
+          <maxValue>
+            <gco:Real xmlns:gco="http://www.isotc211.org/2005/gco">65535</gco:Real>
+          </maxValue>
+          <minValue>
+            <gco:Real xmlns:gco="http://www.isotc211.org/2005/gco">65535</gco:Real>
+          </minValue>
+          <bitsPerValue>
+            <gco:Integer xmlns:gco="http://www.isotc211.org/2005/gco">16</gco:Integer>
+          </bitsPerValue>
+        </MD_Band>
+      </dimension>
+    </MD_CoverageDescription>
+  </contentInfo>
+  <contentInfo>
+    <MD_CoverageDescription uuid="NMOD">
+      <attributeDescription>
+        <gco:RecordType xmlns:gco="http://www.isotc211.org/2005/gco">NMOD (number of clear observations)</gco:RecordType>
+      </attributeDescription>
+      <contentType>
+        <MD_CoverageContentTypeCode codeList="http://www.isotc211.org/2005/resources/codelist/gmxCodelists.xml#MD_CoverageContentTypeCode" codeListValue="image" />
+      </contentType>
+      <dimension>
+        <MD_Band>
+          <sequenceIdentifier>
+            <gco:MemberName xmlns:gco="http://www.isotc211.org/2005/gco">
+              <gco:aName>
+                <gco:CharacterString>Digital Number</gco:CharacterString>
+              </gco:aName>
+              <gco:attributeType>
+                <gco:TypeName>
+                  <gco:aName>
+                    <gco:CharacterString>value type</gco:CharacterString>
+                  </gco:aName>
+                </gco:TypeName>
+              </gco:attributeType>
+            </gco:MemberName>
+          </sequenceIdentifier>
+          <descriptor>
+            <gco:CharacterString xmlns:gco="http://www.isotc211.org/2005/gco">Significant digital value range</gco:CharacterString>
+          </descriptor>
+          <maxValue>
+            <gco:Real xmlns:gco="http://www.isotc211.org/2005/gco">60</gco:Real>
+          </maxValue>
+          <minValue>
+            <gco:Real xmlns:gco="http://www.isotc211.org/2005/gco">0</gco:Real>
+          </minValue>
+          <bitsPerValue>
+            <gco:Integer xmlns:gco="http://www.isotc211.org/2005/gco">8</gco:Integer>
+          </bitsPerValue>
+          <scaleFactor>
+            <gco:Real xmlns:gco="http://www.isotc211.org/2005/gco">1.0</gco:Real>
+          </scaleFactor>
+          <offset>
+            <gco:Real xmlns:gco="http://www.isotc211.org/2005/gco">0.0</gco:Real>
+          </offset>
+        </MD_Band>
+      </dimension>
+      <dimension>
+        <MD_Band>
+          <sequenceIdentifier>
+            <gco:MemberName xmlns:gco="http://www.isotc211.org/2005/gco">
+              <gco:aName>
+                <gco:CharacterString>Invalid</gco:CharacterString>
+              </gco:aName>
+              <gco:attributeType>
+                <gco:TypeName>
+                  <gco:aName>
+                    <gco:CharacterString>flag type</gco:CharacterString>
+                  </gco:aName>
+                </gco:TypeName>
+              </gco:attributeType>
+            </gco:MemberName>
+          </sequenceIdentifier>
+          <descriptor>
+            <gco:CharacterString xmlns:gco="http://www.isotc211.org/2005/gco">Invalid</gco:CharacterString>
+          </descriptor>
+          <maxValue>
+            <gco:Real xmlns:gco="http://www.isotc211.org/2005/gco">255</gco:Real>
+          </maxValue>
+          <minValue>
+            <gco:Real xmlns:gco="http://www.isotc211.org/2005/gco">255</gco:Real>
+          </minValue>
+          <bitsPerValue>
+            <gco:Integer xmlns:gco="http://www.isotc211.org/2005/gco">8</gco:Integer>
+          </bitsPerValue>
+        </MD_Band>
+      </dimension>
+    </MD_CoverageDescription>
+  </contentInfo>
+  <contentInfo>
+    <MD_CoverageDescription uuid="LMK">
+      <attributeDescription>
+        <gco:RecordType xmlns:gco="http://www.isotc211.org/2005/gco">LMK ( Land cover map)</gco:RecordType>
+      </attributeDescription>
+      <contentType>
+        <MD_CoverageContentTypeCode codeList="http://www.isotc211.org/2005/resources/codelist/gmxCodelists.xml#MD_CoverageContentTypeCode" codeListValue="image" />
+      </contentType>
+      <dimension>
+        <MD_Band>
+          <sequenceIdentifier>
+            <gco:MemberName xmlns:gco="http://www.isotc211.org/2005/gco">
+              <gco:aName>
+                <gco:CharacterString>Digital Number</gco:CharacterString>
+              </gco:aName>
+              <gco:attributeType>
+                <gco:TypeName>
+                  <gco:aName>
+                    <gco:CharacterString>value type</gco:CharacterString>
+                  </gco:aName>
+                </gco:TypeName>
+              </gco:attributeType>
+            </gco:MemberName>
+          </sequenceIdentifier>
+          <descriptor>
+            <gco:CharacterString xmlns:gco="http://www.isotc211.org/2005/gco">Significant digital value range</gco:CharacterString>
+          </descriptor>
+          <maxValue>
+            <gco:Real xmlns:gco="http://www.isotc211.org/2005/gco">255</gco:Real>
+          </maxValue>
+          <minValue>
+            <gco:Real xmlns:gco="http://www.isotc211.org/2005/gco">200</gco:Real>
+          </minValue>
+          <bitsPerValue>
+            <gco:Integer xmlns:gco="http://www.isotc211.org/2005/gco">8</gco:Integer>
+          </bitsPerValue>
+          <scaleFactor>
+            <gco:Real xmlns:gco="http://www.isotc211.org/2005/gco">1.0</gco:Real>
+          </scaleFactor>
+          <offset>
+            <gco:Real xmlns:gco="http://www.isotc211.org/2005/gco">0.0</gco:Real>
+          </offset>
+        </MD_Band>
+      </dimension>
+      <dimension>
+        <MD_Band>
+          <sequenceIdentifier>
+            <gco:MemberName xmlns:gco="http://www.isotc211.org/2005/gco">
+              <gco:aName>
+                <gco:CharacterString>Invalid</gco:CharacterString>
+              </gco:aName>
+              <gco:attributeType>
+                <gco:TypeName>
+                  <gco:aName>
+                    <gco:CharacterString>flag type</gco:CharacterString>
+                  </gco:aName>
+                </gco:TypeName>
+              </gco:attributeType>
+            </gco:MemberName>
+          </sequenceIdentifier>
+          <descriptor>
+            <gco:CharacterString xmlns:gco="http://www.isotc211.org/2005/gco">Invalid</gco:CharacterString>
+          </descriptor>
+          <maxValue>
+            <gco:Real xmlns:gco="http://www.isotc211.org/2005/gco">0</gco:Real>
+          </maxValue>
+          <minValue>
+            <gco:Real xmlns:gco="http://www.isotc211.org/2005/gco">0</gco:Real>
+          </minValue>
+          <bitsPerValue>
+            <gco:Integer xmlns:gco="http://www.isotc211.org/2005/gco">8</gco:Integer>
+          </bitsPerValue>
+        </MD_Band>
+      </dimension>
+    </MD_CoverageDescription>
+  </contentInfo>
+  <distributionInfo>
+    <MD_Distribution>
+      <distributionFormat>
+        <MD_Format>
+          <name>
+            <gco:CharacterString>ZIP archive</gco:CharacterString>
+          </name>
+          <version>
+            <gco:CharacterString> v3.2</gco:CharacterString>
+          </version>
+          <specification>
+            <gco:CharacterString>Standard PKZIP compatible Unix/Linux ZIP format</gco:CharacterString>
+          </specification>
+          <fileDecompressionTechnique>
+            <gco:CharacterString>unzip or pkunzip</gco:CharacterString>
+          </fileDecompressionTechnique>
+        </MD_Format>
+      </distributionFormat>
+      <distributor>
+        <MD_Distributor>
+          <distributorContact>
+            <CI_ResponsibleParty>
+              <organisationName>
+                <gco:CharacterString>Flemish Institute for Technological Research (VITO)</gco:CharacterString>
+              </organisationName>
+              <positionName>
+                <gco:CharacterString>VITO Helpdesk</gco:CharacterString>
+              </positionName>
+              <contactInfo>
+                <CI_Contact>
+                  <address>
+                    <CI_Address>
+                      <deliveryPoint>
+                        <gco:CharacterString>Boeretang 200</gco:CharacterString>
+                      </deliveryPoint>
+                      <city>
+                        <gco:CharacterString>Mol</gco:CharacterString>
+                      </city>
+                      <postalCode>
+                        <gco:CharacterString>2400</gco:CharacterString>
+                      </postalCode>
+                      <country>
+                        <Country codeList="http://www.iso.org/iso/en/prods-services/iso3166ma/02iso-3166-code-lists/index.html" codeListValue="BE" codeSpace="ISO 3166-1">Belgium </Country>
+                      </country>
+                      <electronicMailAddress>
+                        <gco:CharacterString>helpdesk@vgt.vito.be</gco:CharacterString>
+                      </electronicMailAddress>
+                    </CI_Address>
+                  </address>
+                  <onlineResource>
+                    <CI_OnlineResource>
+                      <linkage>
+                        <URL>http://www.geoland2.eu</URL>
+                      </linkage>
+                      <protocol>
+                        <gco:CharacterString>HTTP</gco:CharacterString>
+                      </protocol>
+                      <name>
+                        <gco:CharacterString>Geoland2 SDI portal</gco:CharacterString>
+                      </name>
+                      <description>
+                        <gco:CharacterString>Project portal</gco:CharacterString>
+                      </description>
+                      <function>
+                        <CI_OnLineFunctionCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/Codelist/ML_gmxCodelists.xml#CI_OnLineFunctionCode" codeListValue="information">information</CI_OnLineFunctionCode>
+                      </function>
+                    </CI_OnlineResource>
+                  </onlineResource>
+                  <hoursOfService>
+                    <gco:CharacterString>Office hours, 7 days per week</gco:CharacterString>
+                  </hoursOfService>
+                  <contactInstructions>
+                    <gco:CharacterString>Preferrably by e-mail</gco:CharacterString>
+                  </contactInstructions>
+                </CI_Contact>
+              </contactInfo>
+              <role>
+                <CI_RoleCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/Codelist/ML_gmxCodelists.xml#CI_RoleCode" codeListValue="distributor">distributor</CI_RoleCode>
+              </role>
+            </CI_ResponsibleParty>
+          </distributorContact>
+          <distributionOrderProcess>
+            <MD_StandardOrderProcess>
+              <fees>
+                <gco:CharacterString>Free by ftp and Eumetcast; cost of medium by DvD or tape</gco:CharacterString>
+              </fees>
+              <orderingInstructions>
+                <gco:CharacterString>Products can be downloaded on-line via HTTP (or FTP) or can be received through EUMETCast satellite reception in Africa and Latin-America. Users can also get the latest datasets in near-real time via FTP after subscription. To subscribe, please send an e-mail to mailto:helpdesk@vgt.vito.be, with subject 'geoland2 Biopar subscription' and the name of this dataset series. You will be contacted in a few days. When the subscription is accepted, you will be informed by e-mail whenever new products are available on the FTP-server.</gco:CharacterString>
+              </orderingInstructions>
+            </MD_StandardOrderProcess>
+          </distributionOrderProcess>
+        </MD_Distributor>
+      </distributor>
+      <transferOptions>
+        <MD_DigitalTransferOptions>
+          <unitsOfDistribution>
+            <gco:CharacterString>Per product</gco:CharacterString>
+          </unitsOfDistribution>
+          <transferSize>
+            <gco:Real>-</gco:Real>
+          </transferSize>
+          <onLine>
+            <CI_OnlineResource>
+              <linkage>
+                <URL>http://www.geoland2.eu/portal/order/PrepareOperation.do?serviceId=D3808080&amp;operation=Search&amp;collection=Fcover.1542e309-b483-4623-8e28-d7de768a1212</URL>
+              </linkage>
+              <protocol>
+                <gco:CharacterString>HTTP</gco:CharacterString>
+              </protocol>
+              <name>
+                <gco:CharacterString>Geoland2 BioPar VITO</gco:CharacterString>
+              </name>
+              <description>
+                <gco:CharacterString>1. Search and Order products on VITO Biopar Dataset Catalogue and Ordering service</gco:CharacterString>
+              </description>
+              <function>
+                <CI_OnLineFunctionCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/Codelist/ML_gmxCodelists.xml#CI_OnLineFunctionCode" codeListValue="download">download</CI_OnLineFunctionCode>
+              </function>
+            </CI_OnlineResource>
+          </onLine>
+        </MD_DigitalTransferOptions>
+      </transferOptions>
+      <transferOptions>
+        <MD_DigitalTransferOptions>
+          <onLine>
+            <CI_OnlineResource>
+              <linkage>
+                <URL>http://www.geoland2.eu/portal/system/subscription.html</URL>
+              </linkage>
+              <protocol>
+                <gco:CharacterString>HTTP</gco:CharacterString>
+              </protocol>
+              <name>
+                <gco:CharacterString>Geoland2 BioPar VITO</gco:CharacterString>
+              </name>
+              <description>
+                <gco:CharacterString>2. Subscribe to receive future products via e-mail</gco:CharacterString>
+              </description>
+              <function>
+                <CI_OnLineFunctionCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/Codelist/ML_gmxCodelists.xml#CI_OnLineFunctionCode" codeListValue="download">download</CI_OnLineFunctionCode>
+              </function>
+            </CI_OnlineResource>
+          </onLine>
+        </MD_DigitalTransferOptions>
+      </transferOptions>
+      <transferOptions>
+        <MD_DigitalTransferOptions>
+          <unitsOfDistribution>
+            <gco:CharacterString>Per product</gco:CharacterString>
+          </unitsOfDistribution>
+          <transferSize>
+            <gco:Real>-</gco:Real>
+          </transferSize>
+          <onLine>
+            <CI_OnlineResource>
+              <linkage>
+                <URL>mailto:helpdesk@vgt.vito.be</URL>
+              </linkage>
+              <name>
+                <gco:CharacterString>Geoland2 BioPar VITO</gco:CharacterString>
+              </name>
+              <description>
+                <gco:CharacterString>3. Request to receive products via Eumetcast</gco:CharacterString>
+              </description>
+            </CI_OnlineResource>
+          </onLine>
+        </MD_DigitalTransferOptions>
+      </transferOptions>
+    </MD_Distribution>
+  </distributionInfo>
+  <dataQualityInfo>
+    <DQ_DataQuality>
+      <scope>
+        <DQ_Scope>
+          <level>
+            <MD_ScopeCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/Codelist/ML_gmxCodelists.xml#MD_ScopeCode" codeListValue="dataset">dataset</MD_ScopeCode>
+          </level>
+        </DQ_Scope>
+      </scope>
+      <report>
+        <DQ_ThematicAccuracy>
+          <result>
+            <DQ_ConformanceResult>
+              <specification>
+                <CI_Citation>
+                  <title>
+                    <gco:CharacterString xmlns:gco="http://www.isotc211.org/2005/gco">Validation results conform CEOS LPV guidelines</gco:CharacterString>
+                  </title>
+                  <date>
+                    <CI_Date>
+                      <date>
+                        <gco:Date xmlns:gco="http://www.isotc211.org/2005/gco">2010-12-01</gco:Date>
+                      </date>
+                      <dateType>
+                        <CI_DateTypeCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/Codelist/ML_gmxCodelists.xml#CI_DateTypeCode" codeListValue="publication">publication</CI_DateTypeCode>
+                      </dateType>
+                    </CI_Date>
+                  </date>
+                </CI_Citation>
+              </specification>
+              <explanation>
+                <gco:CharacterString xmlns:gco="http://www.isotc211.org/2005/gco">http://web.vgt.vito.be/documents/BioPar/g2-BP-RP-BP022-ValidationReport-VGTV1Products-I1.00.pdf</gco:CharacterString>
+              </explanation>
+              <pass>
+                <gco:Boolean xmlns:gco="http://www.isotc211.org/2005/gco">1</gco:Boolean>
+              </pass>
+            </DQ_ConformanceResult>
+          </result>
+        </DQ_ThematicAccuracy>
+        <DQ_DomainConsistency>
+          <result>
+            <DQ_ConformanceResult>
+              <specification>
+                <CI_Citation>
+                  <title>
+                    <gco:CharacterString xmlns:gco="http://www.isotc211.org/2005/gco">INSPIRE Data Specification on orthoimagery - Guidelines</gco:CharacterString>
+                  </title>
+                  <date>
+                    <CI_Date>
+                      <date>
+                        <gco:Date xmlns:gco="http://www.isotc211.org/2005/gco">2010-04-26</gco:Date>
+                      </date>
+                      <dateType>
+                        <CI_DateTypeCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/Codelist/ML_gmxCodelists.xml#CI_DateTypeCode" codeListValue="publication">publication</CI_DateTypeCode>
+                      </dateType>
+                    </CI_Date>
+                  </date>
+                </CI_Citation>
+              </specification>
+              <explanation>
+                <gco:CharacterString xmlns:gco="http://www.isotc211.org/2005/gco">See the referenced specification</gco:CharacterString>
+              </explanation>
+              <pass>
+                <gco:Boolean xmlns:gco="http://www.isotc211.org/2005/gco">True</gco:Boolean>
+              </pass>
+            </DQ_ConformanceResult>
+          </result>
+        </DQ_DomainConsistency>
+      </report>
+      <lineage>
+        <LI_Lineage>
+          <statement>
+            <CharacterString xmlns="http://www.isotc211.org/2005/gco">The input data are the daily Top of the Atmosphere reflectances measured by the SPOT-VGT sensor. They are calibrated, the clouds and their shadows are removed, and they are atmospherically-corrected to get the Top Of the Canopy reflectances. The existing CYCLOPES V3.1 FCOVER product is scaled to correct a significant underestimation. Then, it is used to calibrate a neural network over the BELMANIP2 set of sites to relate the FCOVER to the corresponding atmospherically-corrected and directionally-normalized top of canopy SPOT/VEGETATION reflectances.</CharacterString>
+          </statement>
+        </LI_Lineage>
+      </lineage>
+    </DQ_DataQuality>
+  </dataQualityInfo>
+  <metadataMaintenance>
+    <MD_MaintenanceInformation>
+      <maintenanceAndUpdateFrequency>
+        <MD_MaintenanceFrequencyCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/Codelist/ML_gmxCodelists.xml#MD_MaintenanceFrequencyCode" codeListValue="asNeeded">asNeeded</MD_MaintenanceFrequencyCode>
+      </maintenanceAndUpdateFrequency>
+    </MD_MaintenanceInformation>
+  </metadataMaintenance>
+</MD_Metadata>

@@ -1535,6 +1535,7 @@ class WebDisseminator(ProcessingPackage):
 
         pass
 
+
 class OWSPreparator(ProcessingPackage):
     '''
     This class prepares the Web Map Service.
@@ -1973,12 +1974,47 @@ class MetadataGenerator(ProcessingPackage):
     CSW server.
     '''
 
-    # FIXME
-    # - implement this method
     def __init__(self, settings, timeslot, area, host=None, createIO=True):
-        # fields to include:
-        #   xmlOutDir, ...
-        pass
+        '''
+        Inputs:
+
+            settings - A systemsettings.models.Package object
+
+            timeslot - A datetime.datetime object
+
+            area - A systemsettings.models.Area object
+        '''
+
+        self.rawSettings = settings
+        self.name = settings.name
+        self.product = settings.product
+        super(MetadataGenerator, self).__init__(settings, timeslot, area,
+                                                host)
+        relCodeDir = utilities.parse_marked(
+                settings.packagepath_set.get(name='codeDir'), self)
+        self.codeDir = os.path.join(self.host.codePath, relCodeDir)
+        relMetaDir = utilities.parse_marked(
+                settings.packagepath_set.get(name='xmlOutDir'), self)
+        self.xmlOutDir = os.path.join(self.host.dataPath, relMetaDir)
+        relWorkDir = utilities.parse_marked(
+                settings.packagepath_set.get(name='workingDir'), self)
+        self.workingDir = os.path.join(self.host.dataPath, relWorkDir)
+        relMetaTemplateDir = utilities.parse_marked(
+                settings.packagepath_set.get(name='xmlTemplateDir'), self)
+        self.xmlTemplateDir = os.path.join(self.host.codePath, 
+                                           relMetaTemplateDir)
+        if createIO:
+            self.inputs = self._create_files(
+                'input', 
+                settings.packageInput_systemsettings_packageinput_related.all()
+            )
+            self.outputs = self._create_files(
+                'output', 
+                settings.packageOutput_systemsettings_packageoutput_related.all()
+            )
+            theTemplate = os.path.join(self.xmlTemplateDir, self.xmlTemplate)
+            self.mapper = mappers.NewNGPMapper()
+            self.mdGenerator = metadatas.MetadataGenerator(theTemplate, self.timeslot, self.product)
 
     # FIXME
     # - incorporate the 'tile' argument
@@ -1989,27 +2025,28 @@ class MetadataGenerator(ProcessingPackage):
 
         g2fs = self._filter_g2f_list(self.inputs, 'fileType', 'hdf5')
         found = self._find_files(g2fs, useArchive=True)
-        result = None
+        result = []
         for g2f, foundDict in found.iteritems():
-            for tilePath in foundDict['paths']:
+            self.logger.info('Processing %s files...' % g2f.name)
+            for index, tilePath in enumerate(foundDict['paths']):
+                self.logger.info('%i/%i - Generating metadata file...' % \
+                        (index + 1, len(foundDict['paths'])))
                 xmlFile = self.generate_xml_metadata(tilePath)
                 result.append(xmlFile)
         return result
 
-    # FIXME
-    # - implement this method
-    def generate_xml_metadata(tilePath):
+    def generate_xml_metadata(self, tilePath):
         '''
         Returns a string with the path to the xml file or None.
         '''
 
-        #if not self.host.is_dir(self.xmlOutDir):
-        #    self.host.make_dir(self.xmlOutDir)
-        #self.mdGenerator.apply_changes(tilePath, self.mapper, self.hdf5WebDir)
-        #pathFName = os.path.splitext(os.path.basename(tilePath))[0]
-        #xmlPath = os.path.join(self.xmlOutDir, '%s.xml' % pathFName)
-        #self.mdGenerator.save_xml(xmlPath)
-        return None
+        if not self.host.is_dir(self.xmlOutDir):
+            self.host.make_dir(self.xmlOutDir)
+        self.mdGenerator.apply_changes(tilePath, self.mapper)
+        pathFName = os.path.splitext(os.path.basename(tilePath))[0]
+        xmlPath = os.path.join(self.xmlOutDir, '%s.xml' % pathFName)
+        self.mdGenerator.save_xml(xmlPath)
+        return xmlPath
 
     # FIXME
     # - implement this method
@@ -2021,10 +2058,6 @@ class MetadataGenerator(ProcessingPackage):
         return False
 
     def run_main(self, generate=True, tile=None, populateCSW=True):
-        # find out what tiles are available
-        # for each tile (or just for the requested tile), generate the xml metadata
-        # if requested, send the metadata to the csw server
-        #
         # Add a csw server model, which should have as fields: name, host, 
         # serverURL, username, password. There should be only one CSW server
         #
@@ -2040,10 +2073,10 @@ class MetadataGenerator(ProcessingPackage):
         if populateCSW:
             inserted = self.insert_metadata_csw(xmlFiles)
 
-    # FIXME
-    # - implement this method
     def clean_up(self):
-        pass
+        self._delete_directories([self.workingDir])
+        self.host.clean_dirs(self.xmlOutDir)
+        return 0
 
 
 class GenericAggregationPackage(GenericItem):

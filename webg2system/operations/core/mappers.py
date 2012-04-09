@@ -749,4 +749,3 @@ class NewNGPMapper(object):
         posX = position[0] - font.getsize(txt)[0] / 2
         posY = position[1] - font.getsize(txt)[1] / 2
         im.paste(imgText, (posX, posY))
-

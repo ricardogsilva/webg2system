@@ -539,7 +539,7 @@ class MetadataGenerator(object):
         for c in contactEls:
             parentElement.remove(c)
 
-    def apply_changes(self, filePath, mapper, outputDir):
+    def apply_changes(self, filePath, mapper):
         '''
         Aplpy the changes to the XML tree.
 
@@ -548,9 +548,6 @@ class MetadataGenerator(object):
             filePath - the original HDF5 tile being processed.
 
             mapper - A Mapper instance.
-
-            outputDir - directory where the product tiles are made web 
-                accessible.
         '''
 
         productVersion = re.search(r'GEO_(v\d)$', filePath).groups()[0]
@@ -558,8 +555,9 @@ class MetadataGenerator(object):
         fileName = os.path.basename(filePath)
         fileTimeslot = utilities.extract_timeslot(filePath)
         fs = utilities.get_file_settings(filePath)
-        minx, miny, maxx, maxy = mapper.get_bounds(filePath)
-        tileName = mapper.get_area(filePath)
+        minx, miny, maxx, maxy = mapper.get_bounds(filePath, 
+                                                   self.product.pixelSize)
+        tileName = mapper._get_tile_name(filePath)
         uuid = str(uuid1())
         rootAttribs = self.tree.getroot().attrib
         rootAttribs['id'] = '%sMetadata' % self.product.short_name
@@ -597,7 +595,7 @@ class MetadataGenerator(object):
                                  positionName='Geoland2 Help Desk',
                                  contact=self.product.originator_collaborator)
         self._apply_graphic_overview(tileName, self.product)
-        self._apply_aggregation_infos(mapper)
+        self._apply_aggregation_infos()
         self._apply_temporal_extent(self.product, fileTimeslot)
         self._apply_keywords(self.product)
         self.update_element('resolution', '%.2f' % self.product.pixelSize)
@@ -652,7 +650,7 @@ class MetadataGenerator(object):
                                      namespaces=self.ns)[0]
         fileTypeEl.text = product.graphic_overview_type
 
-    def _apply_aggregation_infos(self, mapper):
+    def _apply_aggregation_infos(self):
         parentEl = self.tree.xpath('gmd:identificationInfo/'\
                                         'gmd:MD_DataIdentification', 
                                         namespaces=self.ns)[0]
@@ -664,7 +662,7 @@ class MetadataGenerator(object):
                     namespaces=self.ns)[0]
             if dsAssocTypeCode.text != 'partOfSeamlessDatabase':
                 parentEl.remove(previousAggInfo)
-        for sourceSett in mapper.product.sources.all():
+        for sourceSett in self.product.sources.all():
             sourceName = sourceSett.name
             sensor = sourceSett.sourceextrainfo_set.get(name='sensor').string
             self._apply_aggreg_info(parentEl, 'platform', sourceName)
