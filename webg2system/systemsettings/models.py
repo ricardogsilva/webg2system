@@ -332,3 +332,12 @@ class Dataset(models.Model):
 class WebServer(models.Model):
     host = models.ForeignKey(Host)
     public_URL = models.CharField(max_length=255)
+
+class CatalogueServer(models.Model):
+    host = models.ForeignKey(Host)
+    username = models.CharField(max_length=255)
+    password = models.CharField(max_length=50)
+    base_URL = models.CharField(max_length=255)
+    csw_URI = models.CharField(max_length=255)
+    login_URI = models.CharField(max_length=255)
+    logout_URI = models.CharField(max_length=255)

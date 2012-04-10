@@ -879,66 +879,90 @@ class MetadataGenerator(object):
         endEl.text = theTimeslot
         
     # FIXME
-    # this code is adapted from
-    # http://trac.osgeo.org/geonetwork/wiki/HowToDoCSWTransactionOperations#Python
-    def send_to_csw(self):
-        gn_username = 'admin'
-        gn_password = 'admin'
-        gn_baseURL = 'http://geo4.meteo.pt/geonetwork'
-        gn_loginURI = 'srv/en/xml.user.login'
-        gn_logoutURI = 'srv/en/xml.user.logout'
-        gn_cswURI = 'srv/en/csw'
+    # - test this method
+    def insert_csw(self, csw_url, login_url, logout_url, username,
+                    password, filePaths=None):
+        '''
+        Insert metadata records in the catalogue server.
 
-        # HTTP header for authentication
-        header_urlencode = {"Content-type": "application/x-www-form-urlencoded", "Accept": "text/plain"}
-        # HTTP header for CSW request
-        header_xml = {"Content-type": "application/xml", "Accept": "text/plain"}
-        # authentication Post parameters
-        post_parameters = urllib.urlencode({"username": gn_username, "password": gn_password})
+        This code is adapted from
+        http://trac.osgeo.org/geonetwork/wiki/HowToDoCSWTransactionOperations#Python
 
-        # Sample CSW transactions
-        xml_request = "<?xml version=\"1.0\"?>\
-               <csw:DescribeRecord xmlns:csw=\"http://www.opengis.net/cat/csw/2.0.2\"\
-               service=\"CSW\" version=\"2.0.2\" outputFormat=\"application/xml\"\
-               schemaLanguage=\"http://www.w3.org/XML/Schema\"/>"
+        Inputs:
+            
+            csw_url - URL for the CSW entry point.
 
-        url_in = '/'.join((gn_baseURL, gn_loginURI))
-        url_out = '/'.join((gn_baseURL, gn_logoutURI))
-        url_csw = '/'.join((gn_baseURL, gn_cswURI))
+            login_url - URL for the CSW log in page.
 
+            logout_url - URL for the CSW log out page.
 
-        # first, always log out
-        request = urllib2.Request(url_out)
-        response = urllib2.urlopen(request)
-        #print response.read()       # debug
+            username - username for the catalogue server's insert operation.
 
+            password - password for the user
+
+            filePaths - A list of xml files with the metadata to insert in the
+                catalogue. If None (the default), this instance's own tree
+                will be used.
+        '''
+
+        headers_auth = {
+            "Content-type": "application/x-www-form-urlencoded", 
+            "Accept": "text/plain"
+        }
+        headers_xml = {
+            "Content-type": "application/xml", 
+            "Accept": "text/plain"
+        }
+        data = urllib.urlencode({"username": username, "password": password})
+        logoutReq = urllib2.Request(logout_url) # first, always log out
+        response = urllib2.urlopen(logoutReq)
+        print response.read() # debug
         # send authentication request
-        request = urllib2.Request(url_in, post_parameters, header_urlencode)
-        response = urllib2.urlopen(request)
+        loginReq = urllib2.Request(login_url, data, headers_auth)
+        response = urllib2.urlopen(loginReq)
         # a basic memory-only cookie jar instance
         cookies = cookielib.CookieJar()
-        cookies.extract_cookies(response,request)
-        cookie_handler= urllib2.HTTPCookieProcessor( cookies )
+        cookies.extract_cookies(response,loginReq)
+        cookie_handler= urllib2.HTTPCookieProcessor(cookies)
         # a redirect handler
         redirect_handler= urllib2.HTTPRedirectHandler()
         # save cookie and redirect handler for future HTTP Posts
         opener = urllib2.build_opener(redirect_handler,cookie_handler)
+        if filePaths is not None:
+            # Process up to 30 files in each transaction in order to
+            # prevent out of memory errors on the CSW server
+            requestList = []
+            for index, fp in enumerate(filePaths):
+                requestList.append(fp)
+                if (index + 1) % 30 == 0:
+                    self._execute_csw_insert_request(requestList, csw_url, 
+                                                     headers_xml, opener)
+                    requestList = []
+            else:
+                self._execute_csw_insert_request(requestList, csw_url, 
+                                                 headers_xml, opener)
+        else:
+            self._execute_csw_insert_request([self.tree], csw_url, 
+                                             headers_xml, opener)
+        logoutReq = urllib2.Request(logout_url) # Last, always log out
+        response = opener.open(logoutReq)
+        print response.read() # debug
 
-        # CSW request
-        request = urllib2.Request(url_csw, xml_request2, header_xml)
-        response = opener.open(request)
-        # CSW respons
-        xml_response = response.read()
-        print xml_response  # debug
-
-        # Do something with the response. For example:
-        #xmldoc = minidom.parseString(xml_response)
-        #for node in xmldoc.getElementsByTagName('ows:ExceptionText'):       # display <ows:ExceptionText /> value(s)
-        #    print "    EXCEPTION: "+node.firstChild.nodeValue
-        #xmldoc.unlink()     # cleanup DOM for improved performance
-
-        # more CSW requests if desired
-        # Last, always log out
-        request = urllib2.Request(url_out)
-        response = opener.open(request)
-        #print response.read()       # debug
+    def _execute_csw_insert_request(self, fileList, url, headers, opener):
+        theRequest = '<?xml version="1.0" encoding="UTF-8"?>'\
+            '<csw:Transaction service="CSW" version="2.0.2" '\
+            'xmlns:csw="http://www.opengis.net/cat/csw/2.0.2">'
+        for filePath in fileList:
+            theXML = etree.parse(filePath)
+            theRequest += '<csw:Insert>' + etree.tostring(theXML) + '</csw:Insert>'
+        theRequest += '</csw:Transaction>'
+        try:
+            insertReq = urllib2.Request(url, theRequest, headers)
+            response = opener.open(insertReq)
+            # CSW response
+            xml_response = response.read()
+            print('insertReq response:')
+            print xml_response  # debug
+            print('------')
+        except urllib2.HTTPError, error:
+            print(error.read())

@@ -82,6 +82,15 @@ class ProductAdmin(admin.ModelAdmin):
 
 class WebServerAdmin(admin.ModelAdmin):
     list_display = ('host', 'public_URL')
+    
+    def has_add_permission(self, request):
+        return False
+
+class CatalogueServerAdmin(admin.ModelAdmin):
+    list_display = ('host', 'base_URL')
+    
+    def has_add_permission(self, request):
+        return False
 
 
 #admin.site.register(ExceptHour)
@@ -93,3 +102,4 @@ admin.site.register(File, FileAdmin)
 admin.site.register(Source, SourceAdmin)
 admin.site.register(Product, ProductAdmin)
 admin.site.register(WebServer, WebServerAdmin)
+admin.site.register(CatalogueServer, CatalogueServerAdmin)

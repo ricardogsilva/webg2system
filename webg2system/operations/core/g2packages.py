@@ -2049,13 +2049,30 @@ class MetadataGenerator(ProcessingPackage):
         return xmlPath
 
     # FIXME
-    # - implement this method
+    # - test this method
     def insert_metadata_csw(self, xmlFiles):
         '''
-        Returns a boolean with the insert operation's result.
+        Insert metadata records in the catalogue server.
+
+        Inputs:
+
+            xmlFiles - A list of paths to the newly-generated XML metadata
+                files.
+
+        Returns:
+        
+            A boolean with the insert operation's result.
         '''
 
-        return False
+        cswSetts = ss.CatalogueServer.objects.get()
+        csw_url = '/'.join((cswSetts.base_URL, cswSetts.csw_URI))
+        login_url = '/'.join((cswSetts.base_URL, cswSetts.login_URI))
+        logout_url = '/'.join((cswSetts.base_URL, cswSetts.logout_URI))
+        result = self.mdGenerator.insert_csw(csw_url, login_url, logout_url,
+                                             cswSetts.username, 
+                                             cswSetts.password,
+                                             filePaths=xmlFiles)
+        return result
 
     def run_main(self, generate=True, tile=None, populateCSW=True):
         # Add a csw server model, which should have as fields: name, host, 
@@ -2066,10 +2083,11 @@ class MetadataGenerator(ProcessingPackage):
             xmlFiles = self.generate_metadatas(tile)
         else:
             xmlOut = self._filter_g2f_list(self.outputs, 'fileType', 'xml')
-            found = self._find_files(xmlOut, useArchive=True)
+            found = self._fetch_files(xmlOut, self.workingDir, 
+                                      useArchive=True, decompress=True)
             xmlFiles = []
-            for g2f, foundDict in found.iteritems():
-                xmlFiles += foundDict['paths']
+            for g2f, pathList in found.iteritems():
+                xmlFiles += pathList
         if populateCSW:
             inserted = self.insert_metadata_csw(xmlFiles)
 
