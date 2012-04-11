@@ -15,6 +15,8 @@ import urllib2
 import cookielib
 from uuid import uuid1
 import datetime as dt
+import socket
+socket.setdefaulttimeout(None) # don't timeout
 
 import pycountry
 
@@ -934,7 +936,7 @@ class MetadataGenerator(object):
             requestList = []
             for index, fp in enumerate(filePaths):
                 requestList.append(fp)
-                if (index + 1) % 30 == 0:
+                if (index + 1) % 20 == 0:
                     self._execute_csw_insert_request(requestList, csw_url, 
                                                      headers_xml, opener)
                     requestList = []

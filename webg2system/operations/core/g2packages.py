@@ -1607,6 +1607,7 @@ class OWSPreparator(ProcessingPackage):
         '''
 
         mapfile = self.get_latest_mapfile()
+        print('mapfile: %s' % mapfile)
         rp = geotifPath.replace(self.mapfileShapePath, '').partition('/')[-1]
         updatedMapfile = self.mapper.update_latest_mapfile(mapfile, 
                                                            self.mapfileShapePath, 
@@ -1630,12 +1631,14 @@ class OWSPreparator(ProcessingPackage):
                 hasattr(i, 'latest')][0]
         mapName = g2f.searchPatterns[0]
         mapfile = os.path.join(self.mapfileOutDir, mapName)
+        print('mapfile aqui: %s' % mapfile)
         if self.host.is_file(mapfile):
             result = mapfile
         else:
             self.host.make_dir(self.mapfileOutDir)
             template = os.path.join(self.mapfileTemplateDir, mapName)
-            returnCode, result = self.host.send([template], self.mapfileOutDir)[0]
+            returnCode, resultList = self.host.send([template], self.mapfileOutDir)
+            result = resultList[0]
         return result
 
     def delete_outputs(self):

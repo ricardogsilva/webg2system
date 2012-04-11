@@ -370,6 +370,17 @@ class G2File(GenericItem):
     def _create_originator_pack(self, outputSettings):
         '''
         Return the package from where this instance is an output.
+
+        Usually a G2File instance can be an input to several packages
+        but it can only be an output from one package. However, there
+        can be special cases where a G2File instance is the output
+        from more than one package (for example the 'latest mapfile'
+        is an output from the 'prepare_wms_dssf', 'prepare_wms_dslf'
+        and other packages). In this case, this method will assume
+        that it is good enough just to pick one of the possible
+        originator packages and return it. This should be a good enough
+        approach as most of the time we will be interested in the output
+        directory of the parent package, and that will be the same.
         '''
 
         packSettings = outputSettings.package

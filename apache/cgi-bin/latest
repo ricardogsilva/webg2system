@@ -1,0 +1,10 @@
+#!/bin/sh
+
+# This is a wrapper script for Mapserver
+# It's been adapted from:
+#     http://mapserver.org/cgi/wrapper.html
+
+MAPSERV="/usr/lib/cgi-bin/mapserv"
+#MS_MAPFILE="/home/geo2/dev/mapfiles/mapa.map" exec ${MAPSERV}
+#MS_MAPFILE="/home/geo2/dev/G2System/new_code_testing/OUTPUT_DATA/web_dissemination/mapfiles/quicklooks.map" exec ${MAPSERV}
+MS_MAPFILE="/home/geo2/dev/G2System/new_code_testing/OUTPUT_DATA/wms_preparation/mapfiles/latestproducts.map" exec ${MAPSERV}
