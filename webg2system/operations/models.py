@@ -99,7 +99,7 @@ class RunningPackage(models.Model):
                     print(arg)
 
         Also accepts other arguments and keyword arguments that get passed
-        to the packages' run_main method. Available choices are:
+        to the packages' 'run_main()' method. Available choices are:
 
             Package:
                 Outra
@@ -108,6 +108,12 @@ class RunningPackage(models.Model):
                 OWSPreparator 
                     - generate (bool): True
                     - update (string): None
+                QuickLookGenerator
+                    - tile (string): None
+                MetadataGenerator
+                    - generate (bool): True
+                    - tile (string): None
+                    - populateCSW: True
         '''
 
         if callback is None:
@@ -137,6 +143,7 @@ class RunningPackage(models.Model):
         if runPackage:
             callback((self.progress(4, processSteps), 
                      'Running main process...'))
+            print('kwargs: %s' % kwargs)
             mainResult = pack.run_main(callback, *args, **kwargs)
             # Will be able to add other error codes later
             if mainResult not in (1,):

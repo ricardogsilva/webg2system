@@ -1947,7 +1947,7 @@ class QuickLookGenerator(ProcessingPackage):
                 quickLooks.append(ql)
         result = quickLooks
 
-    def run_main(self, tile=None):
+    def run_main(self, callback=None, tile=None):
         geotiff = self.find_geotiff()
         mapfile = self.update_mapfile(geotiff)
         if tile is None:
@@ -2051,8 +2051,6 @@ class MetadataGenerator(ProcessingPackage):
         self.mdGenerator.save_xml(xmlPath)
         return xmlPath
 
-    # FIXME
-    # - test this method
     def insert_metadata_csw(self, xmlFiles):
         '''
         Insert metadata records in the catalogue server.
@@ -2071,13 +2069,14 @@ class MetadataGenerator(ProcessingPackage):
         csw_url = '/'.join((cswSetts.base_URL, cswSetts.csw_URI))
         login_url = '/'.join((cswSetts.base_URL, cswSetts.login_URI))
         logout_url = '/'.join((cswSetts.base_URL, cswSetts.logout_URI))
+        self.logger.info('Sending metadata to CSW server...')
         result = self.mdGenerator.insert_csw(csw_url, login_url, logout_url,
                                              cswSetts.username, 
                                              cswSetts.password,
                                              filePaths=xmlFiles)
         return result
 
-    def run_main(self, generate=True, tile=None, populateCSW=True):
+    def run_main(self, callback=None, generate=True, tile=None, populateCSW=True):
         # Add a csw server model, which should have as fields: name, host, 
         # serverURL, username, password. There should be only one CSW server
         #
