@@ -1,9 +1,9 @@
 import os
 import time
 import re
-from random import randint
 from uuid import uuid1
 import datetime as dt
+import zipfile
 
 import systemsettings.models as ss
 
@@ -131,7 +131,7 @@ class GenericPackage(GenericItem):
                     objects.append(newObject)
         return objects
 
-    def _find_files(self, g2files, useArchive):
+    def _find_files(self, g2files, useArchive, restrictPattern=None):
         '''
         Inputs:
 
@@ -140,6 +140,11 @@ class GenericPackage(GenericItem):
             useArchive - A boolean indicating if the archives are to be
                 searched if the files are not found in their expected
                 location.
+
+            restrictPattern - A string, to be interpreted as a regular 
+                expression, to filter among all the possible files. This is 
+                useful for finding just a single tile from all the possible 
+                ones.
 
         Returns:
             A dictionary with the input g2files as keys and another 
@@ -157,11 +162,12 @@ class GenericPackage(GenericItem):
                                  'hour. Skipping...' % (g2f.name, g2f.hour))
             else:
                 self.logger.info('Looking for %s...' % g2f.name)
-                result[g2f] = g2f.find(useArchive)
+                result[g2f] = g2f.find(useArchive=useArchive, 
+                                       restrictPattern=restrictPattern)
         return result
 
     def _fetch_files(self, g2files, relTargetDir, useArchive, 
-                     decompress=False):
+                     decompress=False, restrictPattern=None):
         '''
         Fetch the input g2files from their destination to relTargetDir.
 
@@ -186,6 +192,11 @@ class GenericPackage(GenericItem):
                 False (meaning it will not be copied), it will never be
                 decompressed.
 
+            restrictPattern - A string, to be interpreted as a regular 
+                expression, to filter among all the possible files. This is 
+                useful for finding just a single tile from all the possible 
+                ones.
+
         Returns:
         
         A dictionary with the input g2files as keys and a list with the full 
@@ -200,7 +211,8 @@ class GenericPackage(GenericItem):
             else:
                 self.logger.info('Fetching %s...' % g2f.name)
                 localPathList = g2f.fetch(relTargetDir, useArchive, 
-                                          decompress=decompress)
+                                          decompress=decompress, 
+                                          restrictPattern=restrictPattern)
                 result[g2f] = localPathList
         return result
 
@@ -341,8 +353,6 @@ class ProcessingPackage(GenericPackage):
             #exec('self.%s = "%s"' % (extraInfo.name, extraInfo.string))
             exec('self.%s = utilities.parse_marked(extraInfo, self)' % 
                  extraInfo.name)
-        # a random number for generating unique working dirs
-        self.random = randint(0, 100)
 
     def find_inputs(self, useArchive=False):
         self.logger.debug('Looking for %s\'s inputs...' % self.name)
@@ -2019,9 +2029,7 @@ class MetadataGenerator(ProcessingPackage):
             self.mapper = mappers.NewNGPMapper()
             self.mdGenerator = metadatas.MetadataGenerator(theTemplate, self.timeslot, self.product)
 
-    # FIXME
-    # - incorporate the 'tile' argument
-    def generate_metadatas(self, tile=None):
+    def _process_all_tiles(self):
         '''
         Returns a list of xml filepaths.
         '''
@@ -2036,6 +2044,38 @@ class MetadataGenerator(ProcessingPackage):
                         (index + 1, len(foundDict['paths'])))
                 xmlFile = self.generate_xml_metadata(tilePath)
                 result.append(xmlFile)
+        return result
+
+    def _process_single_tile(self, tile, force=False):
+        result = None
+        alreadyThere = self.host.list_dir(self.xmlOutDir)
+        for metadata in alreadyThere:
+            if tile in metadata:
+                self.logger.debug('Found the xml metadata. No need to generate.')
+                result = metadata
+        if result is None:
+            g2fs = self._filter_g2f_list(self.inputs, 'fileType', 'hdf5')
+            theFilePath = None
+            current = 0
+            while (theFilePath is None) and (current < len(g2fs)):
+                g2f = g2fs[current]
+                found = self._find_files([g2f], useArchive=True)
+                isPresent = False
+                for patt in g2f.searchPatterns:
+                    if not isPresent:
+                        newPatt = re.sub(r'\(.*\)', tile, patt)
+                        for filePath in found[g2f]['paths']:
+                            reObj = re.search(newPatt, filePath)
+                            if reObj is not None:
+                                theFilePath = filePath
+                                isPresent = True
+                                break
+                current += 1
+            if theFilePath is not None:
+                self.logger.debug('About to generate a new xml.')
+                result = self.generate_xml_metadata(theFilePath)
+            else:
+                self.logger.error('The requested tile was not found.')
         return result
 
     def generate_xml_metadata(self, tilePath):
@@ -2076,22 +2116,16 @@ class MetadataGenerator(ProcessingPackage):
                                              filePaths=xmlFiles)
         return result
 
-    def run_main(self, callback=None, generate=True, tile=None, populateCSW=True):
-        # Add a csw server model, which should have as fields: name, host, 
-        # serverURL, username, password. There should be only one CSW server
-        #
-        pass
-        if generate:
-            xmlFiles = self.generate_metadatas(tile)
+    def run_main(self, callback=None, tile=None, populateCSW=True):
+        if tile is None:
+            xmlFiles = self._process_all_tiles()
+            result = xmlFiles
         else:
-            xmlOut = self._filter_g2f_list(self.outputs, 'fileType', 'xml')
-            found = self._fetch_files(xmlOut, self.workingDir, 
-                                      useArchive=True, decompress=True)
-            xmlFiles = []
-            for g2f, pathList in found.iteritems():
-                xmlFiles += pathList
+            xmlFiles = [self._process_single_tile(tile)]
+            result = xmlFiles[0]
         if populateCSW:
             inserted = self.insert_metadata_csw(xmlFiles)
+        return result
 
     def clean_up(self):
         self._delete_directories([self.workingDir])
@@ -2110,7 +2144,20 @@ class GenericAggregationPackage(GenericItem):
         raise NotImplementedError
 
     def clean_up(self, callback=None):
-        raise NotImplementedError
+        '''
+        Delete any temporary files.
+
+        The default implementation just calls the clean_up() method
+        of this instances inputPackages and outputPackages.
+        '''
+
+        packs = []
+        if hasattr(self, 'inputPackages'):
+            packs += self.inputPackages
+        if hasattr(self, 'outputPackages'):
+            packs += self.outputPackages
+        for p in packs:
+            p.clean_up()
 
     def __unicode__(self):
         return unicode(self.name)
@@ -2144,6 +2191,27 @@ class GenericAggregationPackage(GenericItem):
                     #self.logger.debug('----------') 
                     objects.append(newObject)
         return objects
+
+    def _filter_g2pack_list(self, g2packs, className):
+        '''
+        Return a list of G2Package instances that belong to the input class.
+        '''
+
+        result = []
+        for g2p in g2packs:
+            if g2p.__class__.__name__ == className:
+                result.append(g2p)
+        return result
+
+    def _delete_directories(self, dirPaths):
+        '''
+        Delete the directories specified and any contents they may have.
+
+        Also deletes any parent directories that may become empty.
+        '''
+
+        for dirPath in dirPaths:
+            self.host.remove_dir(dirPath)
 
 
 class Archivor(GenericAggregationPackage):
@@ -2181,9 +2249,100 @@ class Archivor(GenericAggregationPackage):
     def run_main(self):
         self.archive_output_files()
 
+
 class Cleaner(object):
     '''
     This class will remove old files from the local filesystem.
     '''
 
     pass
+
+
+class TileDistributor(GenericAggregationPackage):
+    '''
+    This class handles dissemination of tiled products.
+    '''
+
+    def __init__(self, settings, timeslot, area, host=None):
+
+        super(TileDistributor, self).__init__(timeslot, area.name, host)
+        self.name = settings.name
+        for extraInfo in settings.packageextrainfo_set.all():
+            #exec('self.%s = "%s"' % (extraInfo.name, extraInfo.string))
+            exec('self.%s = utilities.parse_marked(extraInfo, self)' % extraInfo.name)
+        relWorkDir = utilities.parse_marked(
+                settings.packagepath_set.get(name='workingDir'), self)
+        self.workingDir = os.path.join(self.host.dataPath, relWorkDir)
+
+        relZipDir = utilities.parse_marked(
+                settings.packagepath_set.get(name='zipOutDir'), self)
+        self.zipOutDir = os.path.join(self.host.dataPath, relZipDir)
+
+        self.inputPackages = self._create_packages(
+            'input', 
+            settings.packageInput_systemsettings_packageinput_related.all()
+        )
+
+    def run_main(self, callback=None, tile=None):
+        if tile is not None:
+            result = self.get_zip(tile)
+        else:
+            result = None
+        return result
+
+    def _build_zip(self, tile):
+        '''
+        Return a new zip file with the product tile, quicklook and metadata xml.
+        '''
+
+        self.host.make_dir(self.workingDir)
+        self.host.make_dir(self.zipOutDir)
+        # get the product tile
+        qlPack = self._filter_g2pack_list(self.inputPackages, 
+                                          'QuickLookGenerator')[0]
+        tileG2fs = qlPack._filter_g2f_list(qlPack.inputs, 'fileType', 'hdf5')
+        theProduct = None
+        for g2f in tileG2fs:
+            fetched = g2f.fetch(self.workingDir, useArchive=True, 
+                                decompress=False, restrictPattern=tile)
+            if len(fetched) > 0:
+                theProduct = self.host.compress(fetched)[0]
+        # get the quicklook
+        theQuickLook = qlPack.run_main(tile=tile)
+        # get the xml
+        xmlPack = self._filter_g2pack_list(self.inputPackages, 
+                                           'MetadataGenerator')[0]
+        theXml = xmlPack.run_main(tile=tile, populateCSW=False)
+        # bundle them into a zip file
+        zipName = os.path.basename(os.path.splitext(theProduct)[0]) + '.zip'
+        theZip = os.path.join(self.zipOutDir, zipName)
+        zf = zipfile.ZipFile(theZip, mode='w')
+        for filePath in (theProduct, theQuickLook, theXml):
+            zf.write(filePath, arcname=os.path.basename(filePath))
+        zf.close()
+        return theZip
+
+    def get_zip(self, tile):
+        # first try to find the already generated zip file
+        # if not found, generate a new one
+        theZip = None
+        qlPack = self._filter_g2pack_list(self.inputPackages, 
+                                          'QuickLookGenerator')[0]
+        tileG2fs = qlPack._filter_g2f_list(qlPack.inputs, 'fileType', 'hdf5')
+        for g2f in tileG2fs:
+            for patt in g2f.searchPatterns:
+                for filePath in self.host.list_dir(self.zipOutDir):
+                    if re.search(patt, filePath) is not None and \
+                            re.search(tile, filePath) is not None and \
+                            re.search(r'\.zip$', filePath) is not None:
+                        self.logger.debug('Found the zip file. No need to regenerate.')
+                        theZip = filePath
+        if theZip is None:
+            self.logger.debug('Generating a new zip file...')
+            theZip = self._build_zip(tile)
+        return theZip
+
+    def clean_up(self):
+        super(TileDistributor, self).clean_up()
+        self._delete_directories([self.workingDir])
+        self.host.clean_dirs(self.zipOutDir)

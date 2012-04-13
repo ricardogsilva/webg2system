@@ -5,6 +5,7 @@
 ...
 """
 
+from random import randint
 import logging
 
 from systemsettings.models import Area
@@ -38,6 +39,8 @@ class GenericItem(object):
         self.source = G2Source(area, timeslot)
         hf = HostFactory()
         self.host = hf.create_host(hostSettings)
+        # a random number for generating unique working dirs
+        self.random = randint(0, 100)
 
     @property
     def doy(self):

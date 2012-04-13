@@ -187,7 +187,7 @@ class G2LocalHost(G2Host):
             self.logger.warning('No such directory: %s' % fullPath)
         return dirList
 
-    def find(self, pathList):
+    def find(self, pathList, restrictPattern=None):
         '''
         Search for the paths in the local directory tree.
 
@@ -218,7 +218,11 @@ class G2LocalHost(G2Host):
             if dirExists:
                 for item in os.listdir(searchDir):
                     if patt.search(item) is not None:
-                        foundFiles.append(os.path.join(searchDir, item))
+                        if restrictPattern is not None:
+                            if re.search(restrictPattern, item) is not None:
+                                foundFiles.append(os.path.join(searchDir, item))
+                        else:
+                            foundFiles.append(os.path.join(searchDir, item))
             else:
                 self.logger.warning('No such directory: %s' % searchDir)
         return foundFiles
@@ -691,7 +695,7 @@ class G2RemoteHost(G2Host):
                 'ssh' : SSHProxy(self.user, self.host, self.password),
                 }
 
-    def find(self, pathList, protocol='ftp'):
+    def find(self, pathList, restrictPattern=None, protocol='ftp'):
         '''
         Find the paths.
 
@@ -717,7 +721,8 @@ class G2RemoteHost(G2Host):
                     fullSearchPaths.append(path)
                 else:
                     fullSearchPaths.append(os.path.join(self.dataPath, path))
-            foundFiles = self._localConnection['ftp'].find(fullSearchPaths)
+            foundFiles = self._localConnection['ftp'].find(fullSearchPaths, 
+                                                           restrictPattern)
         else:
             raise NotImplementedError
         return foundFiles

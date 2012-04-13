@@ -8,6 +8,7 @@ from django.http import HttpResponseRedirect, HttpResponse, Http404
 from django.shortcuts import render_to_response, get_object_or_404, get_list_or_404
 from django.core.urlresolvers import reverse
 from django.core.exceptions import ObjectDoesNotExist
+from django.core.servers.basehttp import FileWrapper
 from django.template import RequestContext
 from django.contrib.auth import authenticate, login, logout
 from django.views.decorators.csrf import csrf_exempt
@@ -16,7 +17,7 @@ from systemsettings.models import Package, Area, Host, File
 from forms import CreatePackageForm
 
 import systemsettings.models as ss
-from core.g2packages import QuickLookGenerator
+from core.g2packages import QuickLookGenerator, TileDistributor
 
 logger = logging.getLogger(__name__)
 
@@ -95,30 +96,24 @@ def execute_package(request):
                  )
     return result
 
-#FIXME - This view is not done yet
-def get_product_zip(request):
-    ts = dt.datetime.strptime(request.timeslot, '%Y%m%d%H%M')
-    name = request.prodName
-    theArea = '.*' # temporary hack
-    files = File.objects.filter(product__short_name=name, fileType='hdf5')
-    try:
-        rp = RunningPackage.objects.filter(
-                timeslot=ts, 
-                area__name=theArea,
-                settings__codeClass__className='WebDisseminator',
-                settings__packageOutput_systemsettings_packageoutput_related__outputItem__file__product__short_name=name).distinct()[0]
-    except IndexError:
-        # couldn't find the package
-        raise
-    pack = rp.create_package()
-    tileZip = pack.disseminate_web(request.area)
-    if tileZip is not None:
-        # make django return a zip file
-        pass
-    pass
+#FIXME - Test this view
+def get_product_zip(request, prodName, tile, timeslot):
+    ts = dt.datetime.strptime(timeslot, '%Y%m%d%H%M')
+    settings = ss.Package.objects.get(codeClass__className='TileDistributor',
+                                      product__short_name=prodName)
+    area = ss.Area.objects.get(name='.*')
+    pack = TileDistributor(settings, ts, area)
+    theZip = pack.run_main(tile=tile)
+    if theZip is not None:
+        response = HttpResponse(FileWrapper(open(theZip)), 
+                                content_type='application/zip')
+        response['Content-Disposition'] = 'attachment; filename=%s' \
+                                          % os.path.basename(theZip)
+        result = response
+    else:
+        raise Http404
+    return result
 
-# FIXME
-# - test this view
 def get_quicklook(request, prodName, tile, timeslot):
     ts = dt.datetime.strptime(timeslot, '%Y%m%d%H%M')
     settings = ss.Package.objects.get(codeClass__className='QuickLookGenerator',

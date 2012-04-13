@@ -65,11 +65,17 @@ class G2File(GenericItem):
         hf = HostFactory()
         self.archives = [hf.create_host(hs) for hs in fileSettings.specificArchives.all()]
 
-    def find(self, useArchive=False, staticFiles='latest timeslot absolute'):
+    def find(self, restrictPattern=None, useArchive=False, 
+             staticFiles='latest timeslot absolute'):
         '''
         Find the files and return their fullPaths.
 
         Inputs:
+
+            restrictPattern - A string, to be interpreted as a regular 
+                expression, to filter among all the possible files. This is 
+                useful for finding just a single tile from all the possible 
+                ones.
 
             useArchive - A boolean indicating if the file's specific 
                 archives are to be searched. Defaults to False.
@@ -116,11 +122,11 @@ class G2File(GenericItem):
             theHost = hostList[hostIndex]
             if theHost is not self.host:
                 self.logger.info('Trying the archives: %s' % theHost)
-            pathsFound = theHost.find(allPaths)
+            pathsFound = theHost.find(allPaths, restrictPattern)
             numFound = len(pathsFound)
             if numFound > 0:
                 allFound = True
-                if numFound < self.numFiles:
+                if numFound < self.numFiles and restrictPattern is None:
                     self.logger.warning('Not all files have been found. '\
                            'Found %i files. Was expecting at least %i.' 
                             % (numFound, self.numFiles))
@@ -134,7 +140,8 @@ class G2File(GenericItem):
                 hostIndex += 1
         return result
 
-    def fetch(self, targetDir, useArchive=None, decompress=True):
+    def fetch(self, targetDir, useArchive=None, decompress=True, 
+              restrictPattern=None):
         '''
         Fetch files from the source host to the destination directory.
 
@@ -174,13 +181,19 @@ class G2File(GenericItem):
                 False (meaning it will not be copied), it will never be
                 decompressed.
 
+            restrictPattern - A string, to be interpreted as a regular 
+                expression, to filter among all the possible files. This is 
+                useful for finding just a single tile from all the possible 
+                ones.
+
         Returns:
 
             A list of strings with the full paths of the files that have been
             fetched.
         '''
 
-        found = self.find(useArchive)
+        found = self.find(useArchive=useArchive, 
+                          restrictPattern=restrictPattern)
         result = found['paths']
         if self.toCopy:
             if len(found['paths']) > 0:

@@ -99,7 +99,7 @@ class FTPProxy(object):
                     self.connection = FTP()
         return result
 
-    def find(self, pathList):
+    def find(self, pathList, restrictPattern=None):
         '''
         Return a list of paths that match the 'pathList' argument.
         
@@ -113,8 +113,8 @@ class FTPProxy(object):
         if self._connect():
             for path in pathList:
                 searchDir, searchPattern = os.path.split(path)
-                self.logger.debug('searchDir: %s' % searchDir)
-                self.logger.debug('searchPattern: %s' % searchPattern)
+                #self.logger.debug('searchDir: %s' % searchDir)
+                #self.logger.debug('searchPattern: %s' % searchPattern)
                 pattRE = re.compile(searchPattern)
                 try:
                     self.connection.cwd(searchDir)
@@ -122,7 +122,13 @@ class FTPProxy(object):
                     rawfileList = self.connection.nlst()
                     for rawPath in rawfileList:
                         if pattRE.search(rawPath) is not None:
-                            fileList.append(os.path.join(currentDir, rawPath))
+                            if restrictPattern is not None:
+                                if re.search(restrictPattern, rawPath) is not None:
+                                    fileList.append(os.path.join(currentDir, 
+                                                    rawPath))
+                            else:
+                                fileList.append(os.path.join(currentDir, 
+                                                rawPath))
                 except error_perm, msg:
                     self.logger.warning(msg)
                     #raise
