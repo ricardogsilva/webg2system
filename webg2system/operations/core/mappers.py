@@ -106,7 +106,10 @@ class NGPMapper(Mapper): #crappy name
 
     def remove_temps(self, paths):
         for path in paths:
-            os.remove(path)
+            if os.path.isfile(path):
+                os.remove(path)
+            else:
+                pass
 
     def create_geotiffs(self, fileList, outputDir, dataset, missingValue, 
                         scalingFactor, tolerance=0.1):
@@ -589,21 +592,21 @@ class NewNGPMapper(object):
         return legendPath
 
     def get_bounds(self, filePath, pixelSize):
-        areaName = self._get_tile_name(filePath)
         fileSettings = utilities.get_file_settings(filePath)
         if fileSettings is not None:
-            try:
+            smallTile = fileSettings.fileextrainfo_set.filter(name='smallTile')
+            if len(smallTile) == 1:
                 # it's a grid tile
-                smallTile = fileSettings.fileextrainfo_set.get(name='smallTile')
                 minx, miny, maxx, maxy = self._get_tile_bbox(filePath, 
                                                              fileSettings, 
                                                              pixelSize)
-            except fileSettings.DoesNotExist:
+            elif len(smallTile) == 0:
                 # it's a continental tile
-                ulTile = fileSettings.fileextrainfo_set.get(name='%s upper left tile' % areaName)
+                areaName = self._get_tile_name(filePath)
+                ulTile = fileSettings.fileextrainfo_set.get(name='%s_upper_left_tile' % areaName).string
                 ulTileFile = filePath.replace(areaName, ulTile)
                 ulSettings = utilities.get_file_settings(ulTileFile)
-                lrTile = fileSettings.fileextrainfo_set.get(name='%s lower right tile' % areaName)
+                lrTile = fileSettings.fileextrainfo_set.get(name='%s_lower_right_tile' % areaName).string
                 lrTileFile = filePath.replace(areaName, lrTile)
                 lrSettings = utilities.get_file_settings(lrTileFile)
                 ulBBox = self._get_tile_bbox(ulTileFile, ulSettings, pixelSize)
@@ -625,8 +628,62 @@ class NewNGPMapper(object):
             v = None
         return h, v
 
+    def get_lines_cols(self, filePath):
+        fileSettings = utilities.get_file_settings(filePath)
+        if fileSettings is not None:
+            smallTile = fileSettings.fileextrainfo_set.filter(name='smallTile')
+            if len(smallTile) == 1: # grid tile
+                rowSize = fileSettings.fileextrainfo_set.get(name='nLines').string
+                colSize = fileSettings.fileextrainfo_set.get(name='nCols').string
+            elif len(smallTile) == 0: # continental tile
+                areaName = self._get_tile_name(filePath)
+                ulTile = fileSettings.fileextrainfo_set.get(name='%s_upper_left_tile' % areaName).string
+                ulTileFile = filePath.replace(areaName, ulTile)
+                ulSettings = utilities.get_file_settings(ulTileFile)
+                lrTile = fileSettings.fileextrainfo_set.get(name='%s_lower_right_tile' % areaName).string
+                lrTileFile = filePath.replace(areaName, lrTile)
+                lrSettings = utilities.get_file_settings(lrTileFile)
+                ulH, ulV = self.get_h_v(ulTileFile)
+                lrH, lrV = self.get_h_v(lrTileFile)
+                ulNLines = int(ulSettings.fileextrainfo_set.get(name='nLines').string)
+                ulNCols = int(ulSettings.fileextrainfo_set.get(name='nCols').string)
+                rowSize = (lrV - ulV + 1) * ulNLines
+                colSize = (lrH - ulH + 1) * ulNCols
+        return rowSize, colSize
+
     def remove_temps(self, paths, host):
         host.delete_files(paths)
+
+    def update_latest_mapfile(self, mapfile, shapePath, geotifRelativePath):
+        '''
+        Update the 'latest' mapfile.
+
+        Inputs:
+
+            mapfile - Full path to the mapfile.
+
+            shapePath - Value to attribute to the mapfile's 'shapepath' 
+                variable.
+
+            geotifRelativePath - Relative path to the geotiff. This path 
+                is relative to the shapePath argument.
+        '''
+
+        
+        mapObj = mapscript.mapObj(mapfile)
+        mapObj.shapepath = shapePath
+        mapWMSMetadata = mapObj.web.metadata
+        mapWMSMetadata.set('wms_onlineresource', 
+                           'http://%s/cgi-bin/mapserv?map=%s&' \
+                            % (self.host.host, mapfile))
+        layer = mapObj.getLayerByName(self.product.short_name)
+        layer.data = geotifRelativePath
+        layerAbstract = '%s product generated for the %s timeslot.' % \
+                        (self.product.short_name, 
+                         self.timeslot.strftime('%Y-%m-%d %H:%M'))
+        layer.metadata.set('wms_abstract', layerAbstract)
+        mapObj.save(mapfile)
+        return mapfile
 
     def _get_tile_name(self, fileName):
         hvPatt = re.compile(r'H(\d{2})V(\d{2})')
@@ -635,7 +692,7 @@ class NewNGPMapper(object):
             areaName = reObj.group()
         else:
             try:
-                areaName = os.path.baseName(fileName).split('_')[4]
+                areaName = os.path.basename(fileName).split('_')[4]
             except IndexError:
                 self.logger.error('Couldn\'t find area from the file name.')
                 areaName = None

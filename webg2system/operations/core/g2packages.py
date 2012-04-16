@@ -1846,7 +1846,7 @@ class QuickLookGenerator(ProcessingPackage):
         if len(pathList) > 0:
             geotiff = [f for f in pathList if re.search(r'\.ovr', f) is None][0]
         else:
-            self.logger.error('Couldn\t find the geotiff input')
+            self.logger.error('Couldn\'t find the geotiff input')
         return geotiff
 
     def update_mapfile(self, geotiff):

@@ -559,6 +559,9 @@ class MetadataGenerator(object):
         fs = utilities.get_file_settings(filePath)
         minx, miny, maxx, maxy = mapper.get_bounds(filePath, 
                                                    self.product.pixelSize)
+        rowSize, colSize = mapper.get_lines_cols(filePath)
+        print('rowSize: %s' % rowSize)
+        print('colSize: %s' % colSize)
         tileName = mapper._get_tile_name(filePath)
         uuid = str(uuid1())
         rootAttribs = self.tree.getroot().attrib
@@ -571,11 +574,9 @@ class MetadataGenerator(object):
                                  role='pointOfContact', 
                                  contact=self.product.originator_collaborator)
         self.update_element('dateStamp', today)
-        rowSize = fs.fileextrainfo_set.get(name='nLines').string
-        self.update_element('rowSize', rowSize)
+        self.update_element('rowSize', str(rowSize))
         self.update_element('rowResolution', '%.2f' % self.product.pixelSize)
-        colSize = fs.fileextrainfo_set.get(name='nCols').string
-        self.update_element('colSize', colSize)
+        self.update_element('colSize', str(colSize))
         self.update_element('colResolution', '%.2f' % self.product.pixelSize)
         cornerPoint = '%.1f %.1f' % (maxy, minx)
         self.update_element('cornerPoint', cornerPoint)
