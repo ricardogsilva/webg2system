@@ -211,6 +211,10 @@ class Product(models.Model):
     OVERVIEW_TYPE_CHOICES = (('png', 'png'),)
     name = models.CharField(max_length=100)
     short_name = models.CharField(max_length=20)
+    user_manual = models.CharField(
+        max_length=255, help_text='Relative path to the user manual. ' \
+        'The path is relative to the host\'s \'datapath\' attribute.'
+    )
     originator_collaborator = models.ForeignKey(
             Collaborator,
             related_name='product_%(app_label)s_%(class)s_related',
@@ -258,10 +262,6 @@ class Product(models.Model):
                                           'EPSG code', help_text='INSPIRE '\
                                           'metadata element: EPSG code of '\
                                           'coordinate reference system.')
-    iOtherDetails = models.CharField(max_length=255, verbose_name='Other '\
-                                     'details', help_text='INSPIRE '\
-                                     'metadata element: URL for the PUM.',
-                                     null=True, blank=True)
     iCredit = models.TextField(verbose_name='Credit', help_text='INSPIRE '\
                                'metadata element: Product credit information.')
     graphic_overview_description = models.TextField(help_text='INSPIRE ' \

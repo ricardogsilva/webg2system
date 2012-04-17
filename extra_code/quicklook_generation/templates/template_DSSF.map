@@ -44,77 +44,98 @@ MAP
             EXPRESSION([pixel] == -1)
             NAME "Missing value"
             STYLE
+                COLOR 255 255 255
+            END 
+        END 
+        CLASS
+            EXPRESSION([pixel] > -1 AND [pixel] <= 100)
+            NAME "< 100 W.m^-2"
+            STYLE
                 COLOR 0 0 0
-            END 
-        END 
-        CLASS
-            EXPRESSION([pixel] == 0)
-            NAME "0 W.m^-2"
-            STYLE
-                COLOR 255 255 217
-            END 
-        END 
-        CLASS
-            EXPRESSION([pixel] > 0 AND [pixel] <= 138)
-            NAME "0 - 138 W.m^-2"
-            STYLE
-                COLOR 237 248 217
             END
         END
         CLASS
-            EXPRESSION([pixel] > 138 AND [pixel] <= 275)
-            NAME "138 - 275 W.m^-2"
+            EXPRESSION([pixel] > 100 AND [pixel] <= 200)
+            NAME "100 - 200 W.m^-2"
             STYLE
-                COLOR 199 233 180
+                COLOR 0 0 41
             END
         END
         CLASS
-            EXPRESSION([pixel] > 275 AND [pixel] <= 412)
-            NAME "275 - 412 W.m^-2"
+            EXPRESSION([pixel] > 200 AND [pixel] <= 300)
+            NAME "200 - 300 W.m^-2"
             STYLE
-                COLOR 127 205 187
+                COLOR 0 25 83
             END
         END
         CLASS
-            EXPRESSION([pixel] > 412 AND [pixel] <= 550)
-            NAME "412 - 550 W.m^-2"
+            EXPRESSION([pixel] > 300 AND [pixel] <= 400)
+            NAME "300 - 400 W.m^-2"
             STYLE
-                COLOR 65 182 196
+                COLOR 0 87 100
             END
         END
         CLASS
-            EXPRESSION([pixel] > 550 AND [pixel] <= 688)
-            NAME "550 - 688 W.m^-2"
+            EXPRESSION([pixel] > 400 AND [pixel] <= 500)
+            NAME "400 - 500 W.m^-2"
             STYLE
-                COLOR 29 145 192
+                COLOR 0 150 100
             END
         END
         CLASS
-            EXPRESSION([pixel] > 688 AND [pixel] <= 825)
-            NAME "688 - 825 W.m^-2"
+            EXPRESSION([pixel] > 500 AND [pixel] <= 600)
+            NAME "500 - 600 W.m^-2"
             STYLE
-                COLOR 34 94 168
+                COLOR 0 147 37
             END
         END
         CLASS
-            EXPRESSION([pixel] > 825 AND [pixel] <= 962)
-            NAME "825 - 962 W.m^-2"
+            EXPRESSION([pixel] > 600 AND [pixel] <= 700)
+            NAME "600 - 700 W.m^-2"
             STYLE
-                COLOR 37 52 148
+                COLOR 60 120 0
             END
         END
         CLASS
-            EXPRESSION([pixel] > 962 AND [pixel] <= 1100)
-            NAME "962 - 1100 W.m^-2"
+            EXPRESSION([pixel] > 700 AND [pixel] <= 800)
+            NAME "700 - 800 W.m^-2"
             STYLE
-                COLOR 8 29 88
+                COLOR 180 25 0
             END
         END
         CLASS
-            EXPRESSION([pixel] > 1100)
-            NAME "> 1100 W.m^-2"
+            EXPRESSION([pixel] > 800 AND [pixel] <= 900)
+            NAME "800 - 900 W.m^-2"
             STYLE
-                COLOR 255 0 0
+                COLOR 208 36 0
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] > 900 AND [pixel] <= 1000)
+            NAME "900 - 1000 W.m^-2"
+            STYLE
+                COLOR 218 83 0
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] > 1000 AND [pixel] <= 1100)
+            NAME "1000 - 1100 W.m^-2"
+            STYLE
+                COLOR 228 129 0
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] > 1100 AND [pixel] <= 1200)
+            NAME "1100 - 1200 W.m^-2"
+            STYLE
+                COLOR 238 175 0
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] > 1200)
+            NAME "> 1200 W.m^-2"
+            STYLE
+                COLOR 248 221 0
             END
         END
     END

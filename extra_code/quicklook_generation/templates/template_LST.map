@@ -45,77 +45,154 @@ MAP
             EXPRESSION([pixel] == -8000)
             NAME "Missing value"
             STYLE
-                COLOR 0 0 0
+                COLOR 255 255 255
             END 
         END 
         CLASS
-            EXPRESSION([pixel] == -40)
-            NAME "-40 C"
+            EXPRESSION([pixel] > -8000 AND [pixel] <= -40)
+            NAME "< -40 C"
             STYLE
-                COLOR 255 255 204
+                COLOR 76 76 76
             END 
         END 
         CLASS
-            EXPRESSION([pixel] > -40 AND [pixel] <= -26)
-            NAME "-40 - -26 C"
+            EXPRESSION([pixel] > -40 AND [pixel] <= -35)
+            NAME "-40 - -35 C"
             STYLE
-                COLOR 255 237 160
+                COLOR 161 161 161
             END
         END
         CLASS
-            EXPRESSION([pixel] > -26 AND [pixel] <= -12)
-            NAME "-26 - -12 C"
+            EXPRESSION([pixel] > -35 AND [pixel] <= -30)
+            NAME "-35 - -30 C"
             STYLE
-                COLOR 254 217 118
+                COLOR 245 245 245
             END
         END
         CLASS
-            EXPRESSION([pixel] > -12 AND [pixel] <= 1)
-            NAME "-12 - 1 C"
+            EXPRESSION([pixel] > -30 AND [pixel] <= -25)
+            NAME "-30 - -25 C"
             STYLE
-                COLOR 254 178 76
+                COLOR 190 147 212
             END
         END
         CLASS
-            EXPRESSION([pixel] > 1 AND [pixel] <= 15)
-            NAME "1 - 15 C"
+            EXPRESSION([pixel] > -25 AND [pixel] <= -20)
+            NAME "-25 - -20 C"
             STYLE
-                COLOR 253 141 60
+                COLOR 118 26 163
             END
         END
 	CLASS
-            EXPRESSION([pixel] > 15 AND [pixel] <= 29)
-            NAME "15 - 29 C"
+            EXPRESSION([pixel] > -20 AND [pixel] <= -15)
+            NAME "-20 - -15 C"
             STYLE
-                COLOR 252 78 42
+                COLOR 68 29 141
             END
         END
         CLASS
-            EXPRESSION([pixel] > 29 AND [pixel] <= 42)
-            NAME "29 - 42 C" 
+            EXPRESSION([pixel] > -15 AND [pixel] <= -10)
+            NAME "-15 - -10 C" 
             STYLE
-                COLOR 227 26 28
+                COLOR 24 66 127
             END
         END
         CLASS
-            EXPRESSION([pixel] > 42 AND [pixel] <= 56)
-            NAME "42 - 56 C" 
+            EXPRESSION([pixel] > -10 AND [pixel] <= -5)
+            NAME "-10 - -5 C" 
             STYLE
-                COLOR 189 0 38
+                COLOR 15 93 86
             END
         END
         CLASS
-            EXPRESSION([pixel] > 56 AND [pixel] <= 70)
-            NAME "56 - 70 C" 
+            EXPRESSION([pixel] > -5 AND [pixel] <= 0)
+            NAME "-5 - 0 C" 
             STYLE
-                COLOR 128 0 38
+                COLOR 24 115 31
             END
         END
         CLASS
-            EXPRESSION([pixel] > 70)
-            NAME "> 70 C"
+            EXPRESSION([pixel] > 0 AND [pixel] <= 5)
+            NAME "0 - 5 C" 
             STYLE
-                COLOR 0 100 0
+                COLOR 83 155 10
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] > 5 AND [pixel] <= 10)
+            NAME "5 - 10 C" 
+            STYLE
+                COLOR 182 209 15
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] > 10 AND [pixel] <= 15)
+            NAME "10 - 15 C" 
+            STYLE
+                COLOR 240 210 14
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] > 15 AND [pixel] <= 20)
+            NAME "15 - 20 C" 
+            STYLE
+                COLOR 249 145 5
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] > 20 AND [pixel] <= 25)
+            NAME "20 - 25 C" 
+            STYLE
+                COLOR 255 85 0
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] > 25 AND [pixel] <= 30)
+            NAME "25 - 30 C" 
+            STYLE
+                COLOR 255 37 0
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] > 30 AND [pixel] <= 35)
+            NAME "30 - 35 C" 
+            STYLE
+                COLOR 238 37 0
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] > 35 AND [pixel] <= 40)
+            NAME "35 - 40 C" 
+            STYLE
+                COLOR 238 3 1
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] > 40 AND [pixel] <= 45)
+            NAME "40 - 45 C" 
+            STYLE
+                COLOR 164 16 8
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] > 45 AND [pixel] <= 50)
+            NAME "45 - 50 C" 
+            STYLE
+                COLOR 96 27 15
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] > 50 AND [pixel] <= 55)
+            NAME "50 - 55 C" 
+            STYLE
+                COLOR 73 25 19
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] > 55)
+            NAME "> 55 C"
+            STYLE
+                COLOR 51 22 22
             END
         END
     END

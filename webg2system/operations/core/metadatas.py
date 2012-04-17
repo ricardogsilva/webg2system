@@ -211,12 +211,6 @@ class MetadataGenerator(object):
 
         self.tree.write(path)
 
-    # FIXME
-    # - This method is to replace most of the commands present in
-    # operations.core.g2packages.WebDisseminator.generate_xml_metadata()
-    def process_tile(self, tilePath):
-        raise NotImplementedError
-
     def update_element(self, elementName, value):
         '''
         Update the element's value with the new setting.
@@ -552,7 +546,8 @@ class MetadataGenerator(object):
             mapper - A Mapper instance.
         '''
 
-        productVersion = re.search(r'GEO_(v\d)$', filePath).groups()[0]
+        self.logger.debug('filePath: %s' % filePath)
+        productVersion = re.search(r'GEO_(v\d)', filePath).groups()[0]
         today = dt.date.today().strftime('%Y-%m-%d')
         fileName = os.path.basename(filePath)
         fileTimeslot = utilities.extract_timeslot(filePath)
@@ -864,7 +859,10 @@ class MetadataGenerator(object):
         otherDetailsEl = citationEl.xpath('gmd:otherCitationDetails/'\
                                           'gco:CharacterString', 
                                           namespaces=self.ns)[0]
-        otherDetailsEl.text = productSettings.iOtherDetails
+        baseURL = ss.WebServer.objects.get().public_URL
+        userManualURL = '%s/operations/products/%s/docs/pum' % \
+                (baseURL, productSettings.short_name)
+        otherDetailsEl.text = userManualURL
 
     def _apply_temporal_extent(self, productSettings, timeslot):
         parentEl = self.tree.xpath('gmd:identificationInfo/*/gmd:extent/'\
@@ -932,12 +930,12 @@ class MetadataGenerator(object):
         # save cookie and redirect handler for future HTTP Posts
         opener = urllib2.build_opener(redirect_handler,cookie_handler)
         if filePaths is not None:
-            # Process up to 30 files in each transaction in order to
+            # Process up to 10 files in each transaction in order to
             # prevent out of memory errors on the CSW server
             requestList = []
             for index, fp in enumerate(filePaths):
                 requestList.append(fp)
-                if (index + 1) % 20 == 0:
+                if (index + 1) % 10 == 0:
                     self._execute_csw_insert_request(requestList, csw_url, 
                                                      headers_xml, opener)
                     requestList = []

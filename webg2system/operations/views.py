@@ -18,6 +18,7 @@ from forms import CreatePackageForm
 
 import systemsettings.models as ss
 from core.g2packages import QuickLookGenerator, TileDistributor
+import core.g2hosts as g2hosts
 
 logger = logging.getLogger(__name__)
 
@@ -96,7 +97,21 @@ def execute_package(request):
                  )
     return result
 
-#FIXME - Test this view
+def get_product_user_manual(request, prodName):
+    hostFactory = g2hosts.HostFactory()
+    theHost = hostFactory.create_host()
+    theProduct = ss.Product.objects.get(short_name=prodName)
+    pumPath = os.path.join(theHost.dataPath, theProduct.user_manual)
+    if theHost.is_file(pumPath):
+        content = open(pumPath, 'rb').read()
+        response = HttpResponse(content, mimetype='application/pdf')
+        response['Content-Disposition'] = 'attachment: filename=%s' % \
+                                          os.path.basename(pumPath)
+        result = response
+    else:
+        raise Http404
+    return result
+
 def get_product_zip(request, prodName, tile, timeslot):
     ts = dt.datetime.strptime(timeslot, '%Y%m%d%H%M')
     settings = ss.Package.objects.get(codeClass__className='TileDistributor',
