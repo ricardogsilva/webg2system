@@ -546,17 +546,14 @@ class MetadataGenerator(object):
             mapper - A Mapper instance.
         '''
 
-        self.logger.debug('filePath: %s' % filePath)
         productVersion = re.search(r'GEO_(v\d)', filePath).groups()[0]
         today = dt.date.today().strftime('%Y-%m-%d')
-        fileName = os.path.basename(filePath)
+        fileName = os.path.splitext(os.path.basename(filePath))[0]
         fileTimeslot = utilities.extract_timeslot(filePath)
         fs = utilities.get_file_settings(filePath)
         minx, miny, maxx, maxy = mapper.get_bounds(filePath, 
                                                    self.product.pixelSize)
         rowSize, colSize = mapper.get_lines_cols(filePath)
-        print('rowSize: %s' % rowSize)
-        print('colSize: %s' % colSize)
         tileName = mapper._get_tile_name(filePath)
         uuid = str(uuid1())
         rootAttribs = self.tree.getroot().attrib
@@ -874,7 +871,7 @@ class MetadataGenerator(object):
         nameEl = parentEl.xpath('gml:name', namespaces=self.ns)[0]
         nameEl.text = 'timeslot'
         beginEl = parentEl.xpath('gml:beginPosition', namespaces=self.ns)[0]
-        theTimeslot = timeslot.strftime('%Y-%m-%dT%H:%M:%S')
+        theTimeslot = timeslot.strftime('%Y-%m-%dT%H:%M:%SZ')
         beginEl.text = theTimeslot
         endEl = parentEl.xpath('gml:endPosition', namespaces=self.ns)[0]
         endEl.text = theTimeslot

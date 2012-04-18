@@ -1199,10 +1199,10 @@
           <distributionOrderProcess>
             <MD_StandardOrderProcess>
               <fees>
-                <gco:CharacterString>Free by ftp and Eumetcast; cost of medium by DvD or tape</gco:CharacterString>
+                <gco:CharacterString>Free by HTTP; cost of medium by DvD or tape</gco:CharacterString>
               </fees>
               <orderingInstructions>
-                <gco:CharacterString>Products can be downloaded on-line via HTTP (or FTP) or can be received through EUMETCast satellite reception in Africa and Latin-America. Users can also get the latest datasets in near-real time via FTP after subscription. To subscribe, please send an e-mail to mailto:helpdesk@vgt.vito.be, with subject 'geoland2 Biopar subscription' and the name of this dataset series. You will be contacted in a few days. When the subscription is accepted, you will be informed by e-mail whenever new products are available on the FTP-server.</gco:CharacterString>
+                <gco:CharacterString>Products can be downloaded on-line via HTTP. Bulk downloads and near-real time dissemination can be requested at our helpdesk.</gco:CharacterString>
               </orderingInstructions>
             </MD_StandardOrderProcess>
           </distributionOrderProcess>
@@ -1225,60 +1225,14 @@
                 <gco:CharacterString>HTTP</gco:CharacterString>
               </protocol>
               <name>
-                <gco:CharacterString>Geoland2 BioPar VITO</gco:CharacterString>
+                <gco:CharacterString>Geoland2 BioPar IPMA catalog</gco:CharacterString>
               </name>
               <description>
-                <gco:CharacterString>1. Search and Order products on VITO Biopar Dataset Catalogue and Ordering service</gco:CharacterString>
+                <gco:CharacterString>Search and Order products on IPMA or VITO Biopar Dataset Catalogue and Ordering service</gco:CharacterString>
               </description>
               <function>
                 <CI_OnLineFunctionCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/Codelist/ML_gmxCodelists.xml#CI_OnLineFunctionCode" codeListValue="download">download</CI_OnLineFunctionCode>
               </function>
-            </CI_OnlineResource>
-          </onLine>
-        </MD_DigitalTransferOptions>
-      </transferOptions>
-      <transferOptions>
-        <MD_DigitalTransferOptions>
-          <onLine>
-            <CI_OnlineResource>
-              <linkage>
-                <URL>http://www.geoland2.eu/portal/system/subscription.html</URL>
-              </linkage>
-              <protocol>
-                <gco:CharacterString>HTTP</gco:CharacterString>
-              </protocol>
-              <name>
-                <gco:CharacterString>Geoland2 BioPar VITO</gco:CharacterString>
-              </name>
-              <description>
-                <gco:CharacterString>2. Subscribe to receive future products via e-mail</gco:CharacterString>
-              </description>
-              <function>
-                <CI_OnLineFunctionCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/Codelist/ML_gmxCodelists.xml#CI_OnLineFunctionCode" codeListValue="download">download</CI_OnLineFunctionCode>
-              </function>
-            </CI_OnlineResource>
-          </onLine>
-        </MD_DigitalTransferOptions>
-      </transferOptions>
-      <transferOptions>
-        <MD_DigitalTransferOptions>
-          <unitsOfDistribution>
-            <gco:CharacterString>Per product</gco:CharacterString>
-          </unitsOfDistribution>
-          <transferSize>
-            <gco:Real>-</gco:Real>
-          </transferSize>
-          <onLine>
-            <CI_OnlineResource>
-              <linkage>
-                <URL>mailto:helpdesk@vgt.vito.be</URL>
-              </linkage>
-              <name>
-                <gco:CharacterString>Geoland2 BioPar VITO</gco:CharacterString>
-              </name>
-              <description>
-                <gco:CharacterString>3. Request to receive products via Eumetcast</gco:CharacterString>
-              </description>
             </CI_OnlineResource>
           </onLine>
         </MD_DigitalTransferOptions>

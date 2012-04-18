@@ -15,6 +15,7 @@ socket.setdefaulttimeout(10) # timeout for ftp connections, in seconds
 import os
 import re
 import logging
+import time
 
 class FTPProxy(object):
     '''

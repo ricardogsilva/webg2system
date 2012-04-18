@@ -1617,7 +1617,6 @@ class OWSPreparator(ProcessingPackage):
         '''
 
         mapfile = self.get_latest_mapfile()
-        print('mapfile: %s' % mapfile)
         rp = geotifPath.replace(self.mapfileShapePath, '').partition('/')[-1]
         updatedMapfile = self.mapper.update_latest_mapfile(mapfile, 
                                                            self.mapfileShapePath, 
@@ -1641,7 +1640,6 @@ class OWSPreparator(ProcessingPackage):
                 hasattr(i, 'latest')][0]
         mapName = g2f.searchPatterns[0]
         mapfile = os.path.join(self.mapfileOutDir, mapName)
-        print('mapfile aqui: %s' % mapfile)
         if self.host.is_file(mapfile):
             result = mapfile
         else:
@@ -1737,8 +1735,6 @@ class OWSPreparator(ProcessingPackage):
         pattern = pattern.replace('#', '')
         geotiff = None
         for filePath in fetched[g2f]:
-            print('pattern: %s' % pattern)
-            print('filePath: %s' % filePath)
             reObj = re.search(pattern, filePath)
             if reObj is not None:
                 geotiff = filePath

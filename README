@@ -1,1 +1,34 @@
 A project to create a web version of the g2system. More details soon...
+
+This is a django project to manage the processing lines of the G2System.
+
+The code is organized in 3 apps:
+
+- systemsettings
+
+  Holds most of the settings for the packages, files, hosts, ... used in the 
+  g2system.
+
+- inspiresettings
+
+  Has settings which are relevant for the metadata generation
+
+- operations
+
+  Has the main code for the processing lines.
+
+There are other bits of code that concerning other parts of the system:
+
+- extra code
+
+  Extra algorithms that perform the product generation and other settings. 
+  Some of this code is not included in the git repository, for copyright
+  reasons.
+
+- apache
+
+  Sample configuration for the web server.
+
+- scripts
+
+  Scripts to be run in SMS
