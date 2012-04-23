@@ -45,7 +45,7 @@ class FTPProxy(object):
 
         return self.connection.getwelcome() is not None
 
-    def _connect(self, timeoutRetries=5):
+    def _connect(self, timeoutRetries=3):
         '''
         Establish a new connection to the remote server.
 
@@ -74,6 +74,8 @@ class FTPProxy(object):
                     self.logger.info('The FTP connection timed out. Waiting '\
                                      '%i seconds' % timeoutRetries)
                     time.sleep(timeoutRetries)
+                    del self.connection
+                    self.connection = FTP()
                     result = self._connect()
         else:
             #create the connection
