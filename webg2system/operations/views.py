@@ -49,7 +49,8 @@ def execute_package(request):
                     except RunningPackage.DoesNotExist:
                         logger.info('The package does not exist. It will be ' \
                                     'created.')
-                        rp = RunningPackage(settings=p, area=a, timeslot=timeslot)
+                        rp = RunningPackage(settings=p, area=a, 
+                                            timeslot=timeslot)
                     if rp is not None:
                         runOutputList = []
                         callback = runOutputList.append
