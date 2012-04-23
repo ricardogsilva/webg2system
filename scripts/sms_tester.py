@@ -121,23 +121,24 @@ def error(msg, logger=logging.getLogger(), smsLabelObj="info"):
 
 def main():
     # collect SMS variables for this task
-    # for now its just placeholder text
+    ymd = '&YMD&'
+    hour = '&HOUR&'
     codeHost = '&HOSTNAME&'
-    package = '&PACKAGE&'
-    area = '&AREA&'
-    timeslot = '&TIMESLOT&'
-    force = '&FORCE&'
     username = '&USERNAME&'
     password = '&PASSWORD&'
+    force = '&FORCE&'
+    package = '&PACKAGE&'
+    area = '&AREA&'
     extra = '&EXTRA_KWARGS&'
 
     g2systemURL = 'http://%s/g2system/operations/create/' % codeHost
     values = {
         'package': package,
         'area': area,
-        'timeslot': timeslot,
+        'timeslot': dt.datetime.strptime(ymd + hour, '%Y%m%d%H'),
         'username': username,
         'password': password,
+        'force' : force,
         'extra' : extra
     }
     data = urlencode(values)
@@ -156,6 +157,7 @@ def main():
         elif hasattr(e, 'code'):
             print('The server couldn\'t fulfill the request.')
             print('Error code: %s' % e.code)
+        raise 
 
 if __name__ == "__main__":
     try:
