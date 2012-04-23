@@ -1720,6 +1720,7 @@ class OWSPreparator(ProcessingPackage):
         if geotiff is not None:
             if update == 'latest':
                 self.update_latest_mapfile(geotiff)
+            self.logger.info('All Done')
         else:
             self.logger.warning('Couldn\'t find the geotiff files.')
         return geotiff
@@ -1939,7 +1940,7 @@ class QuickLookGenerator(ProcessingPackage):
         hdfFiles = []
         quickLooks = []
         for g2f, foundDict in found.iteritems():
-            hdfFiles += foundDict['paths']
+            hdfFiles += [p.replace('.bz2', '') for p in foundDict['paths']]
         if len(hdfFiles) > 0:
             ql = self.generate_quicklook(mapfile, hdfFiles[0], 
                                          self.quickviewOutDir,
