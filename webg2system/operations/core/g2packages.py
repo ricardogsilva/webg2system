@@ -1948,6 +1948,7 @@ class QuickLookGenerator(ProcessingPackage):
             quickLooks.append(ql)
         if len(hdfFiles) > 1:
             for filePath in hdfFiles[1:]:
+                self.logger.debug('Converting %s to GeoTiff...' % filePath)
                 ql = self.generate_quicklook(mapfile, filePath, 
                                              self.quickviewOutDir,
                                              generate_legend=False)
@@ -1961,6 +1962,7 @@ class QuickLookGenerator(ProcessingPackage):
             result = self._process_all_tiles(mapfile)
         else:
             result = self._process_single_tile(tile, mapfile)
+        self.logger.info('All Done')
         return result
 
     def clean_up(self):
@@ -2037,8 +2039,8 @@ class MetadataGenerator(ProcessingPackage):
         for g2f, foundDict in found.iteritems():
             self.logger.info('Processing %s files...' % g2f.name)
             for index, tilePath in enumerate(foundDict['paths']):
-                self.logger.info('%i/%i - Generating metadata file...' % \
-                        (index + 1, len(foundDict['paths'])))
+                #self.logger.info('%i/%i - Generating metadata file...' % \
+                #        (index + 1, len(foundDict['paths'])))
                 xmlFile = self.generate_xml_metadata(tilePath)
                 result.append(xmlFile)
         return result
@@ -2122,6 +2124,7 @@ class MetadataGenerator(ProcessingPackage):
             result = xmlFiles[0]
         if populateCSW:
             inserted = self.insert_metadata_csw(xmlFiles)
+        self.logger.info('All Done')
         return result
 
     def clean_up(self):

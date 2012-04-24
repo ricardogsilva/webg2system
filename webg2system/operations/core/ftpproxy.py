@@ -22,10 +22,6 @@ class FTPProxy(object):
     Connect to another server through FTP and perform various actions.
     '''
 
-    # FIXME
-    # - Create the localHost and remoteHost attributes, replacing the 'host' 
-    # attribute
-    # - Rename the send() and fetch() methods in a more intuitive way
     def __init__(self, localHost, remoteHost):
         '''
         Inputs:
@@ -168,8 +164,12 @@ class FTPProxy(object):
                 # this code only works with local hosts
                 # as the open().write piece assumes local
                 # filesystem
+                fh = open(fname, 'wb')
                 self.connection.retrbinary('RETR %s' % path, 
-                                           open(fname, 'wb').write)
+                                           fh.write)
+                fh.close()
+                #self.connection.retrbinary('RETR %s' % path, 
+                #                           open(fname, 'wb').write)
                 copiedPaths.append(os.path.join(destination, fname))
             self.localHost.change_dir(oldDir)
         return copiedPaths

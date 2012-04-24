@@ -914,7 +914,7 @@ class MetadataGenerator(object):
         data = urllib.urlencode({"username": username, "password": password})
         logoutReq = urllib2.Request(logout_url) # first, always log out
         response = urllib2.urlopen(logoutReq)
-        print response.read() # debug
+        #print response.read() # debug
         # send authentication request
         loginReq = urllib2.Request(login_url, data, headers_auth)
         response = urllib2.urlopen(loginReq)
@@ -944,7 +944,7 @@ class MetadataGenerator(object):
                                              headers_xml, opener)
         logoutReq = urllib2.Request(logout_url) # Last, always log out
         response = opener.open(logoutReq)
-        print response.read() # debug
+        #print response.read() # debug
 
     def _execute_csw_insert_request(self, fileList, url, headers, opener):
         theRequest = '<?xml version="1.0" encoding="UTF-8"?>'\
@@ -959,8 +959,8 @@ class MetadataGenerator(object):
             response = opener.open(insertReq)
             # CSW response
             xml_response = response.read()
-            print('insertReq response:')
-            print xml_response  # debug
-            print('------')
+            #print('insertReq response:')
+            #print xml_response  # debug
+            #print('------')
         except urllib2.HTTPError, error:
             print(error.read())

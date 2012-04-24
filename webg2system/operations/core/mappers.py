@@ -133,7 +133,7 @@ class NGPMapper(Mapper): #crappy name
 
         outputPaths = []
         for fNum, path in enumerate(fileList):
-            self.logger.debug('(%i/%i) - Converting HDF5 to GeoTiff...' % (fNum+1, len(fileList)))
+            #self.logger.debug('(%i/%i) - Converting HDF5 to GeoTiff...' % (fNum+1, len(fileList)))
             fileName = os.path.basename(path) + '.tif'
             outputPath = os.path.join(outputDir, fileName)
             outDriver = gdal.GetDriverByName('GTiff')

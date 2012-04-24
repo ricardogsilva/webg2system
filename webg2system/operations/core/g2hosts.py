@@ -64,16 +64,26 @@ class HostFactory(object):
             hostSettings = ss.Host.objects.get(name=localName)
         name = hostSettings.name
         ip = hostSettings.ip
-        if name not in self._hosts.keys():
-            self.logger.debug('Creating a new %s host object...' % 
-                             (name))
-            if name == localName or ip == localIP:
-                theClass = G2LocalHost
-            else:
-                theClass = G2RemoteHost
-            hostObj = theClass(hostSettings)
-            self._hosts[name] = hostObj
-        return self._hosts.get(name)
+        #if name not in self._hosts.keys():
+        #    self.logger.debug('Creating a new %s host object...' % 
+        #                     (name))
+        #    if name == localName or ip == localIP:
+        #        theClass = G2LocalHost
+        #    else:
+        #        theClass = G2RemoteHost
+        #    hostObj = theClass(hostSettings)
+        #    self._hosts[name] = hostObj
+        #return self._hosts.get(name)
+
+        self.logger.debug('Creating a new %s host object...' % 
+                         (name))
+        if name == localName or ip == localIP:
+            theClass = G2LocalHost
+        else:
+            theClass = G2RemoteHost
+        hostObj = theClass(hostSettings)
+
+        return hostObj
 
 
 class G2Host(object):
@@ -509,7 +519,7 @@ class G2LocalHost(G2Host):
         for relPath in relativePathList:
             fullPath = os.path.join(self.dataPath, relPath)
             try:
-                self.logger.debug('Deleting %s...' % fullPath)
+                #self.logger.debug('Deleting %s...' % fullPath)
                 os.remove(fullPath)
                 dirPath = os.path.dirname(fullPath)
                 self.clean_dirs(dirPath)
