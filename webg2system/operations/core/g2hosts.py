@@ -16,7 +16,7 @@ import shutil
 import logging
 import os
 import re
-from subprocess import Popen, PIPE
+import subprocess
 from xml.etree.ElementTree import ElementTree as et
 import ftplib
 import socket
@@ -502,11 +502,25 @@ class G2LocalHost(G2Host):
         '''
 
         commandList = command.split(' ')
-        newProcess = Popen(commandList, cwd=workingDir, stdin=PIPE,
-                           stdout=PIPE, stderr=PIPE)
+        newProcess = subprocess.Popen(commandList, cwd=workingDir, 
+                                      stdin=subprocess.PIPE,
+                                      stdout=subprocess.PIPE, 
+                                      stderr=subprocess.PIPE)
         stdout, stderr = newProcess.communicate()
         retCode = newProcess.returncode
         return stdout, stderr, retCode
+
+    def start_sms_server(self, working_dir=None):
+        '''
+        Starts a new sms server.
+        '''
+
+        #new_process = subprocess.Popen(['sms', '-b'], cwd=working_dir,
+        #                               stdout=subprocess.PIPE,
+        #                               stderr=subprocess.STDOUT)
+        new_process = subprocess.Popen('sms -b > /dev/null 2>&1', shell=True, 
+                                       cwd=working_dir)
+        return new_process.wait()
 
     def delete_files(self, relativePathList):
         '''

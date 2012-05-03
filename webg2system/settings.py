@@ -140,6 +140,7 @@ INSTALLED_APPS = (
     'systemsettings',
     'operations',
     'inspiresettings',
+    'smssettings',
 )
 
 # A sample logging configuration. The only tangible logging
