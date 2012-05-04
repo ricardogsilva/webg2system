@@ -17,6 +17,7 @@ class SMSServer(models.Model):
             self.CDP_COMMANDS = {
                     'login' : 'login %s %s %s',
                     'terminate' : 'terminate -y',
+                    'suites' : 'suites',
             }
             self.host = HostFactory().create_host(self.host_settings)
             self.base_path = os.path.join(self.host.dataPath, 'SMS_SERVERS', self.alias)
@@ -30,6 +31,55 @@ class SMSServer(models.Model):
             else:
                 login = 1
             return login
+
+    #FIXME - finish this method
+    def list_suites(self):
+        '''Return a list with the names of the suites in the server.'''
+
+        out = self._get_cdp_result(self.CDP_COMMANDS['suites'])
+        return out
+
+    #def play_suite(self, suite_obj, build_sms_files=True, substitute=False):
+    #    '''
+    #    Play a suite.
+
+    #    Inputs:
+
+    #        suite_obj - Either the path to the sms definition file defining 
+    #            the suite or a Suite instance.
+
+    #        build_sms_files - A boolean indicating if the internal sms
+    #            directories and symlinks are to be created. Defaults to True.
+
+    #        substitute - A boolean indicating if the definition file is to be
+    #            played even if there is already a suite with the same name
+    #            in use in the server. Defaults to False.
+    #    '''
+
+    #    if isinstance(suite_obj, Suite):
+    #        the_suite = suite_obj
+    #    else:
+    #        the_suite = Suite(suite_obj)
+    #    result = self._play_suite_obj(the_suite)
+    #    if result == 0:
+    #        if build_sms_files:
+    #            built = self._build_sms_files()
+
+    #def _build_sms_files(self, suite_obj):
+    #    paths = {'dirs' : [], 'files' : []}
+    #    for
+
+
+    #def _play_suite_obj(self, suite_obj):
+    #    '''
+    #    Paly a suite in the server from a Suite object.
+    #    '''
+
+    #    raise NotImplementedError
+
+    #def cancel_suite(self, suite_name):
+
+
 
     def __unicode__(self):
         return '%s:%s_%s' % (self.alias, self.host_settings.name, self.rpc_num)
