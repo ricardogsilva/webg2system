@@ -4,7 +4,212 @@ import pexpect
 from django.db import models
 from systemsettings.models import Host
 from operations.core.g2hosts import HostFactory
-#from operations.core.cdpproxy import CDPProxy
+
+import pyparsing as pp
+
+class SMSStatus(models.Model):
+    status = models.CharField(max_length=50)
+
+    class Meta:
+        verbose_name = 'SMS status'
+        verbose_name_plural = 'SMS statuses'
+
+    def __unicode__(self):
+        return self.status
+
+class Root(models.Model):
+    _name = models.CharField(max_length=100)
+    status = models.ForeignKey(SMSStatus)
+
+    class Meta:
+        abstract = True
+
+    def __unicode__(self):
+        return self.name
+
+
+class Suite(Root):
+    families = models.ManyToManyField('Family')
+
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, name):
+        self._name = name
+
+    @staticmethod
+    def from_def(def_file):
+        fh = open(def_file, 'r')
+        grammar = Suite.suite_grammar()
+        p = grammar.parseString(fh.read())
+        s = Suite(name=p[1], status=SMSStatus.objects.get(status='unknown'))
+        s.save()
+        var_list = [i for i in p if i[0] == 'edit']
+        fam_list = [i for i in p if i[0] == 'family']
+        s._parse_variables_def(var_list)
+        s._parse_families_def(fam_list)
+        s.save()
+        return p, s
+
+    @staticmethod
+    def suite_grammar():
+        quote = pp.Word('"\'', exact=1).suppress()
+        colon = pp.Literal(':').suppress()
+        l_paren = pp.Literal('(').suppress()
+        r_paren = pp.Literal(')').suppress()
+        sms_node_path = pp.Word('./_' + pp.alphanums)
+        identifier = pp.Word(pp.alphas, pp.alphanums + '_')
+        var_value = pp.Word(pp.alphanums) | (quote + \
+                pp.Combine(pp.OneOrMore(pp.Word(pp.alphanums)), adjacent=False, 
+                           joinString=' ') + quote)
+        sms_var = pp.Group(pp.Keyword('edit') + identifier + var_value)
+        sms_label = pp.Group(pp.Keyword('label') + identifier + var_value)
+        sms_meter = pp.Group(pp.Keyword('meter') + identifier + pp.Word(pp.nums) * 3)
+        sms_limit = pp.Group(pp.Keyword('limit') + identifier + pp.Word(pp.nums))
+        sms_in_limit = pp.Group(pp.Keyword('inlimit') + sms_node_path + colon + identifier)
+        sms_trigger = pp.Group(pp.Keyword('trigger') + pp.restOfLine)
+        sms_task = pp.Group(
+            pp.Keyword('task') + \
+            identifier + \
+            pp.ZeroOrMore(
+                sms_trigger ^ sms_in_limit ^ sms_label ^ sms_meter ^ sms_var
+            )
+        ) + pp.Optional(pp.Keyword('endtask').suppress())
+        sms_family = pp.Forward()
+        sms_family << pp.Group(
+            pp.Keyword('family') + identifier + pp.ZeroOrMore(
+                sms_in_limit ^ sms_limit ^ sms_trigger ^ sms_var ^ sms_task ^ sms_family
+            )
+        ) + pp.Keyword('endfamily').suppress()
+        sms_suite = pp.Keyword('suite') + identifier + \
+                    pp.ZeroOrMore(sms_var ^ sms_family) + \
+                    pp.Keyword('endsuite').suppress()
+        return sms_suite
+
+    def _parse_variables_def(self, var_list):
+        for i in var_list:
+            v = SuiteVariable(suite=self, name=i[1], value=i[2])
+            v.save()
+
+    def _parse_families_def(self, fam_list):
+        for i in fam_list:
+            #f = Family(name=i[1], status=status)
+            f = Family.from_def(i)
+            f.save()
+            self.families.add(f)
+            
+
+
+class Node(Root):
+    _path = models.CharField(max_length=255, editable=False)
+    _family = models.ForeignKey(
+        'Family', null=True, blank=True,
+        related_name='%(app_label)s_%(class)s_families', 
+    )
+
+    @property
+    def path(self):
+        return self._path
+
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, name):
+        self._name = name
+        self._path = ''.join(self.path.rpartition('/')[0:2] + (name,))
+
+    @property
+    def family(self):
+        return self._family
+
+    @family.setter
+    def family(self, family):
+        self._family = family
+        if family is not None:
+            self._path = '/'.join((family.path, self.name))
+        else:
+            self._path = self._name
+
+    def save(self):
+        self.name = self.name
+        self.family = self.family
+        super(Node, self).save()
+
+    class Meta:
+        abstract = True
+
+class Family(Node):
+
+    class Meta:
+        verbose_name_plural = 'Families'
+
+    @staticmethod
+    def from_def(parse_obj):
+        status = SMSStatus.objects.get(status='unknown')
+        f = Family(name=parse_obj[1], status=status)
+        f.save()
+        var_list = [i for i in parse_obj if i[0] == 'edit']
+        fam_list = [i for i in parse_obj if i[0] == 'family']
+        task_list = [i for i in parse_obj if i[0] == 'task']
+        f._parse_variables_def(var_list)
+        f._parse_families_def(fam_list)
+        f.save()
+        return f
+
+    def _parse_variables_def(self, var_list):
+        for i in var_list:
+            v = FamilyVariable(family=self, name=i[1], value=i[2])
+            v.save()
+
+    def _parse_families_def(self, fam_list):
+        for i in fam_list:
+            f = Family.from_def(i)
+            f.save()
+            self.smssettings_family_families.add(f)
+
+    def _parse_tasks_def(self, task_list):
+        for i in task_list:
+            t = Task.from_def(i)
+            t.save()
+            self.task_set.add(t)
+            
+
+class Task(Node):
+    family = models.ForeignKey(Family, null=True, blank=True)
+
+    @staticmethod
+    def from_def(parse_obj):
+        status = SMSStatus.objects.get(status='unknown')
+        t = Task(name=parse_obj[1], status=status)
+        t.save()
+        var_list = [i for i in parse_obj if i[0] == 'edit']
+        t._parse_variables_def(var_list)
+        t.save()
+        return t
+
+
+class Variable(models.Model):
+    name = models.CharField(max_length=20)
+    value = models.CharField(max_length=255)
+
+    class Meta:
+        abstract = True
+
+    def __unicode__(self):
+        return self.name
+
+class SuiteVariable(Variable):
+    suite = models.ForeignKey(Suite)
+
+class FamilyVariable(Variable):
+    family = models.ForeignKey(Family)
+
+class TaskVariable(Variable):
+    task = models.ForeignKey(Task)
 
 class SMSServer(models.Model):
     alias = models.CharField(max_length=100)
