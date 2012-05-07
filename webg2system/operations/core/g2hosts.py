@@ -485,7 +485,7 @@ class G2LocalHost(G2Host):
                 raise Exception
         return newPaths
 
-    def run_program(self, command, workingDir=None):
+    def run_program(self, command, workingDir=None, env=None):
         '''
         Run an external program.
 
@@ -496,13 +496,22 @@ class G2LocalHost(G2Host):
             workingDir - The directory where the program should be
                 run.
 
+            env - A list of two-element tuples containing the name and value
+                of aditional environment variables to be set before running 
+                the command. This is useful for setting the SMS_PROG variable 
+                before pinging the sms server, for example.
+
         Returns:
 
             A tuple with the commands' stdout, stderr and return code.
         '''
 
+        if env is not None:
+            the_env = os.environ
+            for tup in env:
+                the_env[tup[0]] = tup[1]
         commandList = command.split(' ')
-        newProcess = subprocess.Popen(commandList, cwd=workingDir, 
+        newProcess = subprocess.Popen(commandList, cwd=workingDir, env=the_env,
                                       stdin=subprocess.PIPE,
                                       stdout=subprocess.PIPE, 
                                       stderr=subprocess.PIPE)
@@ -716,7 +725,8 @@ class G2RemoteHost(G2Host):
         localHost = factory.create_host()
         self._localConnection = {
                 'ftp' : FTPProxy(localHost=localHost, remoteHost=self),
-                'ssh' : SSHProxy(self.user, self.host, self.password),
+                #'ssh' : SSHProxy(self.user, self.host, self.password),
+                'ssh' : SSHProxy(self.user, self.host),
                 }
 
     def find(self, pathList, restrictPattern=None, protocol='ftp'):
@@ -751,8 +761,34 @@ class G2RemoteHost(G2Host):
             raise NotImplementedError
         return foundFiles
 
-    def run_program(self, command, workingDir=None):
-        raise NotImplementedError
+    #FIXME - Incorporate the workingDir argument
+    def run_program(self, command, workingDir=None, env=None):
+        '''
+        Run an external program.
+
+        Inputs:
+
+            command - A string with the full command to run.
+
+            workingDir - The directory where the program should be
+                run.
+
+            env - A list of two-element tuples containing the name and value
+                of aditional environment variables to be set before running 
+                the command. This is useful for setting the SMS_PROG variable 
+                before pinging the sms server, for example.
+
+        Returns:
+
+            A tuple with the commands' stdout, stderr and return code.
+        '''
+        ssh = self._localConnection.get('ssh')
+        if env is not None:
+            for tup in env:
+                result = ssh.run_command('export %s=%s' % (tup[0], tup[1]))
+        result = ssh.run_command(command)
+        stdout = ''.join(result)
+        return stdout, '', 0
 
 # older code
 

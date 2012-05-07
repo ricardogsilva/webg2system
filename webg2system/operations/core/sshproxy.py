@@ -66,7 +66,8 @@ class SSHProxy(object):
             self.connection = spawn('ssh %s %s@%s' % (otherOptions, self.user,
                                     self.host))
             self.connection.expect(self.sshPrompt)
-            result = self.connection.after.split('\r\n')
+            #result = self.connection.after.split('\r\n')
+            result = self.connection.after.splitlines()
             if re.search(self.sshPrompt, result[-1]) is not None:
                 print('connection successful')
 
@@ -86,7 +87,8 @@ class SSHProxy(object):
         self._connect()
         self.connection.sendline(command)
         result = self.connection.expect(self.sshPrompt)
-        output = self.connection.after.split('\r\n')
+        #output = self.connection.after.split('\r\n')
+        output = self.connection.after.splitlines()
         # output [0] is the command that was run
         # output [-1] is the sshPrompt
         # that is why they are stripped from the result
