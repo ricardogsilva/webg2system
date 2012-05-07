@@ -70,6 +70,7 @@ class Suite(Root):
         sms_limit = pp.Group(pp.Keyword('limit') + identifier + pp.Word(pp.nums))
         sms_in_limit = pp.Group(pp.Keyword('inlimit') + sms_node_path + colon + identifier)
         sms_trigger = pp.Group(pp.Keyword('trigger') + pp.restOfLine)
+        sms_repeat = pp.Group(pp.Keyword('repeat') + identifier + pp.Word(pp.nums) * 2)
         sms_task = pp.Group(
             pp.Keyword('task') + \
             identifier + \
@@ -80,7 +81,7 @@ class Suite(Root):
         sms_family = pp.Forward()
         sms_family << pp.Group(
             pp.Keyword('family') + identifier + pp.ZeroOrMore(
-                sms_in_limit ^ sms_limit ^ sms_trigger ^ sms_var ^ sms_task ^ sms_family
+                sms_in_limit ^ sms_limit ^ sms_trigger ^ sms_var ^ sms_task ^ sms_family ^ sms_repeat
             )
         ) + pp.Keyword('endfamily').suppress()
         sms_suite = pp.Keyword('suite') + identifier + \
