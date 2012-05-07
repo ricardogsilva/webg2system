@@ -13,6 +13,10 @@ class TaskVariableInLine(admin.StackedInline):
     model = TaskVariable
     extra = 0
 
+class RepeatInLine(admin.StackedInline):
+    model = Repeat
+    extra = 0
+
 class SMSStatusAdmin(admin.ModelAdmin):
     pass
 

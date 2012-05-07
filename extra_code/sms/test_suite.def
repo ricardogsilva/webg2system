@@ -4,7 +4,7 @@ suite suiteTeste
     edit terceiro 'Soares'
     edit resto 'Garcia da Silva'
     family main
-        repeat date 20090101 20101231
+        repeat date YMD 20090101 20101231
         limit simultaneous_tasks 5
         limit outro_lim 10
         edit var5 'Esta e longa'

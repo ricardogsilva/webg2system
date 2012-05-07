@@ -70,7 +70,7 @@ class Suite(Root):
         sms_limit = pp.Group(pp.Keyword('limit') + identifier + pp.Word(pp.nums))
         sms_in_limit = pp.Group(pp.Keyword('inlimit') + sms_node_path + colon + identifier)
         sms_trigger = pp.Group(pp.Keyword('trigger') + pp.restOfLine)
-        sms_repeat = pp.Group(pp.Keyword('repeat') + identifier + pp.Word(pp.nums) * 2)
+        sms_repeat = pp.Group(pp.Keyword('repeat') + pp.Keyword('date') + identifier + pp.Word(pp.nums) * 2)
         sms_task = pp.Group(
             pp.Keyword('task') + \
             identifier + \
@@ -144,6 +144,7 @@ class Node(Root):
         abstract = True
 
 class Family(Node):
+    repeat = models.ForeignKey('Repeat', null=True, blank=True)
 
     class Meta:
         verbose_name_plural = 'Families'
@@ -157,6 +158,7 @@ class Family(Node):
         fam_list = [i for i in parse_obj if i[0] == 'family']
         task_list = [i for i in parse_obj if i[0] == 'task']
         f._parse_variables_def(var_list)
+        f._parse_repeat_def(parse_obj)
         f._parse_families_def(fam_list)
         f.save()
         return f
@@ -171,6 +173,27 @@ class Family(Node):
             f = Family.from_def(i)
             f.save()
             self.smssettings_family_families.add(f)
+
+    def _parse_repeat_def(self, parse_obj):
+        try:
+            r = [i for i in parse_obj if i[0] == 'repeat'][0]
+            repeat = {'type' : r[1], 'name' : r[2], 'start' : r[3], 'end' : r[4]}
+            existent = Repeat.objects.filter(repeat_type=repeat['type'],
+                                             name=repeat['name'], 
+                                             start=repeat['start'],
+                                             end=repeat['end'])
+            if len(existent) > 0:
+                the_repeat = existent[0]
+            else:
+                the_repeat = Repeat(repeat_type=repeat['type'], 
+                                    name=repeat['name'],
+                                    start=repeat['start'],
+                                    end=repeat['end'])
+                the_repeat.save()
+            self.repeat = the_repeat
+        except IndexError:
+            # this family doesn't define a repeat
+            pass
 
     def _parse_tasks_def(self, task_list):
         for i in task_list:
@@ -211,6 +234,15 @@ class FamilyVariable(Variable):
 
 class TaskVariable(Variable):
     task = models.ForeignKey(Task)
+
+class Repeat(models.Model):
+    name = models.CharField(max_length=50)
+    repeat_type = models.CharField(max_length=50)
+    start = models.CharField(max_length=255)
+    end = models.CharField(max_length=255)
+
+    def __unicode__(self):
+        return self.name
 
 class SMSServer(models.Model):
     alias = models.CharField(max_length=100)
