@@ -959,8 +959,8 @@ class MetadataGenerator(object):
             response = opener.open(insertReq)
             # CSW response
             xml_response = response.read()
-            #print('insertReq response:')
-            #print xml_response  # debug
-            #print('------')
+            print('insertReq response:')
+            print xml_response  # debug
+            print('------')
         except urllib2.HTTPError, error:
             print(error.read())
