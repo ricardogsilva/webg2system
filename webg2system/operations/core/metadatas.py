@@ -23,7 +23,30 @@ import pycountry
 import utilities
 import systemsettings.models as ss
 
+# TODO
+# Order the elements according to the element_order attribute
+# Check the remaining xml errors
+
 class MetadataGenerator(object):
+
+    element_order = {
+        'fileIdentifier' : 0,
+        'language' : 1,
+        'characterSet' : 2,
+        'parentIdentifier' : 3,
+        'hierarchyLevel' : 4,
+        'contact' : 5,
+        'dateStamp' : 6,
+        'metadataStandardName' : 7,
+        'metadataStandardVersion' : 8,
+        'spatialRepresentationInfo' : 9,
+        'referenceSystemInfo' : 10,
+        'identificationInfo' : 11,
+        'contentInfo' : 12,
+        'distributionInfo' : 13,
+        'dataQualityInfo' : 14,
+        'metadataMaintenance' : 15,
+    }
 
     def __init__(self, template, timeslot, product):
         self.logger = logging.getLogger(
@@ -127,10 +150,10 @@ class MetadataGenerator(object):
                 'otherDetails' : self.tree.xpath('gmd:identificationInfo[1]'\
                     '/*/gmd:citation/*/gmd:otherCitationDetails'\
                     '/gco:CharacterString', namespaces=self.ns)[0],
-                    # abstract
-                'abstract' : self.tree.xpath('gmd:identificationInfo[1]'\
-                        '/*/gmd:abstract/gco:CharacterString', 
-                        namespaces=self.ns)[0],
+                    # abstract <- handled by the _apply_abstract method()
+                #'abstract' : self.tree.xpath('gmd:identificationInfo[1]'\
+                #        '/*/gmd:abstract/gco:CharacterString', 
+                #        namespaces=self.ns)[0],
                     # purpose <- does not need changing
                     # credit
                 'credit' : self.tree.xpath('gmd:identificationInfo[1]/*'\
@@ -274,7 +297,10 @@ class MetadataGenerator(object):
                                                 self.ns['gmd'])
                 titleEl = etree.SubElement(ciCitationEl, '{%s}title' % \
                                            self.ns['gmd'])
-                titleEl.text = vocSettings.title
+                charStringTitleEl = etree.SubElement(titleEl,
+                                                     '{%s}CharacterString' % \
+                                                     self.ns['gco'])
+                charStringTitleEl.text = vocSettings.title
                 dateEl = etree.SubElement(ciCitationEl, '{%s}date' % \
                                           self.ns['gmd'])
                 ciDateEl = etree.SubElement(dateEl, '{%s}CI_Date' % \
@@ -328,7 +354,10 @@ class MetadataGenerator(object):
                                         self.ns['gmd'])
         titleEl = etree.SubElement(ciCitationEl, '{%s}title' % \
                                    self.ns['gmd'])
-        titleEl.text = 'GEMET - INSPIRE themes version 1.0'
+        charStringTitleEl = etree.SubElement(titleEl,
+                                             '{%s}CharacterString' % \
+                                             self.ns['gco'])
+        charStringTitleEl.text = 'GEMET - INSPIRE themes version 1.0'
         dateEl = etree.SubElement(ciCitationEl, '{%s}date' % \
                                   self.ns['gmd'])
         ciDateEl = etree.SubElement(dateEl, '{%s}CI_Date' % \
@@ -460,16 +489,9 @@ class MetadataGenerator(object):
         gcoPostalEl.text = contact.organization.postalCode
         countryEl = etree.SubElement(ciAddressEl, '{%s}country' \
                                        % self.ns['gmd'])
-        countryListEl = etree.SubElement(countryEl, '{%s}Country' \
-                                       % self.ns['gmd'])
-        countryListElAttribs = countryListEl.attrib
-        countryListElAttribs['codeList'] = 'http://'\
-            'www.iso.org/iso/en/prods-services/iso3166ma/'\
-            '02iso-3166-code-lists/index.html'
-        countryListElAttribs['codeSpace'] = 'ISO 3166-1'
+        countryCharString = etree.SubElement(countryEl, '{%s}CharacterString' % self.ns['gco'])
         countryCode = contact.organization.country
-        countryListElAttribs['codeListValue'] = countryCode
-        countryListEl.text = pycountry.countries.get(alpha2=countryCode).name
+        countryCharString.text = pycountry.countries.get(alpha2=countryCode).name
         emailEl = etree.SubElement(ciAddressEl, '{%s}electronicMailAddress' \
                                    % self.ns['gmd'])
         gcoEmailEl = etree.SubElement(emailEl, '{%s}CharacterString' \
@@ -575,7 +597,8 @@ class MetadataGenerator(object):
         self.update_element('referenceSystemIdentifier', 
                             'EPSG:%s' % self.product.ireferenceSystemID)
         self._apply_citation(self.product, fileName, productVersion, uuid)
-        self.update_element('abstract', self.product.iResourceAbstract)
+        self._apply_abstract(self.product.iResourceAbstract)
+        #self.update_element('abstract', self.product.iResourceAbstract)
         self.update_element('credit', self.product.iCredit)
         identInfoEl = self.tree.xpath('gmd:identificationInfo/'\
                                       'gmd:MD_DataIdentification', 
@@ -614,6 +637,19 @@ class MetadataGenerator(object):
         self.update_element('thematicAccuracyTitle', 'Internal validation report')
         self.update_element('valReport', self.product.validation_report)
         self.update_element('lineage', self.product.lineage)
+
+    def create_series_metadata(self, filePath):
+        '''
+        Create an xml metadata file for the dataset series
+        '''
+
+        # settings that are to come from django
+        uuid = None
+        title = None
+
+        # fields that change from the dataset to dataset series
+        self.update_element('hierarchyLevel', 'series')
+
 
     def _apply_linkage(self, tileName, product):
         baseURL = ss.WebServer.objects.get().public_URL
@@ -719,7 +755,11 @@ class MetadataGenerator(object):
         recordTypeEl.text = dataset.name
         contentTypeEl = etree.SubElement(covEl, '{%s}contentType' % \
                                          self.ns['gmd'])
-        contTypeAttr = contentTypeEl.attrib
+        mdContEl = etree.SubElement(
+            contentTypeEl, 
+            '{%s}MD_CoverageContentTypeCode' % self.ns['gmd']
+        )
+        contTypeAttr = mdContEl.attrib
         contTypeAttr['codeList'] = 'http://' \
             'www.isotc211.org/2005/resources/codelist/gmxCodelists.xml' \
             '#MD_CoverageContentTypeCode'
@@ -860,6 +900,17 @@ class MetadataGenerator(object):
         userManualURL = '%s/operations/products/%s/docs/pum' % \
                 (baseURL, productSettings.short_name)
         otherDetailsEl.text = userManualURL
+
+    def _apply_abstract(self, abstract_text):
+        identInfoEl = self.tree.xpath('gmd:identificationInfo/gmd:MD_DataIdentification', namespaces=self.ns)[0]
+        # first remove any abstract that may be present
+        abstracts = identInfoEl.xpath('gmd:abstract', namespaces=self.ns)
+        for a in abstracts:
+            identInfoEl.remove(a)
+
+        abstractEl = etree.SubElement(identInfoEl, '{%s}abstract' % self.ns['gmd'])
+        charStringEl = etree.SubElement(abstractEl, '{%s}CharacterString' % self.ns['gco'])
+        charStringEl.text = abstract_text
 
     def _apply_temporal_extent(self, productSettings, timeslot):
         parentEl = self.tree.xpath('gmd:identificationInfo/*/gmd:extent/'\
