@@ -14,6 +14,7 @@ import urllib
 import urllib2
 import cookielib
 from uuid import uuid1
+from operator import itemgetter
 import datetime as dt
 import socket
 socket.setdefaulttimeout(None) # don't timeout
@@ -30,22 +31,51 @@ import systemsettings.models as ss
 class MetadataGenerator(object):
 
     element_order = {
-        'fileIdentifier' : 0,
-        'language' : 1,
-        'characterSet' : 2,
-        'parentIdentifier' : 3,
-        'hierarchyLevel' : 4,
-        'contact' : 5,
-        'dateStamp' : 6,
-        'metadataStandardName' : 7,
-        'metadataStandardVersion' : 8,
-        'spatialRepresentationInfo' : 9,
-        'referenceSystemInfo' : 10,
-        'identificationInfo' : 11,
-        'contentInfo' : 12,
-        'distributionInfo' : 13,
-        'dataQualityInfo' : 14,
-        'metadataMaintenance' : 15,
+      0 : 'fileIdentifier',
+      1 : 'language',
+      2 : 'characterSet',
+      3 : 'parentIdentifier',
+      4 : 'hierarchyLevel',
+      5 : 'contact',
+      6 : 'dateStamp',
+      7 : 'metadataStandardName',
+      8 : 'metadataStandardVersion',
+      9 : 'spatialRepresentationInfo',
+      10 : 'referenceSystemInfo',
+      11 : 'identificationInfo',
+      12 : 'contentInfo',
+      13 : 'distributionInfo',
+      14 : 'dataQualityInfo',
+      15 : 'metadataMaintenance',
+    }
+
+    MD_Identification_order = {
+        0 : 'citation',
+        1 : 'abstract',
+        2 : 'purpose',
+        3 : 'credit',
+        4 : 'status',
+        5 : 'pointOfContact',
+        6 : 'resourceMaintenance',
+        7 : 'graphicOverview',
+        8 : 'resourceFormat',
+        9 : 'descriptiveKeywords',
+        10 : 'resourceConstraints',
+        11 : 'aggregationInfo',
+        12 : 'spatialRepresentationType',
+        13 : 'spatialResolution',
+        14 : 'language',
+        15 : 'characterSet',
+        16 : 'topicCategory',
+        17 : 'extent',
+        18 : 'supplementalInformation',
+    }
+
+    MD_Distributor_order = {
+        0 : 'distributorContact',
+        1 : 'distributionOrderProcess',
+        2 : 'distributorFormat',
+        3 : 'distributorTransferOptions',
     }
 
     def __init__(self, template, timeslot, product):
@@ -167,9 +197,9 @@ class MetadataGenerator(object):
                     # graphicOverview <- handled by the _apply_graphic_overview() method
                     # resourceFormat <- unchanged
                     # descriptiveKeywords <- the _apply_keywords() method takes care of these
-                    # resourceconstraints <- unchanged
-                    # resourceconstraints <- unchanged
-                    # resourceconstraints <- unchanged
+                    # resourceConstraints <- unchanged
+                    # resourceConstraints <- unchanged
+                    # resourceConstraints <- unchanged
                     # aggregationInfo <- unchanged
                     # aggregationInfo <- to be removed from the template
                     # aggregationInfo <- to be removed from the template
@@ -519,13 +549,13 @@ class MetadataGenerator(object):
         gcoDescrEl.text = 'Organization website'
         functionEl = etree.SubElement(ciOnlineEl, '{%s}function' \
                                        % self.ns['gmd'])
-        functionListEl = etree.SubElement(functionEl, '{%s}CI_OnlineFunctionCode' \
+        functionListEl = etree.SubElement(functionEl, '{%s}CI_OnLineFunctionCode' \
                                           % self.ns['gmd'])
         functionListElAttribs = functionListEl.attrib
         functionListElAttribs['codeList'] = 'http://'\
             'standards.iso.org/ittf/PubliclyAvailableStandards/'\
             'ISO_19139_Schemas/resources/Codelist/'\
-            'ML_gmxCodelists.xml#CI_OnlineFunctionCode'
+            'ML_gmxCodelists.xml#CI_OnLineFunctionCode'
         functionListElAttribs['codeListValue'] = 'information'
         functionListEl.text = 'information'
         hoursServEl = etree.SubElement(ciContactEl, '{%s}hoursOfService' \
@@ -637,6 +667,19 @@ class MetadataGenerator(object):
         self.update_element('thematicAccuracyTitle', 'Internal validation report')
         self.update_element('valReport', self.product.validation_report)
         self.update_element('lineage', self.product.lineage)
+
+        self._re_order(self.tree.getroot(), self.element_order)
+        md_ident = self.tree.getroot().xpath(
+            'gmd:identificationInfo/gmd:MD_DataIdentification', 
+            namespaces=self.ns
+        )[0]
+        self._re_order(md_ident, self.MD_Identification_order)
+        md_distrib = self.tree.getroot().xpath( 
+            'gmd:distributionInfo/gmd:MD_Distribution/gmd:distributor/' \
+            'gmd:MD_Distributor', 
+            namespaces=self.ns
+        )[0]
+        self._re_order(md_distrib, self.MD_Distributor_order)
 
     def create_series_metadata(self, filePath):
         '''
@@ -927,8 +970,6 @@ class MetadataGenerator(object):
         endEl = parentEl.xpath('gml:endPosition', namespaces=self.ns)[0]
         endEl.text = theTimeslot
         
-    # FIXME
-    # - test this method
     def insert_csw(self, csw_url, login_url, logout_url, username,
                     password, filePaths=None):
         '''
@@ -1015,3 +1056,16 @@ class MetadataGenerator(object):
             print('------')
         except urllib2.HTTPError, error:
             print(error.read())
+
+    def _re_order(self, parent_element, order_dict):
+        re_order = []
+        for el in parent_element:
+            the_index = None
+            for k, v in order_dict.iteritems():
+                full_tag = '{%s}%s' % (self.ns.get('gmd'), v)
+                if full_tag == el.tag:
+                    the_index = k
+            re_order.append((el, the_index))
+        a = sorted(re_order, key=itemgetter(1))
+        for tup in a:
+            parent_element.append(tup[0])
