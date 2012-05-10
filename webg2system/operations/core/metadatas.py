@@ -687,14 +687,79 @@ class MetadataGenerator(object):
         '''
 
         # settings that are to come from django
-        uuid = None
-        title = None
+        uuid = self.product.iParentIdentifier
+        series_title = self.product.series_title
 
         # fields that change from the dataset to dataset series
-        self.update_element('hierarchyLevel', 'series')
+        self._update_hierarchy('series')
+        self._get_series_quicklook()
+        self._update_series_uuid(uuid)
+
+        # fields that get removed from the dataset file
+        self._remove_unused_elements()
+
+        # fields that get added
+
+    def _update_series_uuid(self, uuid):
+        elements = [
+                self.tree.xpath('gmd:fileIdentifier/gco:CharacterString', 
+                                namespaces=self.ns)[0],
+                self.tree.xpath('gmd:identificationInfo/*/gmd:citation/*/'\
+                                'gmd:identifier/*/gmd:code/'\
+                                'gco:CharacterString', 
+                                namespaces=self.ns)[0],
+        ]
+        for el in elements:
+            el.text = uuid
+
+    def _get_series_quicklook(self):
+        fileNameEl = self.tree.xpath('gmd:identificationInfo/*/'\
+                                     'gmd:graphicOverview/*/'\
+                                     'gmd:fileName/gco:CharacterString',
+                                     namespaces=self.ns)[0]
+        #filename is an URL that should mimic the regex in operations.urls.py
+        baseURL = ss.WebServer.objects.get().public_URL
+        url = '%s/operations/products/%s/seriesquicklook' % \
+                (baseURL, product.short_name)
+        fileNameEl.text = url
+
+    def _remove_unused_elements(self):
+        root = self.tree.getroot()
+        elements = [
+            root.xpath('gmd:parentIdentifier', 
+                                      namespaces=self.ns),
+            root.xpath('gmd:spatialRepresentationInfo', 
+                                      namespaces=self.ns),
+            root.xpath('gmd:contentInfo', 
+                                      namespaces=self.ns),
+        ]
+        for els in elements:
+            for el in els
+            root.remove(el)
 
 
-    def _apply_linkage(self, tileName, product):
+    def _update_hierarchy(self, value):
+        elements = [
+            self.tree.getroot().xpath('gmd:hierarchyLevel/gmd:MD_ScopeCode', 
+                                      namespaces=self.ns)[0],
+            self.tree.getroot().xpath('gmd:identificationInfo/*/'\
+                                      'gmd:resourceMaintenance/*/'\
+                                      'gmd:updateScope/gmd:MD_ScopeCode', 
+                                      namespaces=self.ns)[0],
+            self.tree.getroot().xpath('gmd:dataQualityInfo/*/'\
+                                      'gmd:scope/*/'\
+                                      'gmd:level/gmd:MD_ScopeCode', 
+                                      namespaces=self.ns)[0],
+        ]
+        for el in elements:
+            el.attrib['codeList'] = 'http://standards.iso.org/ittf/'\
+                'PubliclyAvailableStandards/ISO_19139_Schemas/resources/'\
+                'Codelist/ML_gmxCodelists.xml#MD_ScopeCode'
+            el.attrib['codeListValue'] = value
+            el.text = value
+
+
+     def _apply_linkage(self, tileName, product):
         baseURL = ss.WebServer.objects.get().public_URL
         ts = self.timeslot.strftime('%Y%m%d%H%M')
         url = '%s/operations/products/%s/%s/%s/product' % \

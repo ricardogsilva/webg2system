@@ -294,6 +294,7 @@ class Product(models.Model):
                                      'generating this product.')
     temporal_extent = models.TextField(help_text='Description of the '\
                                        'temporal extent.')
+    series_title = models.TextField(help_text='Title for the dataset series.')
 
     def __unicode__(self):
         return self.short_name
