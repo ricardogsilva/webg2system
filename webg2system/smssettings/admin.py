@@ -25,7 +25,7 @@ class SuiteAdmin(admin.ModelAdmin):
 
 class FamilyAdmin(admin.ModelAdmin):
     inlines = [FamilyVariableInLine]
-    list_display = ('name', 'path')
+    list_display = ('name', 'path', 'suite')
 
 class TaskAdmin(admin.ModelAdmin):
     inlines = [TaskVariableInLine]

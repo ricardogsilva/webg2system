@@ -7,6 +7,9 @@ from operations.core.g2hosts import HostFactory
 
 import pyparsing as pp
 
+# TODO
+# - Implement methods to retrieve a node given an absolute or
+#   a relative path
 class SMSStatus(models.Model):
     status = models.CharField(max_length=50)
 
@@ -29,7 +32,6 @@ class Root(models.Model):
 
 
 class Suite(Root):
-    families = models.ManyToManyField('Family')
 
     @property
     def name(self):
@@ -91,16 +93,13 @@ class Suite(Root):
 
     def _parse_variables_def(self, var_list):
         for i in var_list:
-            v = SuiteVariable(suite=self, name=i[1], value=i[2])
+            v = SuiteVariable(suite=self, name=i[2], value=i[2])
             v.save()
 
     def _parse_families_def(self, fam_list):
         for i in fam_list:
-            #f = Family(name=i[1], status=status)
-            f = Family.from_def(i)
+            f = Family.from_def(i, parent=self)
             f.save()
-            self.families.add(f)
-            
 
 
 class Node(Root):
@@ -133,7 +132,10 @@ class Node(Root):
         if family is not None:
             self._path = '/'.join((family.path, self.name))
         else:
-            self._path = self._name
+            if self.suite is None:
+                self._path = self.name
+            else:
+                self._path = '/' + self.name
 
     def save(self):
         self.name = self.name
@@ -143,16 +145,36 @@ class Node(Root):
     class Meta:
         abstract = True
 
+
 class Family(Node):
     repeat = models.ForeignKey('Repeat', null=True, blank=True)
+    _suite = models.ForeignKey(Suite, null=True, blank=True)
+
+    @property
+    def suite(self):
+        if self._suite is None and self.family is not None:
+            result = self.family.suite
+        else:
+            result = self._suite
+        return result
+
+    @suite.setter
+    def suite(self, suite):
+        self._suite = suite
 
     class Meta:
         verbose_name_plural = 'Families'
 
     @staticmethod
-    def from_def(parse_obj):
+    def from_def(parse_obj, parent=None):
         status = SMSStatus.objects.get(status='unknown')
-        f = Family(name=parse_obj[1], status=status)
+        if parent is not None:
+            if isinstance(parent, Family):
+                f = Family(name=parse_obj[1], status=status, family=parent)
+            elif isinstance(parent, Suite):
+                f = Family(name=parse_obj[1], status=status, suite=parent)
+        else:
+            f = Family(name=parse_obj[1], status=status)
         f.save()
         var_list = [i for i in parse_obj if i[0] == 'edit']
         fam_list = [i for i in parse_obj if i[0] == 'family']
@@ -160,6 +182,7 @@ class Family(Node):
         f._parse_variables_def(var_list)
         f._parse_repeat_def(parse_obj)
         f._parse_families_def(fam_list)
+        f._parse_tasks_def(task_list)
         f.save()
         return f
 
@@ -170,9 +193,7 @@ class Family(Node):
 
     def _parse_families_def(self, fam_list):
         for i in fam_list:
-            f = Family.from_def(i)
-            f.save()
-            self.smssettings_family_families.add(f)
+            f = Family.from_def(i, parent=self)
 
     def _parse_repeat_def(self, parse_obj):
         try:
@@ -197,23 +218,28 @@ class Family(Node):
 
     def _parse_tasks_def(self, task_list):
         for i in task_list:
-            t = Task.from_def(i)
-            t.save()
-            self.task_set.add(t)
+            t = Task.from_def(i, family=self)
             
 
 class Task(Node):
-    family = models.ForeignKey(Family, null=True, blank=True)
 
     @staticmethod
-    def from_def(parse_obj):
+    def from_def(parse_obj, family=None):
         status = SMSStatus.objects.get(status='unknown')
-        t = Task(name=parse_obj[1], status=status)
+        if isinstance(family, Family):
+            t = Task(name=parse_obj[1], status=status, family=family)
+        else:
+            t = Task(name=parse_obj[1], status=status)
         t.save()
         var_list = [i for i in parse_obj if i[0] == 'edit']
         t._parse_variables_def(var_list)
         t.save()
         return t
+
+    def _parse_variables_def(self, var_list):
+        for i in var_list:
+            v = TaskVariable(task=self, name=i[1], value=i[2])
+            v.save()
 
 
 class Variable(models.Model):

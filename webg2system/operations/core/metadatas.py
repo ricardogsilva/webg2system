@@ -694,6 +694,7 @@ class MetadataGenerator(object):
         self._update_hierarchy('series')
         self._get_series_quicklook()
         self._update_series_uuid(uuid)
+        self._apply_global_coordinates()
 
         # fields that get removed from the dataset file
         self._remove_unused_elements()
@@ -734,8 +735,8 @@ class MetadataGenerator(object):
                                       namespaces=self.ns),
         ]
         for els in elements:
-            for el in els
-            root.remove(el)
+            for el in els:
+                root.remove(el)
 
 
     def _update_hierarchy(self, value):
@@ -759,7 +760,7 @@ class MetadataGenerator(object):
             el.text = value
 
 
-     def _apply_linkage(self, tileName, product):
+    def _apply_linkage(self, tileName, product):
         baseURL = ss.WebServer.objects.get().public_URL
         ts = self.timeslot.strftime('%Y%m%d%H%M')
         url = '%s/operations/products/%s/%s/%s/product' % \

@@ -21,4 +21,6 @@ urlpatterns += patterns('operations.views',
                 '(?P<timeslot>\d{12})/product/$', 'get_product_zip'),
         url(r'^products/(?P<prodName>\w+)/(?P<tile>\w+)/' \
                 '(?P<timeslot>\d{12})/quicklook/$', 'get_quicklook'),
+        url(r'^products/(?P<prodName>\w+)/seriesquicklook/$', 
+            'get_series_quicklook'),
 )

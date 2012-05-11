@@ -146,3 +146,6 @@ def get_quicklook(request, prodName, tile, timeslot):
     else:
         raise Http404
     return response
+
+def get_series_quicklook(request, prodName):
+    pass
