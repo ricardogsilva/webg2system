@@ -30,6 +30,28 @@ class Root(models.Model):
     def __unicode__(self):
         return self.name
 
+    def cdp_definition(self, indent_order=0):
+        output = '%s%s %s\n' % ('\t'*indent_order, 
+                                self.__class__.__name__.lower(), 
+                                self.name)
+        output += self._start_cdp_definition(indent_order)
+        output += self._specific_cdp_definition(indent_order+1)
+        output += self._end_cdp_definition(indent_order)
+        return output
+
+    def _start_cdp_definition(self, indent_order=0):
+        return ''
+
+    def _end_cdp_definition(self, indent_order=0):
+        output = '%send%s\n' % ('\t'*indent_order, 
+                                self.__class__.__name__.lower())
+        return output
+
+    def _specific_cdp_definition(self, indent_order=0):
+        return ''
+
+
+
 
 class Suite(Root):
 
@@ -93,13 +115,26 @@ class Suite(Root):
 
     def _parse_variables_def(self, var_list):
         for i in var_list:
-            v = SuiteVariable(suite=self, name=i[2], value=i[2])
+            v = SuiteVariable(suite=self, name=i[1], value=i[2])
             v.save()
 
     def _parse_families_def(self, fam_list):
         for i in fam_list:
             f = Family.from_def(i, parent=self)
             f.save()
+
+    def _start_cdp_definition(self, indent_order=0):
+        output = ''
+        for var in self.suitevariable_set.all():
+            output += '%sedit %s "%s"\n' % ('\t'*(indent_order+1), 
+                                            var.name, var.value)
+        return output
+
+    def _specific_cdp_definition(self, indent_order=0):
+        output = ''
+        for f in self.family_set.all():
+            output += f.cdp_definition(indent_order)
+        return output
 
 
 class Node(Root):
@@ -144,6 +179,9 @@ class Node(Root):
 
     class Meta:
         abstract = True
+
+    def _specific_cdp_definition(self, indent_order=0):
+        return ''
 
 
 class Family(Node):
@@ -220,6 +258,24 @@ class Family(Node):
         for i in task_list:
             t = Task.from_def(i, family=self)
             
+    def _start_cdp_definition(self, indent_order=0):
+        output = ''
+        for var in self.familyvariable_set.all():
+            output += '%sedit %s "%s"\n' % ('\t'*(indent_order+1), 
+                                            var.name, var.value)
+        return output
+
+    def _specific_cdp_definition(self, indent_order=0):
+        output = ''
+        if self.repeat is not None:
+            output += self.repeat.cdp_definition(indent_order)
+        for f in self.smssettings_family_families.all():
+            output += f.cdp_definition(indent_order)
+        for t in self.smssettings_task_families.all():
+            output += t.cdp_definition(indent_order)
+        return output
+
+
 
 class Task(Node):
 
@@ -241,6 +297,21 @@ class Task(Node):
             v = TaskVariable(task=self, name=i[1], value=i[2])
             v.save()
 
+    def _start_cdp_definition(self, indent_order=0):
+        output = ''
+        for var in self.taskvariable_set.all():
+            output += '%sedit %s "%s"\n' % ('\t'*(indent_order+1), 
+                                            var.name, var.value)
+        return output
+    def _specific_cdp_definition(self, indent_order=0):
+        output = ''
+        #exp, nodes = self.trigger
+        #if exp != '':
+        #    trig = exp % tuple([n.path for n in nodes])
+        #    output += '%strigger %s\n' % ('\t' * indent_order, trig)
+        return output
+
+
 
 class Variable(models.Model):
     name = models.CharField(max_length=20)
@@ -250,7 +321,7 @@ class Variable(models.Model):
         abstract = True
 
     def __unicode__(self):
-        return self.name
+        return '%s: %s' % (self.name, self.value)
 
 class SuiteVariable(Variable):
     suite = models.ForeignKey(Suite)
@@ -269,6 +340,13 @@ class Repeat(models.Model):
 
     def __unicode__(self):
         return self.name
+
+    def cdp_definition(self, indent_order=0):
+        output = '%srepeat %s %s %s %s\n' % ('\t'*indent_order, 
+                                             self.repeat_type, self.name, 
+                                             self.start, self.end)
+        return output
+
 
 class SMSServer(models.Model):
     alias = models.CharField(max_length=100)
