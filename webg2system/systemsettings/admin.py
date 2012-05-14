@@ -77,8 +77,26 @@ class SourceAdmin(admin.ModelAdmin):
 class ProductAdmin(admin.ModelAdmin):
     #radio_fields = {'iResourceType' : admin.HORIZONTAL}
     inlines = [DatasetInline]
-    list_display = ('short_name', 'name')
+    list_display = ('short_name', 'name', 'series_status')
     filter_horizontal = ('keywords', 'topicCategories', 'sources',)
+    fieldsets = [
+            ('Dataset Series information', {
+                'fields' : ['series_title', 'series_status'],
+            }),
+            ('Dataset information', {
+                'fields' : ['name', 'short_name', 'user_manual', 
+                            'originator_collaborator', 
+                            'principal_investigator', 'distributor',
+                            'inspireKeyword', 'keywords', 'topicCategories',
+                            'pixelSize', 'iResourceTitle', 
+                            'iResourceAbstract', 'iParentIdentifier', 
+                            'ireferenceSystemID', 'iCredit',
+                            'graphic_overview_description',
+                            'graphic_overview_type', 'supplemental_info',
+                            'validation_report', 'lineage', 'sources',
+                            'temporal_extent'],
+            }),
+    ]
 
 class WebServerAdmin(admin.ModelAdmin):
     list_display = ('host', 'public_URL')

@@ -114,6 +114,7 @@ class RunningPackage(models.Model):
                     - generate (bool): True
                     - tile (string): None
                     - populateCSW: True
+                    - generate_series: False
         '''
 
         if callback is None:

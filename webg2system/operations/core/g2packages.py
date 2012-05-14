@@ -2090,6 +2090,16 @@ class MetadataGenerator(ProcessingPackage):
         self.mdGenerator.save_xml(xmlPath)
         return xmlPath
 
+    def create_series_metadata(self, xmlFiles):
+        # look for a previously created tile, to serve as a basis
+        base = xmlFiles[0]
+        mdGenerator = metadatas.MetadataGenerator(base, self.timeslot, 
+                                                       self.product)
+        mdGenerator.create_series_metadata()
+        xmlPath = os.path.join(self.xmlOutDir, '%s_series.xml' % \
+                               self.product.short_name)
+        mdGenerator.save_xml(xmlPath)
+
     def insert_metadata_csw(self, xmlFiles):
         '''
         Insert metadata records in the catalogue server.
@@ -2115,7 +2125,8 @@ class MetadataGenerator(ProcessingPackage):
                                              filePaths=xmlFiles)
         return result
 
-    def run_main(self, callback=None, tile=None, populateCSW=True):
+    def run_main(self, callback=None, tile=None, populateCSW=True, 
+                 generate_series=False):
         if tile is None:
             xmlFiles = self._process_all_tiles()
             result = xmlFiles
@@ -2124,6 +2135,8 @@ class MetadataGenerator(ProcessingPackage):
             result = xmlFiles[0]
         if populateCSW:
             inserted = self.insert_metadata_csw(xmlFiles)
+        if generate_series:
+            self.create_series_metadata(xmlFiles)
         self.logger.info('All Done')
         return result
 

@@ -294,7 +294,20 @@ class Product(models.Model):
                                      'generating this product.')
     temporal_extent = models.TextField(help_text='Description of the '\
                                        'temporal extent.')
-    series_title = models.TextField(help_text='Title for the dataset series.')
+    series_title = models.CharField(max_length=255, 
+                                    help_text='Title for the dataset series.')
+    SERIES_STATUS_CHOICES = (
+        ('completed', 'completed'),
+        ('historicalArchive', 'historicalArchive'),
+        ('obsolete', 'obsolete'),
+        ('onGoing', 'onGoing'),
+        ('planned', 'planned'),
+        ('required', 'required'),
+        ('underdevelopment', 'underdevelopment'),
+    )
+    series_status = models.CharField(max_length=20, help_text='Status of the '\
+                                     'dataset series.', 
+                                     choices=SERIES_STATUS_CHOICES)
 
     def __unicode__(self):
         return self.short_name
