@@ -510,6 +510,8 @@ class G2LocalHost(G2Host):
             the_env = os.environ
             for tup in env:
                 the_env[tup[0]] = tup[1]
+        else:
+            the_env = None
         commandList = command.split(' ')
         newProcess = subprocess.Popen(commandList, cwd=workingDir, env=the_env,
                                       stdin=subprocess.PIPE,

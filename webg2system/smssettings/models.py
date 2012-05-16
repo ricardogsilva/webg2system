@@ -51,8 +51,6 @@ class Root(models.Model):
         return ''
 
 
-
-
 class Suite(Root):
 
     @property
@@ -88,6 +86,7 @@ class Suite(Root):
         var_value = pp.Word(pp.alphanums) | (quote + \
                 pp.Combine(pp.OneOrMore(pp.Word(pp.alphanums)), adjacent=False, 
                            joinString=' ') + quote)
+        sms_comment = pp.Word('#') + pp.Optional(pp.restOfLine)
         sms_var = pp.Group(pp.Keyword('edit') + identifier + var_value)
         sms_label = pp.Group(pp.Keyword('label') + identifier + var_value)
         sms_meter = pp.Group(pp.Keyword('meter') + identifier + pp.Word(pp.nums) * 3)
@@ -95,22 +94,26 @@ class Suite(Root):
         sms_in_limit = pp.Group(pp.Keyword('inlimit') + sms_node_path + colon + identifier)
         sms_trigger = pp.Group(pp.Keyword('trigger') + pp.restOfLine)
         sms_repeat = pp.Group(pp.Keyword('repeat') + pp.Keyword('date') + identifier + pp.Word(pp.nums) * 2)
+        sms_defstatus = pp.Group(pp.Keyword('defstatus') + (pp.Keyword('suspended') ^ \
+                        pp.Keyword('complete') ^ pp.Keyword('queued')))
+        sms_clock = pp.Group(pp.Keyword('clock') + pp.Keyword('hybrid') + pp.Word(pp.nums))
         sms_task = pp.Group(
             pp.Keyword('task') + \
             identifier + \
             pp.ZeroOrMore(
-                sms_trigger ^ sms_in_limit ^ sms_label ^ sms_meter ^ sms_var
+                sms_defstatus ^ sms_trigger ^ sms_in_limit ^ sms_label ^ sms_meter ^ sms_var
             )
         ) + pp.Optional(pp.Keyword('endtask').suppress())
         sms_family = pp.Forward()
         sms_family << pp.Group(
             pp.Keyword('family') + identifier + pp.ZeroOrMore(
-                sms_in_limit ^ sms_limit ^ sms_trigger ^ sms_var ^ sms_task ^ sms_family ^ sms_repeat
+                sms_defstatus ^ sms_in_limit ^ sms_limit ^ sms_trigger ^ sms_var ^ sms_task ^ sms_family ^ sms_repeat
             )
         ) + pp.Keyword('endfamily').suppress()
         sms_suite = pp.Keyword('suite') + identifier + \
-                    pp.ZeroOrMore(sms_var ^ sms_family) + \
+                    pp.ZeroOrMore(sms_clock ^ sms_defstatus ^ sms_var ^ sms_family) + \
                     pp.Keyword('endsuite').suppress()
+        sms_suite.ignore(sms_comment)
         return sms_suite
 
     def _parse_variables_def(self, var_list):
@@ -353,7 +356,17 @@ class SMSServer(models.Model):
     rpc_num = models.IntegerField()
     host_settings = models.ForeignKey(Host)
 
-    def init_server(self):
+    @staticmethod
+    def get_server(alias):
+        '''
+        Get the server object and initialize it in one go
+        '''
+
+        s = SMSServer.objects.get(alias=alias)
+        login_result = s._init_server()
+        return s, login_result
+
+    def _init_server(self):
         if not hasattr(self, 'connection'):
             self.CDP_PROMPT = 'CDP>'
             self.CDP_COMMANDS = {
