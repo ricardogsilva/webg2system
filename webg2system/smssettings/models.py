@@ -8,144 +8,37 @@ from operations.core.g2hosts import HostFactory
 import pyparsing as pp
 
 # TODO
-# - Implement methods to retrieve a node given an absolute or
-#   a relative path
-class SMSStatus(models.Model):
-    status = models.CharField(max_length=50)
+# - add the cdp_definition() method
+# - add the get_node() method
+# - add the from_def() static method
 
-    class Meta:
-        verbose_name = 'SMS status'
-        verbose_name_plural = 'SMS statuses'
+class Suite(models.Model):
+    name = models.CharField(max_length=255, unique=True)
+    sms_representation = models.TextField()
 
-    def __unicode__(self):
-        return self.status
+    def get_suite_obj(self):
+        '''
+        Return a SuiteObj instance from this object's sms representation.
+        '''
 
-class Root(models.Model):
-    _name = models.CharField(max_length=100)
-    status = models.ForeignKey(SMSStatus)
+        raise NotImplementedError
 
-    class Meta:
-        abstract = True
+    def import_suite_obj(self, suite_obj):
+        '''
+        Import the input suite_obj and update this object's sms representation.
+        '''
 
-    def __unicode__(self):
-        return self.name
-
-    def cdp_definition(self, indent_order=0):
-        output = '%s%s %s\n' % ('\t'*indent_order, 
-                                self.__class__.__name__.lower(), 
-                                self.name)
-        output += self._start_cdp_definition(indent_order)
-        output += self._specific_cdp_definition(indent_order+1)
-        output += self._end_cdp_definition(indent_order)
-        return output
-
-    def _start_cdp_definition(self, indent_order=0):
-        return ''
-
-    def _end_cdp_definition(self, indent_order=0):
-        output = '%send%s\n' % ('\t'*indent_order, 
-                                self.__class__.__name__.lower())
-        return output
-
-    def _specific_cdp_definition(self, indent_order=0):
-        return ''
+        raise NotImplementedError
 
 
-class Suite(Root):
-
-    @property
-    def name(self):
-        return self._name
-
-    @name.setter
-    def name(self, name):
-        self._name = name
-
-    @staticmethod
-    def from_def(def_file):
-        fh = open(def_file, 'r')
-        grammar = Suite.suite_grammar()
-        p = grammar.parseString(fh.read())
-        s = Suite(name=p[1], status=SMSStatus.objects.get(status='unknown'))
-        s.save()
-        var_list = [i for i in p if i[0] == 'edit']
-        fam_list = [i for i in p if i[0] == 'family']
-        s._parse_variables_def(var_list)
-        s._parse_families_def(fam_list)
-        s.save()
-        return p, s
-
-    @staticmethod
-    def suite_grammar():
-        quote = pp.Word('"\'', exact=1).suppress()
-        colon = pp.Literal(':').suppress()
-        l_paren = pp.Literal('(').suppress()
-        r_paren = pp.Literal(')').suppress()
-        sms_node_path = pp.Word('./_' + pp.alphanums)
-        identifier = pp.Word(pp.alphas, pp.alphanums + '_')
-        var_value = pp.Word(pp.alphanums) | (quote + \
-                pp.Combine(pp.OneOrMore(pp.Word(pp.alphanums)), adjacent=False, 
-                           joinString=' ') + quote)
-        sms_comment = pp.Word('#') + pp.Optional(pp.restOfLine)
-        sms_var = pp.Group(pp.Keyword('edit') + identifier + var_value)
-        sms_label = pp.Group(pp.Keyword('label') + identifier + var_value)
-        sms_meter = pp.Group(pp.Keyword('meter') + identifier + pp.Word(pp.nums) * 3)
-        sms_limit = pp.Group(pp.Keyword('limit') + identifier + pp.Word(pp.nums))
-        sms_in_limit = pp.Group(pp.Keyword('inlimit') + sms_node_path + colon + identifier)
-        sms_trigger = pp.Group(pp.Keyword('trigger') + pp.restOfLine)
-        sms_repeat = pp.Group(pp.Keyword('repeat') + pp.Keyword('date') + identifier + pp.Word(pp.nums) * 2)
-        sms_defstatus = pp.Group(pp.Keyword('defstatus') + (pp.Keyword('suspended') ^ \
-                        pp.Keyword('complete') ^ pp.Keyword('queued')))
-        sms_clock = pp.Group(pp.Keyword('clock') + pp.Keyword('hybrid') + pp.Word(pp.nums))
-        sms_task = pp.Group(
-            pp.Keyword('task') + \
-            identifier + \
-            pp.ZeroOrMore(
-                sms_defstatus ^ sms_trigger ^ sms_in_limit ^ sms_label ^ sms_meter ^ sms_var
-            )
-        ) + pp.Optional(pp.Keyword('endtask').suppress())
-        sms_family = pp.Forward()
-        sms_family << pp.Group(
-            pp.Keyword('family') + identifier + pp.ZeroOrMore(
-                sms_defstatus ^ sms_in_limit ^ sms_limit ^ sms_trigger ^ sms_var ^ sms_task ^ sms_family ^ sms_repeat
-            )
-        ) + pp.Keyword('endfamily').suppress()
-        sms_suite = pp.Keyword('suite') + identifier + \
-                    pp.ZeroOrMore(sms_clock ^ sms_defstatus ^ sms_var ^ sms_family) + \
-                    pp.Keyword('endsuite').suppress()
-        sms_suite.ignore(sms_comment)
-        return sms_suite
-
-    def _parse_variables_def(self, var_list):
-        for i in var_list:
-            v = SuiteVariable(suite=self, name=i[1], value=i[2])
-            v.save()
-
-    def _parse_families_def(self, fam_list):
-        for i in fam_list:
-            f = Family.from_def(i, parent=self)
-            f.save()
-
-    def _start_cdp_definition(self, indent_order=0):
-        output = ''
-        for var in self.suitevariable_set.all():
-            output += '%sedit %s "%s"\n' % ('\t'*(indent_order+1), 
-                                            var.name, var.value)
-        return output
-
-    def _specific_cdp_definition(self, indent_order=0):
-        output = ''
-        for f in self.family_set.all():
-            output += f.cdp_definition(indent_order)
-        return output
-
-
-class Node(Root):
-    _path = models.CharField(max_length=255, editable=False)
-    _family = models.ForeignKey(
-        'Family', null=True, blank=True,
-        related_name='%(app_label)s_%(class)s_families', 
-    )
+class SMSGenericNode(object):
+    sms_type = ''
+    _name = ''
+    _path = ''
+    variables = []
+    defstatus = 'queued'
+    status = 'unknown'
+    _parent = None
 
     @property
     def path(self):
@@ -158,198 +51,434 @@ class Node(Root):
     @name.setter
     def name(self, name):
         self._name = name
-        self._path = ''.join(self.path.rpartition('/')[0:2] + (name,))
+        oldPath = self.path.rpartition('/')
+        self._path = '/'.join((oldPath[0], self.name))
 
     @property
-    def family(self):
-        return self._family
+    def parent(self):
+        return self._parent
 
-    @family.setter
-    def family(self, family):
-        self._family = family
-        if family is not None:
-            self._path = '/'.join((family.path, self.name))
+    @parent.setter
+    def parent(self, parent):
+        if self.sms_type != 'suite':
+            self._parent = parent
         else:
-            if self.suite is None:
-                self._path = self.name
-            else:
-                self._path = '/' + self.name
-
-    def save(self):
-        self.name = self.name
-        self.family = self.family
-        super(Node, self).save()
-
-    class Meta:
-        abstract = True
-
-    def _specific_cdp_definition(self, indent_order=0):
-        return ''
-
-
-class Family(Node):
-    repeat = models.ForeignKey('Repeat', null=True, blank=True)
-    _suite = models.ForeignKey(Suite, null=True, blank=True)
-
-    @property
-    def suite(self):
-        if self._suite is None and self.family is not None:
-            result = self.family.suite
+            raise Exception
+        if parent is None:
+            self._path = self.name
         else:
-            result = self._suite
-        return result
+            self._path = '/'.join((self.parent.path, self.name))
 
-    @suite.setter
-    def suite(self, suite):
-        self._suite = suite
-
-    class Meta:
-        verbose_name_plural = 'Families'
-
-    @staticmethod
-    def from_def(parse_obj, parent=None):
-        status = SMSStatus.objects.get(status='unknown')
-        if parent is not None:
-            if isinstance(parent, Family):
-                f = Family(name=parse_obj[1], status=status, family=parent)
-            elif isinstance(parent, Suite):
-                f = Family(name=parse_obj[1], status=status, suite=parent)
+    def __init__(self, name, variables=None, defstatus=None):
+        self.name = name
+        if variables is None:
+            self.variables = []
         else:
-            f = Family(name=parse_obj[1], status=status)
-        f.save()
-        var_list = [i for i in parse_obj if i[0] == 'edit']
-        fam_list = [i for i in parse_obj if i[0] == 'family']
-        task_list = [i for i in parse_obj if i[0] == 'task']
-        f._parse_variables_def(var_list)
-        f._parse_repeat_def(parse_obj)
-        f._parse_families_def(fam_list)
-        f._parse_tasks_def(task_list)
-        f.save()
-        return f
+            self.variables = variables
+        if defstatus is not None:
+            self.defstatus = defstatus
 
-    def _parse_variables_def(self, var_list):
-        for i in var_list:
-            v = FamilyVariable(family=self, name=i[1], value=i[2])
-            v.save()
+    def __repr__(self):
+        return '%s(%s)' % (self.sms_type, self.name)
 
-    def _parse_families_def(self, fam_list):
-        for i in fam_list:
-            f = Family.from_def(i, parent=self)
+class SuiteObj(SMSGenericNode):
+    sms_type = 'suite'
+    families = []
+    limits = []
 
-    def _parse_repeat_def(self, parse_obj):
-        try:
-            r = [i for i in parse_obj if i[0] == 'repeat'][0]
-            repeat = {'type' : r[1], 'name' : r[2], 'start' : r[3], 'end' : r[4]}
-            existent = Repeat.objects.filter(repeat_type=repeat['type'],
-                                             name=repeat['name'], 
-                                             start=repeat['start'],
-                                             end=repeat['end'])
-            if len(existent) > 0:
-                the_repeat = existent[0]
-            else:
-                the_repeat = Repeat(repeat_type=repeat['type'], 
-                                    name=repeat['name'],
-                                    start=repeat['start'],
-                                    end=repeat['end'])
-                the_repeat.save()
-            self.repeat = the_repeat
-        except IndexError:
-            # this family doesn't define a repeat
-            pass
-
-    def _parse_tasks_def(self, task_list):
-        for i in task_list:
-            t = Task.from_def(i, family=self)
-            
-    def _start_cdp_definition(self, indent_order=0):
-        output = ''
-        for var in self.familyvariable_set.all():
-            output += '%sedit %s "%s"\n' % ('\t'*(indent_order+1), 
-                                            var.name, var.value)
-        return output
-
-    def _specific_cdp_definition(self, indent_order=0):
-        output = ''
-        if self.repeat is not None:
-            output += self.repeat.cdp_definition(indent_order)
-        for f in self.smssettings_family_families.all():
-            output += f.cdp_definition(indent_order)
-        for t in self.smssettings_task_families.all():
-            output += t.cdp_definition(indent_order)
-        return output
-
-
-
-class Task(Node):
-
-    @staticmethod
-    def from_def(parse_obj, family=None):
-        status = SMSStatus.objects.get(status='unknown')
-        if isinstance(family, Family):
-            t = Task(name=parse_obj[1], status=status, family=family)
+    def __init__(self, name, variables=None, defstatus=None, families=None, 
+                 limits=None):
+        super(SuiteObj, self).__init__(name, variables, defstatus)
+        self._path = '/'
+        if families is None:
+            self.families = []
         else:
-            t = Task(name=parse_obj[1], status=status)
-        t.save()
-        var_list = [i for i in parse_obj if i[0] == 'edit']
-        t._parse_variables_def(var_list)
-        t.save()
-        return t
+            self.families = []
+        if limits is not None:
+            self.limits = limits
 
-    def _parse_variables_def(self, var_list):
-        for i in var_list:
-            v = TaskVariable(task=self, name=i[1], value=i[2])
-            v.save()
+class SMSTriggerNode(SMSGenericNode):
+    trigger = ''
+    in_limits = []
 
-    def _start_cdp_definition(self, indent_order=0):
-        output = ''
-        for var in self.taskvariable_set.all():
-            output += '%sedit %s "%s"\n' % ('\t'*(indent_order+1), 
-                                            var.name, var.value)
-        return output
-    def _specific_cdp_definition(self, indent_order=0):
-        output = ''
-        #exp, nodes = self.trigger
-        #if exp != '':
-        #    trig = exp % tuple([n.path for n in nodes])
-        #    output += '%strigger %s\n' % ('\t' * indent_order, trig)
-        return output
+    def __init__(self, name, variables=None, defstatus=None, trigger=None, 
+                 in_limits=None):
+        super(SMSTriggerNode, self).__init__(name, variables, defstatus)
+        if trigger is not None:
+            self.trigger = trigger
+        if in_limits is not None:
+            self.in_limits = in_limits
+
+class FamilyObj(SMSTriggerNode):
+    sms_type = 'family'
+    families = []
+    tasks = []
+    limits = []
+
+    def __init__(self, name, variables=None, defstatus=None, trigger=None,
+                 in_limits=None, families=None, tasks=None, limits=None):
+        super(FamilyObj, self).__init__(name, variables, defstatus, trigger,
+                                        in_limits)
+        if families is not None:
+            self.families = families
+        if  tasks is not None:
+            self.tasks = tasks
+        if limits is not None:
+            self.limits = limits
 
 
+class TaskObj(SMSTriggerNode):
+    sms_type = 'task'
 
-class Variable(models.Model):
-    name = models.CharField(max_length=20)
-    value = models.CharField(max_length=255)
+    def __init__(self, name, variables=None, defstatus=None, trigger=None,
+                 in_limits=None):
+        super(TaskObj, self).__init__(name, variables, defstatus, trigger,
+                                      in_limits)
 
-    class Meta:
-        abstract = True
 
-    def __unicode__(self):
-        return '%s: %s' % (self.name, self.value)
-
-class SuiteVariable(Variable):
-    suite = models.ForeignKey(Suite)
-
-class FamilyVariable(Variable):
-    family = models.ForeignKey(Family)
-
-class TaskVariable(Variable):
-    task = models.ForeignKey(Task)
-
-class Repeat(models.Model):
-    name = models.CharField(max_length=50)
-    repeat_type = models.CharField(max_length=50)
-    start = models.CharField(max_length=255)
-    end = models.CharField(max_length=255)
-
-    def __unicode__(self):
-        return self.name
-
-    def cdp_definition(self, indent_order=0):
-        output = '%srepeat %s %s %s %s\n' % ('\t'*indent_order, 
-                                             self.repeat_type, self.name, 
-                                             self.start, self.end)
-        return output
-
+# TODO
+# - Implement methods to retrieve a node given an absolute or
+#   a relative path
+#class SMSStatus(models.Model):
+#    status = models.CharField(max_length=50)
+#
+#    class Meta:
+#        verbose_name = 'SMS status'
+#        verbose_name_plural = 'SMS statuses'
+#
+#    def __unicode__(self):
+#        return self.status
+#
+#class Root(models.Model):
+#    _name = models.CharField(max_length=100)
+#    status = models.ForeignKey(SMSStatus)
+#
+#    class Meta:
+#        abstract = True
+#
+#    def __unicode__(self):
+#        return self.name
+#
+#    def cdp_definition(self, indent_order=0):
+#        output = '%s%s %s\n' % ('\t'*indent_order, 
+#                                self.__class__.__name__.lower(), 
+#                                self.name)
+#        output += self._start_cdp_definition(indent_order)
+#        output += self._specific_cdp_definition(indent_order+1)
+#        output += self._end_cdp_definition(indent_order)
+#        return output
+#
+#    def _start_cdp_definition(self, indent_order=0):
+#        return ''
+#
+#    def _end_cdp_definition(self, indent_order=0):
+#        output = '%send%s\n' % ('\t'*indent_order, 
+#                                self.__class__.__name__.lower())
+#        return output
+#
+#    def _specific_cdp_definition(self, indent_order=0):
+#        return ''
+#
+#
+#class Suite(Root):
+#
+#    @property
+#    def name(self):
+#        return self._name
+#
+#    @name.setter
+#    def name(self, name):
+#        self._name = name
+#
+#    @staticmethod
+#    def from_def(def_file):
+#        fh = open(def_file, 'r')
+#        grammar = Suite.suite_grammar()
+#        p = grammar.parseString(fh.read())
+#        s = Suite(name=p[1], status=SMSStatus.objects.get(status='unknown'))
+#        s.save()
+#        var_list = [i for i in p if i[0] == 'edit']
+#        fam_list = [i for i in p if i[0] == 'family']
+#        s._parse_variables_def(var_list)
+#        s._parse_families_def(fam_list)
+#        s.save()
+#        return p, s
+#
+#    @staticmethod
+#    def suite_grammar():
+#        quote = pp.Word('"\'', exact=1).suppress()
+#        colon = pp.Literal(':').suppress()
+#        l_paren = pp.Literal('(').suppress()
+#        r_paren = pp.Literal(')').suppress()
+#        sms_node_path = pp.Word('./_' + pp.alphanums)
+#        identifier = pp.Word(pp.alphas, pp.alphanums + '_')
+#        var_value = pp.Word(pp.alphanums) | (quote + \
+#                pp.Combine(pp.OneOrMore(pp.Word(pp.alphanums)), adjacent=False, 
+#                           joinString=' ') + quote)
+#        sms_comment = pp.Word('#') + pp.Optional(pp.restOfLine)
+#        sms_var = pp.Group(pp.Keyword('edit') + identifier + var_value)
+#        sms_label = pp.Group(pp.Keyword('label') + identifier + var_value)
+#        sms_meter = pp.Group(pp.Keyword('meter') + identifier + pp.Word(pp.nums) * 3)
+#        sms_limit = pp.Group(pp.Keyword('limit') + identifier + pp.Word(pp.nums))
+#        sms_in_limit = pp.Group(pp.Keyword('inlimit') + sms_node_path + colon + identifier)
+#        sms_trigger = pp.Group(pp.Keyword('trigger') + pp.restOfLine)
+#        sms_repeat = pp.Group(pp.Keyword('repeat') + pp.Keyword('date') + identifier + pp.Word(pp.nums) * 2)
+#        sms_defstatus = pp.Group(pp.Keyword('defstatus') + (pp.Keyword('suspended') ^ \
+#                        pp.Keyword('complete') ^ pp.Keyword('queued')))
+#        sms_clock = pp.Group(pp.Keyword('clock') + pp.Keyword('hybrid') + pp.Word(pp.nums))
+#        sms_task = pp.Group(
+#            pp.Keyword('task') + \
+#            identifier + \
+#            pp.ZeroOrMore(
+#                sms_defstatus ^ sms_trigger ^ sms_in_limit ^ sms_label ^ sms_meter ^ sms_var
+#            )
+#        ) + pp.Optional(pp.Keyword('endtask').suppress())
+#        sms_family = pp.Forward()
+#        sms_family << pp.Group(
+#            pp.Keyword('family') + identifier + pp.ZeroOrMore(
+#                sms_defstatus ^ sms_in_limit ^ sms_limit ^ sms_trigger ^ sms_var ^ sms_task ^ sms_family ^ sms_repeat
+#            )
+#        ) + pp.Keyword('endfamily').suppress()
+#        sms_suite = pp.Keyword('suite') + identifier + \
+#                    pp.ZeroOrMore(sms_clock ^ sms_defstatus ^ sms_var ^ sms_family) + \
+#                    pp.Keyword('endsuite').suppress()
+#        sms_suite.ignore(sms_comment)
+#        return sms_suite
+#
+#    def _parse_variables_def(self, var_list):
+#        for i in var_list:
+#            v = SuiteVariable(suite=self, name=i[1], value=i[2])
+#            v.save()
+#
+#    def _parse_families_def(self, fam_list):
+#        for i in fam_list:
+#            f = Family.from_def(i, parent=self)
+#            f.save()
+#
+#    def _start_cdp_definition(self, indent_order=0):
+#        output = ''
+#        for var in self.suitevariable_set.all():
+#            output += '%sedit %s "%s"\n' % ('\t'*(indent_order+1), 
+#                                            var.name, var.value)
+#        return output
+#
+#    def _specific_cdp_definition(self, indent_order=0):
+#        output = ''
+#        for f in self.family_set.all():
+#            output += f.cdp_definition(indent_order)
+#        return output
+#
+#
+#class Node(Root):
+#    _path = models.CharField(max_length=255, editable=False)
+#    _family = models.ForeignKey(
+#        'Family', null=True, blank=True,
+#        related_name='%(app_label)s_%(class)s_families', 
+#    )
+#
+#    @property
+#    def path(self):
+#        return self._path
+#
+#    @property
+#    def name(self):
+#        return self._name
+#
+#    @name.setter
+#    def name(self, name):
+#        self._name = name
+#        self._path = ''.join(self.path.rpartition('/')[0:2] + (name,))
+#
+#    @property
+#    def family(self):
+#        return self._family
+#
+#    @family.setter
+#    def family(self, family):
+#        self._family = family
+#        if family is not None:
+#            self._path = '/'.join((family.path, self.name))
+#        else:
+#            if self.suite is None:
+#                self._path = self.name
+#            else:
+#                self._path = '/' + self.name
+#
+#    def save(self):
+#        self.name = self.name
+#        self.family = self.family
+#        super(Node, self).save()
+#
+#    class Meta:
+#        abstract = True
+#
+#    def _specific_cdp_definition(self, indent_order=0):
+#        return ''
+#
+#
+#class Family(Node):
+#    repeat = models.ForeignKey('Repeat', null=True, blank=True)
+#    _suite = models.ForeignKey(Suite, null=True, blank=True)
+#
+#    @property
+#    def suite(self):
+#        if self._suite is None and self.family is not None:
+#            result = self.family.suite
+#        else:
+#            result = self._suite
+#        return result
+#
+#    @suite.setter
+#    def suite(self, suite):
+#        self._suite = suite
+#
+#    class Meta:
+#        verbose_name_plural = 'Families'
+#
+#    @staticmethod
+#    def from_def(parse_obj, parent=None):
+#        status = SMSStatus.objects.get(status='unknown')
+#        if parent is not None:
+#            if isinstance(parent, Family):
+#                f = Family(name=parse_obj[1], status=status, family=parent)
+#            elif isinstance(parent, Suite):
+#                f = Family(name=parse_obj[1], status=status, suite=parent)
+#        else:
+#            f = Family(name=parse_obj[1], status=status)
+#        f.save()
+#        var_list = [i for i in parse_obj if i[0] == 'edit']
+#        fam_list = [i for i in parse_obj if i[0] == 'family']
+#        task_list = [i for i in parse_obj if i[0] == 'task']
+#        f._parse_variables_def(var_list)
+#        f._parse_repeat_def(parse_obj)
+#        f._parse_families_def(fam_list)
+#        f._parse_tasks_def(task_list)
+#        f.save()
+#        return f
+#
+#    def _parse_variables_def(self, var_list):
+#        for i in var_list:
+#            v = FamilyVariable(family=self, name=i[1], value=i[2])
+#            v.save()
+#
+#    def _parse_families_def(self, fam_list):
+#        for i in fam_list:
+#            f = Family.from_def(i, parent=self)
+#
+#    def _parse_repeat_def(self, parse_obj):
+#        try:
+#            r = [i for i in parse_obj if i[0] == 'repeat'][0]
+#            repeat = {'type' : r[1], 'name' : r[2], 'start' : r[3], 'end' : r[4]}
+#            existent = Repeat.objects.filter(repeat_type=repeat['type'],
+#                                             name=repeat['name'], 
+#                                             start=repeat['start'],
+#                                             end=repeat['end'])
+#            if len(existent) > 0:
+#                the_repeat = existent[0]
+#            else:
+#                the_repeat = Repeat(repeat_type=repeat['type'], 
+#                                    name=repeat['name'],
+#                                    start=repeat['start'],
+#                                    end=repeat['end'])
+#                the_repeat.save()
+#            self.repeat = the_repeat
+#        except IndexError:
+#            # this family doesn't define a repeat
+#            pass
+#
+#    def _parse_tasks_def(self, task_list):
+#        for i in task_list:
+#            t = Task.from_def(i, family=self)
+#            
+#    def _start_cdp_definition(self, indent_order=0):
+#        output = ''
+#        for var in self.familyvariable_set.all():
+#            output += '%sedit %s "%s"\n' % ('\t'*(indent_order+1), 
+#                                            var.name, var.value)
+#        return output
+#
+#    def _specific_cdp_definition(self, indent_order=0):
+#        output = ''
+#        if self.repeat is not None:
+#            output += self.repeat.cdp_definition(indent_order)
+#        for f in self.smssettings_family_families.all():
+#            output += f.cdp_definition(indent_order)
+#        for t in self.smssettings_task_families.all():
+#            output += t.cdp_definition(indent_order)
+#        return output
+#
+#
+#
+#class Task(Node):
+#
+#    @staticmethod
+#    def from_def(parse_obj, family=None):
+#        status = SMSStatus.objects.get(status='unknown')
+#        if isinstance(family, Family):
+#            t = Task(name=parse_obj[1], status=status, family=family)
+#        else:
+#            t = Task(name=parse_obj[1], status=status)
+#        t.save()
+#        var_list = [i for i in parse_obj if i[0] == 'edit']
+#        t._parse_variables_def(var_list)
+#        t.save()
+#        return t
+#
+#    def _parse_variables_def(self, var_list):
+#        for i in var_list:
+#            v = TaskVariable(task=self, name=i[1], value=i[2])
+#            v.save()
+#
+#    def _start_cdp_definition(self, indent_order=0):
+#        output = ''
+#        for var in self.taskvariable_set.all():
+#            output += '%sedit %s "%s"\n' % ('\t'*(indent_order+1), 
+#                                            var.name, var.value)
+#        return output
+#    def _specific_cdp_definition(self, indent_order=0):
+#        output = ''
+#        #exp, nodes = self.trigger
+#        #if exp != '':
+#        #    trig = exp % tuple([n.path for n in nodes])
+#        #    output += '%strigger %s\n' % ('\t' * indent_order, trig)
+#        return output
+#
+#
+#
+#class Variable(models.Model):
+#    name = models.CharField(max_length=20)
+#    value = models.CharField(max_length=255)
+#
+#    class Meta:
+#        abstract = True
+#
+#    def __unicode__(self):
+#        return '%s: %s' % (self.name, self.value)
+#
+#class SuiteVariable(Variable):
+#    suite = models.ForeignKey(Suite)
+#
+#class FamilyVariable(Variable):
+#    family = models.ForeignKey(Family)
+#
+#class TaskVariable(Variable):
+#    task = models.ForeignKey(Task)
+#
+#class Repeat(models.Model):
+#    name = models.CharField(max_length=50)
+#    repeat_type = models.CharField(max_length=50)
+#    start = models.CharField(max_length=255)
+#    end = models.CharField(max_length=255)
+#
+#    def __unicode__(self):
+#        return self.name
+#
+#    def cdp_definition(self, indent_order=0):
+#        output = '%srepeat %s %s %s %s\n' % ('\t'*indent_order, 
+#                                             self.repeat_type, self.name, 
+#                                             self.start, self.end)
+#        return output
+#
 
 class SMSServer(models.Model):
     alias = models.CharField(max_length=100)
