@@ -11,6 +11,9 @@ import pyparsing as pp
 # - add the cdp_definition() method
 # - add the get_node() method
 # - add the from_def() static method
+# - implement the 'repeat' command properly. According to the SMS manual, 
+#   every node can have a repeat, but some repeat types are only applicable 
+#   to suites.
 
 class Suite(models.Model):
     name = models.CharField(max_length=255, unique=True)
@@ -21,21 +24,23 @@ class Suite(models.Model):
         Return a SuiteObj instance from this object's sms representation.
         '''
 
-        raise NotImplementedError
+        s = SuiteObj.from_sms_definition(self.sms_representation)
+        return s
+
 
     def import_suite_obj(self, suite_obj):
         '''
         Import the input suite_obj and update this object's sms representation.
         '''
 
-        raise NotImplementedError
+        self.sms_representation = suite_obj.cdp_definition()
 
 
 class SMSGenericNode(object):
     sms_type = ''
     _name = ''
     _path = ''
-    variables = []
+    variables = dict()
     defstatus = 'queued'
     status = 'unknown'
     _parent = None
@@ -72,7 +77,7 @@ class SMSGenericNode(object):
     def __init__(self, name, variables=None, defstatus=None):
         self.name = name
         if variables is None:
-            self.variables = []
+            self.variables = dict()
         else:
             self.variables = variables
         if defstatus is not None:
@@ -83,19 +88,119 @@ class SMSGenericNode(object):
 
 class SuiteObj(SMSGenericNode):
     sms_type = 'suite'
-    families = []
-    limits = []
+    _families = []
+    _limits = []
+
+    @property
+    def families(self):
+        return self._families
+
+    @property
+    def limits(self):
+        return self._limits
+
+    @staticmethod
+    def from_sms_definition(def_string):
+        '''Return a new SuiteObj by parsing the input def_string.'''
+
+        grammar = SuiteObj.suite_grammar()
+        p = grammar.parseString(def_string)
+        the_variables = dict()
+        the_defstatus = 'queued'
+        the_clock = 'hybrid'
+        the_families = []
+        the_limits = []
+        for item in p[2:]:
+            the_type = item[0]
+            if the_type == 'edit':
+                the_variables[item[1]] = item[2]
+            elif the_type == 'defstatus':
+                the_defstatus = item[1]
+            elif the_type == 'clock':
+                the_clock = item[1]
+            elif the_type == 'limit':
+                the_limits.append(Limit(item[1], item[2]))
+            elif the_type == 'family':
+                the_families.append(FamilyObj.from_parse_obj(item))
+        s = SuiteObj(p[1], the_variables, the_defstatus, the_families, 
+                     the_limits, the_clock)
+        #s.parse_in_limits()
+        #s.parse_triggers()
+        return s, p
+
+    @staticmethod
+    def suite_grammar():
+        quote = pp.Word('"\'', exact=1).suppress()
+        colon = pp.Literal(':').suppress()
+        l_paren = pp.Literal('(').suppress()
+        r_paren = pp.Literal(')').suppress()
+        sms_node_path = pp.Word('./_' + pp.alphanums)
+        identifier = pp.Word(pp.alphas, pp.alphanums + '_')
+        var_value = pp.Word(pp.alphanums) | (quote + \
+                pp.Combine(pp.OneOrMore(pp.Word(pp.alphanums)), adjacent=False, 
+                           joinString=' ') + quote)
+        sms_comment = pp.Word('#') + pp.Optional(pp.restOfLine)
+        sms_var = pp.Group(pp.Keyword('edit') + identifier + var_value)
+        sms_label = pp.Group(pp.Keyword('label') + identifier + var_value)
+        sms_meter = pp.Group(pp.Keyword('meter') + identifier + pp.Word(pp.nums) * 3)
+        sms_limit = pp.Group(pp.Keyword('limit') + identifier + pp.Word(pp.nums))
+        sms_in_limit = pp.Group(pp.Keyword('inlimit') + sms_node_path + colon + identifier)
+        sms_trigger = pp.Group(pp.Keyword('trigger') + pp.restOfLine)
+        sms_repeat = pp.Group(pp.Keyword('repeat') + pp.Keyword('date') + identifier + pp.Word(pp.nums) * 2)
+        sms_defstatus = pp.Group(pp.Keyword('defstatus') + (pp.Keyword('suspended') ^ \
+                        pp.Keyword('complete') ^ pp.Keyword('queued')))
+        sms_clock = pp.Group(pp.Keyword('clock') + pp.Keyword('hybrid') + pp.Word(pp.nums))
+        sms_task = pp.Group(
+            pp.Keyword('task') + \
+            identifier + \
+            pp.ZeroOrMore(
+                sms_defstatus ^ sms_trigger ^ sms_in_limit ^ sms_label ^ sms_meter ^ sms_var
+            )
+        ) + pp.Optional(pp.Keyword('endtask').suppress())
+        sms_family = pp.Forward()
+        sms_family << pp.Group(
+            pp.Keyword('family') + identifier + pp.ZeroOrMore(
+                sms_defstatus ^ sms_in_limit ^ sms_limit ^ sms_trigger ^ sms_var ^ sms_task ^ sms_family ^ sms_repeat
+            )
+        ) + pp.Keyword('endfamily').suppress()
+        sms_suite = pp.Keyword('suite') + identifier + \
+                    pp.ZeroOrMore(sms_clock ^ sms_defstatus ^ sms_var ^ sms_family) + \
+                    pp.Keyword('endsuite').suppress()
+        sms_suite.ignore(sms_comment)
+        return sms_suite
 
     def __init__(self, name, variables=None, defstatus=None, families=None, 
-                 limits=None):
+                 limits=None, clock=None):
         super(SuiteObj, self).__init__(name, variables, defstatus)
         self._path = '/'
+        self.clock = clock
         if families is None:
-            self.families = []
+            self._families = []
         else:
-            self.families = []
-        if limits is not None:
-            self.limits = limits
+            for f in families:
+                self.add_family(f)
+        if limits is None:
+            self._limits = []
+        else:
+            for li in limits:
+                self.add_limit(li)
+
+    def add_family(self, f):
+        self._families.append(f)
+        f.parent = self
+
+    def remove_family(self, f):
+        self._families.remove(f)
+        f.parent = None
+
+    def add_limit(self, li):
+        self._limits.append(li)
+        li.parent = self
+
+    def remove_limit(self, li):
+        self._limits.remove(li)
+        li.parent = None
+
 
 class SMSTriggerNode(SMSGenericNode):
     trigger = ''
@@ -109,22 +214,106 @@ class SMSTriggerNode(SMSGenericNode):
         if in_limits is not None:
             self.in_limits = in_limits
 
+
 class FamilyObj(SMSTriggerNode):
     sms_type = 'family'
-    families = []
-    tasks = []
-    limits = []
+    repeat = None
+    _families = []
+    _tasks = []
+    _limits = []
+
+    @property
+    def families(self):
+        return self._families
+
+    @property
+    def tasks(self):
+        return self._tasks
+
+    @property
+    def limits(self):
+        return self._limits
+
+    @staticmethod
+    def from_parse_obj(parse_obj):
+        name = parse_obj[1]
+        the_variables = dict()
+        the_defstatus = 'queued'
+        the_trigger = ''
+        the_families = []
+        the_tasks = []
+        the_limits = []
+        the_repeat = None
+        for item in parse_obj[2:]:
+            the_type = item[0]
+            if the_type == 'repeat':
+                the_repeat = ' '.join([i for i in item[2:]]) # for now the repeat is just a string
+            elif the_type == 'edit':
+                the_variables[item[1]] = item[2]
+            elif the_type == 'defstatus':
+                the_defstatus = item[1]
+            elif the_type == 'trigger':
+                the_trigger = item[1]
+            elif the_type == 'family':
+                f = FamilyObj.from_parse_obj(item)
+                the_families.append(f)
+            elif the_type == 'task':
+                t = TaskObj.from_parse_obj(item)
+                the_tasks.append(t)
+            elif the_type == 'limit':
+                the_limits.append(Limit(item[1], int(item[2])))
+        f = FamilyObj(name=name, variables=the_variables, 
+                      defstatus=the_defstatus, trigger=the_trigger,
+                      repeat=the_repeat, families=the_families,
+                      tasks=the_tasks, limits=the_limits)
+        return f
 
     def __init__(self, name, variables=None, defstatus=None, trigger=None,
-                 in_limits=None, families=None, tasks=None, limits=None):
+                 in_limits=None, repeat=None, families=None, tasks=None, 
+                 limits=None):
         super(FamilyObj, self).__init__(name, variables, defstatus, trigger,
                                         in_limits)
-        if families is not None:
-            self.families = families
-        if  tasks is not None:
-            self.tasks = tasks
-        if limits is not None:
-            self.limits = limits
+        if families is None:
+            self._families = []
+        else:
+            for f in families:
+                self.add_family(f)
+        if tasks is None:
+            self._tasks = []
+        else:
+            for t in tasks:
+                self.add_task(t)
+        if limits is None:
+            self._limits = []
+        else:
+            for li in limits:
+                self.add_limit(li)
+        if repeat is not None:
+            self.repeat = repeat
+
+    def add_family(self, f):
+        self._families.append(f)
+        f.parent = self
+
+    def remove_family(self, f):
+        self._families.remove(f)
+        f.parent = None
+
+    def add_task(self, t):
+        self._tasks.append(t)
+        t.parent = self
+
+    def remove_task(self, t):
+        self._tasks.remove(t)
+        t.parent = None
+
+    def add_limit(self, li):
+        self._limits.append(li)
+        li.parent = self
+
+    def remove_limit(self, li):
+        self._limits.remove(li)
+        li.parent = None
 
 
 class TaskObj(SMSTriggerNode):
@@ -134,6 +323,50 @@ class TaskObj(SMSTriggerNode):
                  in_limits=None):
         super(TaskObj, self).__init__(name, variables, defstatus, trigger,
                                       in_limits)
+
+    @staticmethod
+    def from_parse_obj(parse_obj):
+        name = parse_obj[1]
+        the_variables = dict()
+        the_trigger = ''
+        the_defstatus = 'queued'
+        for item in parse_obj[2:]:
+            the_type = item[0]
+            if the_type == 'edit':
+                the_variables[item[1]] = item[2]
+            elif the_type == 'trigger':
+                the_trigger = item[1]
+            elif the_type == 'defstatus':
+                the_defstatus = item[1]
+        t = TaskObj(name= name, variables=the_variables, 
+                    defstatus=the_defstatus, trigger=the_trigger)
+        return t
+
+
+class Limit(object):
+    sms_type = 'limit'
+    name = ''
+    num_tasks = 0
+    members = []
+    parent = None
+
+    @property
+    def path(self):
+        return ':'.join((self.parent.path, self.name))
+
+    def __init__(self, name, num_tasks, parent=None, members=None):
+        self.name = name
+        self.num_tasks = num_tasks
+        if parent is not None:
+            self.parent = parent
+        if members is None:
+            self.members = []
+        else:
+            self.members = members
+
+    def __repr__(self):
+        return '%s(%s)' % (self.sms_type, self.name)
+
 
 
 # TODO
