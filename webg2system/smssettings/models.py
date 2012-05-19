@@ -86,6 +86,7 @@ class SMSGenericNode(object):
     def __repr__(self):
         return '%s(%s)' % (self.sms_type, self.name)
 
+
 class SuiteObj(SMSGenericNode):
     sms_type = 'suite'
     _families = []
@@ -174,14 +175,12 @@ class SuiteObj(SMSGenericNode):
         super(SuiteObj, self).__init__(name, variables, defstatus)
         self._path = '/'
         self.clock = clock
-        if families is None:
-            self._families = []
-        else:
+        self._families = []
+        self._limits = []
+        if families is not None:
             for f in families:
                 self.add_family(f)
-        if limits is None:
-            self._limits = []
-        else:
+        if limits is not None:
             for li in limits:
                 self.add_limit(li)
 
@@ -273,19 +272,16 @@ class FamilyObj(SMSTriggerNode):
                  limits=None):
         super(FamilyObj, self).__init__(name, variables, defstatus, trigger,
                                         in_limits)
-        if families is None:
-            self._families = []
-        else:
+        self._families = []
+        self._tasks = []
+        self._limits = []
+        if families is not None:
             for f in families:
                 self.add_family(f)
-        if tasks is None:
-            self._tasks = []
-        else:
+        if tasks is not None:
             for t in tasks:
                 self.add_task(t)
-        if limits is None:
-            self._limits = []
-        else:
+        if limits is not None:
             for li in limits:
                 self.add_limit(li)
         if repeat is not None:
