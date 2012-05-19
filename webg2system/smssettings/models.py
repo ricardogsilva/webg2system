@@ -72,7 +72,10 @@ class SMSGenericNode(object):
         if parent is None:
             self._path = self.name
         else:
-            self._path = '/'.join((self.parent.path, self.name))
+            if parent.sms_type == 'suite':
+                self._path = parent.path + self.name
+            else:
+                self._path = '/'.join((self.parent.path, self.name))
 
     def __init__(self, name, variables=None, defstatus=None):
         self.name = name
@@ -85,6 +88,38 @@ class SMSGenericNode(object):
 
     def __repr__(self):
         return '%s(%s)' % (self.sms_type, self.name)
+
+    def cdp_definition(self, indent_order=0):
+        output = '%s%s %s\n' % ('\t'*indent_order, self.sms_type, self.name)
+        output += self._start_cdp_definition(indent_order)
+        output += self._specific_cdp_definition(indent_order+1)
+        output += self._end_cdp_definition(indent_order)
+        return output
+
+    def _start_cdp_definition(self, indent_order=0):
+        output = ''
+        for k, v in self.variables.iteritems():
+            output += '%sedit %s "%s"\n' % ('\t'*(indent_order+1), k, v)
+        return output
+
+    def _end_cdp_definition(self, indent_order=0):
+        output = '%send%s\n' % ('\t'*indent_order, self.sms_type)
+        return output
+
+    def _specific_cdp_definition(self, indent_order=0):
+        return ''
+
+    def get_suite(self):
+        if self.parent is None:
+            if self.sms_type == 'suite':
+                result = self.name
+            else:
+                result = None
+        elif self.parent.sms_type == 'suite':
+            result = self.parent.name
+        else:
+            result = self.parent.get_suite()
+        return result
 
 
 class SuiteObj(SMSGenericNode):
@@ -199,6 +234,12 @@ class SuiteObj(SMSGenericNode):
     def remove_limit(self, li):
         self._limits.remove(li)
         li.parent = None
+
+    def _specific_cdp_definition(self, indent_order=0):
+        output = ''
+        for n in self.families:
+            output += n.cdp_definition(indent_order)
+        return output
 
 
 class SMSTriggerNode(SMSGenericNode):
