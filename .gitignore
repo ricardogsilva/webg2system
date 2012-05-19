@@ -10,3 +10,4 @@ python/*
 *.tar.gz
 *.tgz
 sitestatic/*
+*.swp
