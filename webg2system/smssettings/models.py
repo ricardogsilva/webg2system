@@ -1,5 +1,7 @@
 import os
 import pexpect
+import re
+import datetime as dt
 
 from django.db import models
 from systemsettings.models import Host
@@ -8,12 +10,7 @@ from operations.core.g2hosts import HostFactory
 import pyparsing as pp
 
 # TODO
-# - add the cdp_definition() method
-# - add the get_node() method
-# - add the from_def() static method
-# - implement the 'repeat' command properly. According to the SMS manual, 
-#   every node can have a repeat, but some repeat types are only applicable 
-#   to suites.
+#   add 'trigger' and 'inlimit' to the cdp_definition methods
 
 class Suite(models.Model):
     name = models.CharField(max_length=255, unique=True)
@@ -98,6 +95,9 @@ class SMSGenericNode(object):
 
     def _start_cdp_definition(self, indent_order=0):
         output = ''
+        if self.defstatus != 'queued':
+            output += '%sdefstatus %s\n' % ('\t' * (indent_order + 1), 
+                                            self.defstatus)
         for k, v in self.variables.iteritems():
             output += '%sedit %s "%s"\n' % ('\t'*(indent_order+1), k, v)
         return output
@@ -112,14 +112,46 @@ class SMSGenericNode(object):
     def get_suite(self):
         if self.parent is None:
             if self.sms_type == 'suite':
-                result = self.name
+                result = self
             else:
                 result = None
         elif self.parent.sms_type == 'suite':
-            result = self.parent.name
+            result = self.parent
         else:
             result = self.parent.get_suite()
         return result
+
+    def get_node(self, path):
+        '''
+        Return the node with the defined path.
+
+        Paths can be given in an absolute or relative way.
+
+        Inputs:
+
+            path - a path to another node on the suite
+        '''
+
+        if path.startswith('/'):
+            base_node = self.get_suite()
+            node = base_node.get_node(path[1:])
+        else:
+            base_node = self.parent
+            if base_node is None:
+                base_node = self.get_suite()
+            path_list = path.split('/')
+            rel_path_list = []
+            for token in path_list:
+                if token != '':
+                    if token == '..':
+                        base_node = base_node.parent
+                    else:
+                        rel_path_list.append(token)
+            rel_path = '/'.join(rel_path_list)
+            node = None
+            if base_node is not None:
+                node = base_node._node_from_path(rel_path)
+        return node
 
 
 class SuiteObj(SMSGenericNode):
@@ -160,8 +192,9 @@ class SuiteObj(SMSGenericNode):
                 the_families.append(FamilyObj.from_parse_obj(item))
         s = SuiteObj(p[1], the_variables, the_defstatus, the_families, 
                      the_limits, the_clock)
+        for f in s.families:
+            f._parse_triggers()
         #s.parse_in_limits()
-        #s.parse_triggers()
         return s, p
 
     @staticmethod
@@ -200,7 +233,7 @@ class SuiteObj(SMSGenericNode):
             )
         ) + pp.Keyword('endfamily').suppress()
         sms_suite = pp.Keyword('suite') + identifier + \
-                    pp.ZeroOrMore(sms_clock ^ sms_defstatus ^ sms_var ^ sms_family) + \
+                    pp.ZeroOrMore(sms_clock ^ sms_limit ^ sms_defstatus ^ sms_var ^ sms_family) + \
                     pp.Keyword('endsuite').suppress()
         sms_suite.ignore(sms_comment)
         return sms_suite
@@ -235,11 +268,32 @@ class SuiteObj(SMSGenericNode):
         self._limits.remove(li)
         li.parent = None
 
+    def _start_cdp_definition(self, indent_order=0):
+        output = '%sclock %s\n' % ('\t' * (indent_order + 1), self.clock)
+        output += super(SuiteObj, self)._start_cdp_definition(indent_order)
+        return output
+
     def _specific_cdp_definition(self, indent_order=0):
         output = ''
+        for li in self.limits:
+            output += li.cdp_definition(indent_order)
         for n in self.families:
             output += n.cdp_definition(indent_order)
         return output
+
+    def _node_from_path(self, path):
+        if path == '' or path == '.':
+            node = self
+        else:
+            path_list = path.split('/')
+            node_list = self.families
+            possible_node = None
+            for n in node_list:
+                if n.name == path_list[0]:
+                    new_path = '/'.join(path_list[1:])
+                    possible_node = n._node_from_path(new_path)
+            node = possible_node
+        return node
 
 
 class SMSTriggerNode(SMSGenericNode):
@@ -253,6 +307,37 @@ class SMSTriggerNode(SMSGenericNode):
             self.trigger = trigger
         if in_limits is not None:
             self.in_limits = in_limits
+
+    def _parse_trigger(self):
+        if isinstance(self.trigger, str):
+            new_exp = ''
+            nodes = []
+            path_obj = re.compile(r'(\(*)([\w\d./=]*)(\)*)')
+            for tok in self.trigger.split():
+                re_obj = path_obj.search(tok)
+                for i in re_obj.groups():
+                    if i == '':
+                        pass
+                    elif ('(' in i) or (')' in i):
+                        new_exp += i
+                    elif i in ('complete', 'unknown'):
+                        new_exp += ' "%s" ' % i
+                    elif i in ('AND', 'OR'):
+                        new_exp += ' %s ' % i.lower()
+                    elif i in ('==',):
+                        new_exp += ' %s ' % i
+                    else:
+                        new_exp += ' "%s" '
+                        nodes.append(self.get_node(i))
+            self.trigger = new_exp, nodes
+
+    def evaluate_trigger(self):
+        exp, nodes = self.trigger
+        if exp == '':
+            result = True
+        else:
+            result = eval(exp % tuple([n.status for n in nodes]))
+        return result
 
 
 class FamilyObj(SMSTriggerNode):
@@ -287,7 +372,8 @@ class FamilyObj(SMSTriggerNode):
         for item in parse_obj[2:]:
             the_type = item[0]
             if the_type == 'repeat':
-                the_repeat = ' '.join([i for i in item[2:]]) # for now the repeat is just a string
+                #the_repeat = ' '.join([i for i in item[2:]]) # for now the repeat is just a string
+                the_repeat = RepeatFactory.create(item)
             elif the_type == 'edit':
                 the_variables[item[1]] = item[2]
             elif the_type == 'defstatus':
@@ -328,6 +414,13 @@ class FamilyObj(SMSTriggerNode):
         if repeat is not None:
             self.repeat = repeat
 
+    def _parse_triggers(self):
+        self._parse_trigger()
+        for t in self.tasks:
+            t._parse_trigger()
+        for f in self.families:
+            f._parse_triggers()
+
     def add_family(self, f):
         self._families.append(f)
         f.parent = self
@@ -351,6 +444,37 @@ class FamilyObj(SMSTriggerNode):
     def remove_limit(self, li):
         self._limits.remove(li)
         li.parent = None
+
+    def _node_from_path(self, path):
+        if path == '' or path == '.':
+            node = self
+        else:
+            path_list = path.split('/')
+            node_list = self.tasks + self.families
+            possible_node = None
+            for n in node_list:
+                if n.name == path_list[0]:
+                    new_path = '/'.join(path_list[1:])
+                    possible_node = n._node_from_path(new_path)
+            node = possible_node
+        return node
+
+    def _start_cdp_definition(self, indent_order=0):
+        output = ''
+        if self.repeat is not None:
+            output += self.repeat.cdp_definition(indent_order + 1)
+        output += super(FamilyObj, self)._start_cdp_definition(indent_order)
+        return output
+
+    def _specific_cdp_definition(self, indent_order=0):
+        output = ''
+        for li in self.limits:
+            output += li.cdp_definition(indent_order)
+        for n in self.families:
+            output += n.cdp_definition(indent_order)
+        for t in self.tasks:
+            output += t.cdp_definition(indent_order)
+        return output
 
 
 class TaskObj(SMSTriggerNode):
@@ -379,6 +503,12 @@ class TaskObj(SMSTriggerNode):
                     defstatus=the_defstatus, trigger=the_trigger)
         return t
 
+    def _node_from_path(self, path):
+        node = None
+        if path == self.path or path == '':
+            node = self
+        return node
+
 
 class Limit(object):
     sms_type = 'limit'
@@ -404,6 +534,60 @@ class Limit(object):
     def __repr__(self):
         return '%s(%s)' % (self.sms_type, self.name)
 
+    def cdp_definition(self, indent_order=0):
+        output = '%slimit %s %s\n' % ('\t' * (indent_order), 
+                                      self.name, self.num_tasks)
+        return output
+
+
+class RepeatFactory(object):
+
+    @staticmethod
+    def create(parse_obj):
+        r = None
+        if parse_obj[1] == 'date':
+            if len(parse_obj) <= 5:
+                delta = 0
+            else:
+                delta = parse_obj[5]
+            r = DateRepeat(name=parse_obj[2], start_ymd=parse_obj[3], 
+                           end_ymd=parse_obj[4], delta=delta)
+        return r
+
+class GenericRepeat(object):
+    sms_type = 'repeat'
+    name = ''
+
+    def __init__(self, name=None):
+        if name is not None:
+            self.name = name
+
+    def __repr__(self):
+        return '%s(%s)' % (self.sms_type, self.name)
+
+
+class DateRepeat(GenericRepeat):
+
+    def __init__(self, name, start_ymd, end_ymd, delta=None):
+        super(DateRepeat, self).__init__(name)
+        self.start_ymd = dt.date(int(start_ymd[0:4]), 
+                                 int(start_ymd[4:6]), 
+                                 int(start_ymd[6:8]))
+        self.end_ymd = dt.date(int(end_ymd[0:4]), 
+                               int(end_ymd[4:6]), 
+                               int(end_ymd[6:8]))
+        if delta is None:
+            delta = 0
+        self.delta = dt.timedelta(days=delta)
+
+    def cdp_definition(self, indent_order=0):
+        output = '%srepeat date %s %s %s %s\n' % \
+                ('\t' * (indent_order), 
+                 self.name, 
+                 self.start_ymd.strftime('%Y%m%d'),
+                 self.end_ymd.strftime('%Y%m%d'),
+                 self.delta.days)
+        return output
 
 
 # TODO

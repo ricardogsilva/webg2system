@@ -1,6 +1,7 @@
 suite suiteTeste
     defstatus suspended
     clock hybrid 0 # 07.05.2012 15:11
+    limit teste 10
     edit primeiro Ricardo
     edit segundo Filipe
     edit terceiro 'Soares'
