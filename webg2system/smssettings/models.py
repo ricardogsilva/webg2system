@@ -10,7 +10,7 @@ from operations.core.g2hosts import HostFactory
 import pyparsing as pp
 
 # TODO
-#   add 'trigger' and 'inlimit' to the cdp_definition methods
+#   add 'inlimit' to the cdp_definition methods
 
 class Suite(models.Model):
     name = models.CharField(max_length=255, unique=True)
@@ -194,7 +194,7 @@ class SuiteObj(SMSGenericNode):
                      the_limits, the_clock)
         for f in s.families:
             f._parse_triggers()
-        #s.parse_in_limits()
+            f._parse_in_limits()
         return s, p
 
     @staticmethod
@@ -331,6 +331,21 @@ class SMSTriggerNode(SMSGenericNode):
                         nodes.append(self.get_node(i))
             self.trigger = new_exp, nodes
 
+    def _parse_in_limits(self):
+        new_inlimits = []
+        for item in self.in_limits:
+            #print('item: %s' % item)
+            if isinstance(item, tuple):
+                node = self.get_suite().get_node(item[0])
+                lim_name = item[1]
+                for lim in node.limits:
+                    if lim_name == lim.name:
+                        lim.members.append(self)
+                        new_inlimits.append(lim)
+            else:
+                new_inlimits.append(item)
+        self.in_limits = new_inlimits
+
     def evaluate_trigger(self):
         exp, nodes = self.trigger
         if exp == '':
@@ -338,6 +353,15 @@ class SMSTriggerNode(SMSGenericNode):
         else:
             result = eval(exp % tuple([n.status for n in nodes]))
         return result
+
+    def _specific_cdp_definition(self, indent_order=0):
+        trig_text, trig_nodes = self.trigger
+        if trig_text != '':
+            trigger = trig_text % tuple([t.path for t in trig_nodes])
+            output = '%strigger %s\n' % ('\t' * indent_order, trigger)
+        else:
+            output = ''
+        return output
 
 
 class FamilyObj(SMSTriggerNode):
@@ -368,6 +392,7 @@ class FamilyObj(SMSTriggerNode):
         the_families = []
         the_tasks = []
         the_limits = []
+        the_in_limits = []
         the_repeat = None
         for item in parse_obj[2:]:
             the_type = item[0]
@@ -388,10 +413,13 @@ class FamilyObj(SMSTriggerNode):
                 the_tasks.append(t)
             elif the_type == 'limit':
                 the_limits.append(Limit(item[1], int(item[2])))
+            elif the_type == 'inlimit':
+                the_in_limits.append((item[1], item[2]))
         f = FamilyObj(name=name, variables=the_variables, 
                       defstatus=the_defstatus, trigger=the_trigger,
                       repeat=the_repeat, families=the_families,
-                      tasks=the_tasks, limits=the_limits)
+                      tasks=the_tasks, limits=the_limits, 
+                      in_limits=the_in_limits)
         return f
 
     def __init__(self, name, variables=None, defstatus=None, trigger=None,
@@ -420,6 +448,13 @@ class FamilyObj(SMSTriggerNode):
             t._parse_trigger()
         for f in self.families:
             f._parse_triggers()
+
+    def _parse_in_limits(self):
+        super(FamilyObj, self)._parse_in_limits()
+        for t in self.tasks:
+            t._parse_in_limits()
+        for f in self.families:
+            f._parse_in_limits()
 
     def add_family(self, f):
         self._families.append(f)
@@ -467,7 +502,7 @@ class FamilyObj(SMSTriggerNode):
         return output
 
     def _specific_cdp_definition(self, indent_order=0):
-        output = ''
+        output = super(FamilyObj, self)._specific_cdp_definition(indent_order)
         for li in self.limits:
             output += li.cdp_definition(indent_order)
         for n in self.families:
@@ -491,6 +526,7 @@ class TaskObj(SMSTriggerNode):
         the_variables = dict()
         the_trigger = ''
         the_defstatus = 'queued'
+        the_in_limits = []
         for item in parse_obj[2:]:
             the_type = item[0]
             if the_type == 'edit':
@@ -499,8 +535,11 @@ class TaskObj(SMSTriggerNode):
                 the_trigger = item[1]
             elif the_type == 'defstatus':
                 the_defstatus = item[1]
+            elif the_type == 'inlimit':
+                the_in_limits.append((item[1], item[2]))
         t = TaskObj(name= name, variables=the_variables, 
-                    defstatus=the_defstatus, trigger=the_trigger)
+                    defstatus=the_defstatus, trigger=the_trigger, 
+                    in_limits=the_in_limits)
         return t
 
     def _node_from_path(self, path):
