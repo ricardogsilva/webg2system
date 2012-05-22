@@ -5,4 +5,4 @@
 #     http://mapserver.org/cgi/wrapper.html
 
 MAPSERV="/usr/lib/cgi-bin/mapserv"
-MS_MAPFILE="/home/geo2/dev/G2System/new_code_testing/OUTPUT_DATA/wms_preparation/mapfiles/latestproducts.map" exec ${MAPSERV}
+MS_MAPFILE="/home/geo2/gisficheiros/geoland2_aux.map" exec ${MAPSERV}
