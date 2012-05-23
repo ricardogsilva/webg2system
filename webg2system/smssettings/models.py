@@ -9,9 +9,6 @@ from operations.core.g2hosts import HostFactory
 
 import pyparsing as pp
 
-# TODO
-#   add 'inlimit' to the cdp_definition methods
-
 class Suite(models.Model):
     name = models.CharField(max_length=255, unique=True)
     sms_representation = models.TextField()
@@ -355,12 +352,13 @@ class SMSTriggerNode(SMSGenericNode):
         return result
 
     def _specific_cdp_definition(self, indent_order=0):
+        output = ''
+        for in_lim in self.in_limits:
+            output += '%sinlimit %s\n' % ('\t' * indent_order, in_lim.path)
         trig_text, trig_nodes = self.trigger
         if trig_text != '':
             trigger = trig_text % tuple([t.path for t in trig_nodes])
-            output = '%strigger %s\n' % ('\t' * indent_order, trigger)
-        else:
-            output = ''
+            output += '%strigger %s\n' % ('\t' * indent_order, trigger)
         return output
 
 
