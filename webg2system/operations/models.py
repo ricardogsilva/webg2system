@@ -5,7 +5,7 @@ import datetime as dt
 from django.db import models
 from systemsettings.models import Package, Area
 
-from core import g2packages, rpdaemon
+from core import g2packages#, rpdaemon
 
 class RunningPackage(models.Model):
     STATUS_CHOICES = (('running', 'running'),('stopped', 'stopped'))
@@ -70,17 +70,17 @@ class RunningPackage(models.Model):
         pack = self._initialize()
         return pack
 
-    def daemonize(self):
-        daemon = rpdaemon.RPDaemon(self, '/tmp/rpdaemon.pid', 'RPDaemon')
-        r, w = os.pipe() # file descriptors
-        pid = os.fork()
-        if pid: # this is the parent process
-            os.close(w)
-        else: # this is the child process
-            os.close(r)
-            daemon._start()
-            #sys.exit(0)
-        print('Aqui')
+    #def daemonize(self):
+    #    daemon = rpdaemon.RPDaemon(self, '/tmp/rpdaemon.pid', 'RPDaemon')
+    #    r, w = os.pipe() # file descriptors
+    #    pid = os.fork()
+    #    if pid: # this is the parent process
+    #        os.close(w)
+    #    else: # this is the child process
+    #        os.close(r)
+    #        daemon._start()
+    #        #sys.exit(0)
+    #    print('Aqui')
 
     def run(self, callback=None, *args, **kwargs):
         '''
