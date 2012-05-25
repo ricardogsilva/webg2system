@@ -1,0 +1,514 @@
+suite G2REPROCESS
+  defstatus suspended
+  clock hybrid 0 # 13.04.2012 10:30
+  edit SMSMICRO '&'
+  edit OPTYPE 'REPROCESS'
+  edit SMSNODE 'localhost'
+  edit SMSCMD '&SMSJOB& 1> &SMSJOBOUT& 2>&&1 &&'
+  edit SMSKILL 'kill -15 &SMSRID& && cdp -c "sms_g2_operational; force aborted &SMSNAME&"'
+  edit SMSKILLCMD '&SMSKILL& &USER& &HOST& &SMSRID& &SMSJOB&'
+  edit SMSSTATUSCMD '/usr/local/bin:/usr/bin:/bin:/usr/games:./smsstatus &USER& &HOST& &SMSRID& &SMSJOB&'
+  edit SMSCOMMANDSDIR '/home/sms/bin'
+  edit SMSHOME '/data1/geoland/OPERATIONAL/trunk/PROCESSING_LINES/REPROCESSING_suite/sms_temp'
+  edit SMSINCLUDE '/data1/geoland/OPERATIONAL/trunk/PROCESSING_LINES/scripts'
+  edit SCRIPTSDIR '/data1/geoland/OPERATIONAL/trunk/PROCESSING_LINES/scripts'
+  edit SMSFILES '/data1/geoland/OPERATIONAL/trunk/PROCESSING_LINES/REPROCESSING_suite/sms_files'
+  edit PYTHONLIBDIR '/data1/geoland/OPERATIONAL/trunk/PROCESSING_LINES/python_modules'
+  edit SETTINGSDIR '/data1/geoland/OPERATIONAL/trunk/PROCESSING_LINES/settings'
+  edit LOGS_DIR '/data1/geoland/OPERATIONAL/trunk/PROCESSING_LINES/REPROCESSING_suite/LOGS'
+  edit LOG_LEVEL 'info'
+  edit MAIL_LIST 'ops.geoland@gmail.com'
+  edit FORCE_NEW_PRODUCT 'true'
+  edit SUITE_BEGIN_YMD '20120406'
+  edit SUITE_END_YMD '20120414'
+  edit NRT_SUITE '0'
+  family make
+    defstatus complete
+    edit buildsuitestructure 'create_symlinks'
+    edit fetchdataproducts 'fetchData'
+    edit preprocessdata 'LRIT2HDF5_g2 GRIB2HDF5_g2'
+    edit processproducts 'REF_g2 SAT_DATA_STAT_g2 SA_g2 CMa_g2 DSSF_g2 DSLF_g2 LST_g2 NGP2GRID_g2 SWI_g2 GSA_PP_g2'
+    edit new_compressData 'compressData'
+    edit compress_gsa 'compress_gsa'
+    edit disseminate 'new_disseminateData'
+    edit modifyYMD 'modify_YMD'
+    edit setup_Reprocess 'setup_Reprocess'
+    edit process_gsa 'GSA_g2'
+    task create_symlinks
+      edit PACKAGE 'create_symlinks'
+      label info "waiting..."
+    task setup_Reprocess
+      edit PACKAGE 'setup_Reprocess'
+      edit ARGLIST ''
+  endfamily
+  family main
+    repeat date YMD 20101008 20120515 1 # status 20120516
+    limit simultaneous_tasks 6
+    limit simultaneous_hard_tasks 2
+    edit DELAY_HOUR '0'
+    family ten_daily
+      inlimit ../main:simultaneous_tasks
+      edit HOUR '00'
+      family day_01
+        edit theDay '1'
+        family GOESE
+          task hourly_DAM
+            edit ALGORITHM_VERSION 'current'
+            edit ALGORITHM_MODE 'gsa'
+            edit AREA 'GOES-Disk'
+            edit PACKAGE 'GSA_g2'
+            meter progress 0 100 100
+            label timeslot ""
+            label info "waiting..."
+          task end_of_day_DPM
+            trigger hourly_DAM eq complete
+            edit ALGORITHM_VERSION 'current'
+            edit ALGORITHM_MODE 'gsa'
+            edit AREA 'GOES-Disk'
+            edit PACKAGE 'GSA_g2'
+            meter progress 0 100 100
+            label timeslot ""
+            label info "waiting..."
+        endfamily
+        family MTSAT
+          task hourly_DAM
+            edit ALGORITHM_VERSION 'current'
+            edit ALGORITHM_MODE 'gsa'
+            edit AREA 'MTSAT-Disk'
+            edit PACKAGE 'GSA_g2'
+            meter progress 0 100 100
+            label timeslot ""
+            label info "waiting..."
+          task end_of_day_DPM
+            trigger hourly_DAM eq complete
+            edit ALGORITHM_VERSION 'current'
+            edit ALGORITHM_MODE 'gsa'
+            edit AREA 'MTSAT-Disk'
+            edit PACKAGE 'GSA_g2'
+            meter progress 0 100 100
+            label timeslot ""
+            label info "waiting..."
+        endfamily
+      endfamily
+      family day_02
+        edit theDay '2'
+        family GOESE
+          task hourly_DAM
+            trigger ../../day_01/GOESE eq complete
+            edit ALGORITHM_VERSION 'current'
+            edit ALGORITHM_MODE 'gsa'
+            edit AREA 'GOES-Disk'
+            edit PACKAGE 'GSA_g2'
+            meter progress 0 100 100
+            label timeslot ""
+            label info "waiting..."
+          task end_of_day_DPM
+            trigger hourly_DAM eq complete
+            edit ALGORITHM_VERSION 'current'
+            edit ALGORITHM_MODE 'gsa'
+            edit AREA 'GOES-Disk'
+            edit PACKAGE 'GSA_g2'
+            meter progress 0 100 100
+            label timeslot ""
+            label info "waiting..."
+        endfamily
+        family MTSAT
+          task hourly_DAM
+            trigger ../../day_01/MTSAT eq complete
+            edit ALGORITHM_VERSION 'current'
+            edit ALGORITHM_MODE 'gsa'
+            edit AREA 'MTSAT-Disk'
+            edit PACKAGE 'GSA_g2'
+            meter progress 0 100 100
+            label timeslot ""
+            label info "waiting..."
+          task end_of_day_DPM
+            trigger hourly_DAM eq complete
+            edit ALGORITHM_VERSION 'current'
+            edit ALGORITHM_MODE 'gsa'
+            edit AREA 'MTSAT-Disk'
+            edit PACKAGE 'GSA_g2'
+            meter progress 0 100 100
+            label timeslot ""
+            label info "waiting..."
+        endfamily
+      endfamily
+      family day_03
+        edit theDay '3'
+        family GOESE
+          task hourly_DAM
+            trigger ../../day_02/GOESE eq complete
+            edit ALGORITHM_VERSION 'current'
+            edit ALGORITHM_MODE 'gsa'
+            edit AREA 'GOES-Disk'
+            edit PACKAGE 'GSA_g2'
+            meter progress 0 100 100
+            label timeslot ""
+            label info "waiting..."
+          task end_of_day_DPM
+            trigger hourly_DAM eq complete
+            edit ALGORITHM_VERSION 'current'
+            edit ALGORITHM_MODE 'gsa'
+            edit AREA 'GOES-Disk'
+            edit PACKAGE 'GSA_g2'
+            meter progress 0 100 100
+            label timeslot ""
+            label info "waiting..."
+        endfamily
+        family MTSAT
+          task hourly_DAM
+            trigger ../../day_02/MTSAT eq complete
+            edit ALGORITHM_VERSION 'current'
+            edit ALGORITHM_MODE 'gsa'
+            edit AREA 'MTSAT-Disk'
+            edit PACKAGE 'GSA_g2'
+            meter progress 0 100 100
+            label timeslot ""
+            label info "waiting..."
+          task end_of_day_DPM
+            trigger hourly_DAM eq complete
+            edit ALGORITHM_VERSION 'current'
+            edit ALGORITHM_MODE 'gsa'
+            edit AREA 'MTSAT-Disk'
+            edit PACKAGE 'GSA_g2'
+            meter progress 0 100 100
+            label timeslot ""
+            label info "waiting..."
+        endfamily
+      endfamily
+      family day_04
+        edit theDay '4'
+        family GOESE
+          task hourly_DAM
+            trigger ../../day_03/GOESE eq complete
+            edit ALGORITHM_VERSION 'current'
+            edit ALGORITHM_MODE 'gsa'
+            edit AREA 'GOES-Disk'
+            edit PACKAGE 'GSA_g2'
+            meter progress 0 100 100
+            label timeslot ""
+            label info "waiting..."
+          task end_of_day_DPM
+            trigger hourly_DAM eq complete
+            edit ALGORITHM_VERSION 'current'
+            edit ALGORITHM_MODE 'gsa'
+            edit AREA 'GOES-Disk'
+            edit PACKAGE 'GSA_g2'
+            meter progress 0 100 100
+            label timeslot ""
+            label info "waiting..."
+        endfamily
+        family MTSAT
+          task hourly_DAM
+            trigger ../../day_03/MTSAT eq complete
+            edit ALGORITHM_VERSION 'current'
+            edit ALGORITHM_MODE 'gsa'
+            edit AREA 'MTSAT-Disk'
+            edit PACKAGE 'GSA_g2'
+            meter progress 0 100 100
+            label timeslot ""
+            label info "waiting..."
+          task end_of_day_DPM
+            trigger hourly_DAM eq complete
+            edit ALGORITHM_VERSION 'current'
+            edit ALGORITHM_MODE 'gsa'
+            edit AREA 'MTSAT-Disk'
+            edit PACKAGE 'GSA_g2'
+            meter progress 0 100 100
+            label timeslot ""
+            label info "waiting..."
+        endfamily
+      endfamily
+      family day_05
+        edit theDay '5'
+        family GOESE
+          task hourly_DAM
+            trigger ../../day_04/GOESE eq complete
+            edit ALGORITHM_VERSION 'current'
+            edit ALGORITHM_MODE 'gsa'
+            edit AREA 'GOES-Disk'
+            edit PACKAGE 'GSA_g2'
+            meter progress 0 100 100
+            label timeslot ""
+            label info "waiting..."
+          task end_of_day_DPM
+            trigger hourly_DAM eq complete
+            edit ALGORITHM_VERSION 'current'
+            edit ALGORITHM_MODE 'gsa'
+            edit AREA 'GOES-Disk'
+            edit PACKAGE 'GSA_g2'
+            meter progress 0 100 100
+            label timeslot ""
+            label info "waiting..."
+        endfamily
+        family MTSAT
+          task hourly_DAM
+            trigger ../../day_04/MTSAT eq complete
+            edit ALGORITHM_VERSION 'current'
+            edit ALGORITHM_MODE 'gsa'
+            edit AREA 'MTSAT-Disk'
+            edit PACKAGE 'GSA_g2'
+            meter progress 0 100 100
+            label timeslot ""
+            label info "waiting..."
+          task end_of_day_DPM
+            trigger hourly_DAM eq complete
+            edit ALGORITHM_VERSION 'current'
+            edit ALGORITHM_MODE 'gsa'
+            edit AREA 'MTSAT-Disk'
+            edit PACKAGE 'GSA_g2'
+            meter progress 0 100 100
+            label timeslot ""
+            label info "waiting..."
+        endfamily
+      endfamily
+      family day_06
+        edit theDay '6'
+        family GOESE
+          task hourly_DAM
+            trigger ../../day_05/GOESE eq complete
+            edit ALGORITHM_VERSION 'current'
+            edit ALGORITHM_MODE 'gsa'
+            edit AREA 'GOES-Disk'
+            edit PACKAGE 'GSA_g2'
+            meter progress 0 100 100
+            label timeslot ""
+            label info "waiting..."
+          task end_of_day_DPM
+            trigger hourly_DAM eq complete
+            edit ALGORITHM_VERSION 'current'
+            edit ALGORITHM_MODE 'gsa'
+            edit AREA 'GOES-Disk'
+            edit PACKAGE 'GSA_g2'
+            meter progress 0 100 100
+            label timeslot ""
+            label info "waiting..."
+        endfamily
+        family MTSAT
+          task hourly_DAM
+            trigger ../../day_05/MTSAT eq complete
+            edit ALGORITHM_VERSION 'current'
+            edit ALGORITHM_MODE 'gsa'
+            edit AREA 'MTSAT-Disk'
+            edit PACKAGE 'GSA_g2'
+            meter progress 0 100 100
+            label timeslot ""
+            label info "waiting..."
+          task end_of_day_DPM
+            trigger hourly_DAM eq complete
+            edit ALGORITHM_VERSION 'current'
+            edit ALGORITHM_MODE 'gsa'
+            edit AREA 'MTSAT-Disk'
+            edit PACKAGE 'GSA_g2'
+            meter progress 0 100 100
+            label timeslot ""
+            label info "waiting..."
+        endfamily
+      endfamily
+      family day_07
+        edit theDay '7'
+        family GOESE
+          task hourly_DAM
+            trigger ../../day_06/GOESE eq complete
+            edit ALGORITHM_VERSION 'current'
+            edit ALGORITHM_MODE 'gsa'
+            edit AREA 'GOES-Disk'
+            edit PACKAGE 'GSA_g2'
+            meter progress 0 100 100
+            label timeslot ""
+            label info "waiting..."
+          task end_of_day_DPM
+            trigger hourly_DAM eq complete
+            edit ALGORITHM_VERSION 'current'
+            edit ALGORITHM_MODE 'gsa'
+            edit AREA 'GOES-Disk'
+            edit PACKAGE 'GSA_g2'
+            meter progress 0 100 100
+            label timeslot ""
+            label info "waiting..."
+        endfamily
+        family MTSAT
+          task hourly_DAM
+            trigger ../../day_06/MTSAT eq complete
+            edit ALGORITHM_VERSION 'current'
+            edit ALGORITHM_MODE 'gsa'
+            edit AREA 'MTSAT-Disk'
+            edit PACKAGE 'GSA_g2'
+            meter progress 0 100 100
+            label timeslot ""
+            label info "waiting..."
+          task end_of_day_DPM
+            trigger hourly_DAM eq complete
+            edit ALGORITHM_VERSION 'current'
+            edit ALGORITHM_MODE 'gsa'
+            edit AREA 'MTSAT-Disk'
+            edit PACKAGE 'GSA_g2'
+            meter progress 0 100 100
+            label timeslot ""
+            label info "waiting..."
+        endfamily
+      endfamily
+      family day_08
+        edit theDay '8'
+        family GOESE
+          task hourly_DAM
+            trigger ../../day_07/GOESE eq complete
+            edit ALGORITHM_VERSION 'current'
+            edit ALGORITHM_MODE 'gsa'
+            edit AREA 'GOES-Disk'
+            edit PACKAGE 'GSA_g2'
+            meter progress 0 100 100
+            label timeslot ""
+            label info "waiting..."
+          task end_of_day_DPM
+            trigger hourly_DAM eq complete
+            edit ALGORITHM_VERSION 'current'
+            edit ALGORITHM_MODE 'gsa'
+            edit AREA 'GOES-Disk'
+            edit PACKAGE 'GSA_g2'
+            meter progress 0 100 100
+            label timeslot ""
+            label info "waiting..."
+        endfamily
+        family MTSAT
+          task hourly_DAM
+            trigger ../../day_07/MTSAT eq complete
+            edit ALGORITHM_VERSION 'current'
+            edit ALGORITHM_MODE 'gsa'
+            edit AREA 'MTSAT-Disk'
+            edit PACKAGE 'GSA_g2'
+            meter progress 0 100 100
+            label timeslot ""
+            label info "waiting..."
+          task end_of_day_DPM
+            trigger hourly_DAM eq complete
+            edit ALGORITHM_VERSION 'current'
+            edit ALGORITHM_MODE 'gsa'
+            edit AREA 'MTSAT-Disk'
+            edit PACKAGE 'GSA_g2'
+            meter progress 0 100 100
+            label timeslot ""
+            label info "waiting..."
+        endfamily
+      endfamily
+      family day_09
+        edit theDay '9'
+        family GOESE
+          task hourly_DAM
+            trigger ../../day_08/GOESE eq complete
+            edit ALGORITHM_VERSION 'current'
+            edit ALGORITHM_MODE 'gsa'
+            edit AREA 'GOES-Disk'
+            edit PACKAGE 'GSA_g2'
+            meter progress 0 100 100
+            label timeslot ""
+            label info "waiting..."
+          task end_of_day_DPM
+            trigger hourly_DAM eq complete
+            edit ALGORITHM_VERSION 'current'
+            edit ALGORITHM_MODE 'gsa'
+            edit AREA 'GOES-Disk'
+            edit PACKAGE 'GSA_g2'
+            meter progress 0 100 100
+            label timeslot ""
+            label info "waiting..."
+        endfamily
+        family MTSAT
+          task hourly_DAM
+            trigger ../../day_08/MTSAT eq complete
+            edit ALGORITHM_VERSION 'current'
+            edit ALGORITHM_MODE 'gsa'
+            edit AREA 'MTSAT-Disk'
+            edit PACKAGE 'GSA_g2'
+            meter progress 0 100 100
+            label timeslot ""
+            label info "waiting..."
+          task end_of_day_DPM
+            trigger hourly_DAM eq complete
+            edit ALGORITHM_VERSION 'current'
+            edit ALGORITHM_MODE 'gsa'
+            edit AREA 'MTSAT-Disk'
+            edit PACKAGE 'GSA_g2'
+            meter progress 0 100 100
+            label timeslot ""
+            label info "waiting..."
+        endfamily
+      endfamily
+      family day_10
+        edit theDay '10'
+        family GOESE
+          task hourly_DAM
+            trigger ../../day_09/GOESE eq complete
+            edit ALGORITHM_VERSION 'current'
+            edit ALGORITHM_MODE 'gsa'
+            edit AREA 'GOES-Disk'
+            edit PACKAGE 'GSA_g2'
+            meter progress 0 100 100
+            label timeslot ""
+            label info "waiting..."
+          task end_of_day_DPM
+            trigger hourly_DAM eq complete
+            edit ALGORITHM_VERSION 'current'
+            edit ALGORITHM_MODE 'gsa'
+            edit AREA 'GOES-Disk'
+            edit PACKAGE 'GSA_g2'
+            meter progress 0 100 100
+            label timeslot ""
+            label info "waiting..."
+        endfamily
+        family MTSAT
+          task hourly_DAM
+            trigger ../../day_09/MTSAT eq complete
+            edit ALGORITHM_VERSION 'current'
+            edit ALGORITHM_MODE 'gsa'
+            edit AREA 'MTSAT-Disk'
+            edit PACKAGE 'GSA_g2'
+            meter progress 0 100 100
+            label timeslot ""
+            label info "waiting..."
+          task end_of_day_DPM
+            trigger hourly_DAM eq complete
+            edit ALGORITHM_VERSION 'current'
+            edit ALGORITHM_MODE 'gsa'
+            edit AREA 'MTSAT-Disk'
+            edit PACKAGE 'GSA_g2'
+            edit LOG_LEVEL 'debug'
+            meter progress 0 100 100
+            label timeslot ""
+            label info "waiting..."
+        endfamily
+      endfamily
+      family clean_up
+        task compress_data
+          trigger ../day_10 eq complete or ../day_10 eq unknown
+          edit ALGORITHM_VERSION 'current'
+          edit ALGORITHM_MODE 'ten_daily'
+          edit AREA 'GLOBE'
+          edit PACKAGE 'compressData'
+          meter progress 0 100 100
+          label timeslot ""
+          label info "waiting..."
+        task remove_old_files
+          trigger compress_data eq complete or compress_data eq unknown
+          edit ALGORITHM_VERSION 'current'
+          edit ALGORITHM_MODE 'remove_old_files_ten_daily'
+          edit AREA 'GLOBE'
+          edit PACKAGE 'new_disseminateData'
+          meter progress 0 100 100
+          label timeslot ""
+          label info "waiting..."
+      endfamily
+      family archive
+        task archive_all_outputs
+          trigger ../clean_up/compress_data eq complete or ../clean_up/compress_data eq unknown
+          edit ALGORITHM_VERSION 'current'
+          edit ALGORITHM_MODE 'ten_daily'
+          edit AREA 'GLOBE'
+          edit PACKAGE 'new_disseminateData'
+          meter progress 0 100 100
+          label timeslot ""
+          label info "waiting..."
+      endfamily
+    endfamily
+  endfamily
+endsuite

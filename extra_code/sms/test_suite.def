@@ -7,6 +7,8 @@ suite suiteTeste
     edit terceiro 'Soares'
     edit resto 'Garcia da Silva'
     family main
+        time +12:00 13:00 00:10
+        time +12:00
         repeat date YMD 20090101 20101231
         limit simultaneous_tasks 5
         limit outro_lim 10

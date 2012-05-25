@@ -17,6 +17,18 @@ class Suite(models.Model):
     def name(self):
         return self._name
 
+    @staticmethod
+    def from_suite_obj(suite_obj):
+        s = Suite(_name=suite_obj.name, 
+                  sms_representation=suite_obj.cdp_definition())
+        return s
+
+    @staticmethod
+    def from_cdp_definition(definition):
+        so = SuiteObj.from_sms_definition(definition)
+        s = Suite.from_suite_obj(so)
+        return s
+
     def suite_obj(self):
         '''
         Return a SuiteObj instance from this object's sms representation.
@@ -199,7 +211,7 @@ class SuiteObj(SMSGenericNode):
         for f in s.families:
             f._parse_triggers()
             f._parse_in_limits()
-        return s
+        return s, p
 
     @staticmethod
     def suite_grammar():
@@ -209,9 +221,7 @@ class SuiteObj(SMSGenericNode):
         r_paren = pp.Literal(')').suppress()
         sms_node_path = pp.Word('./_' + pp.alphanums)
         identifier = pp.Word(pp.alphas, pp.alphanums + '_')
-        var_value = pp.Word(pp.alphanums) | (quote + \
-                pp.Combine(pp.OneOrMore(pp.Word(pp.alphanums)), adjacent=False, 
-                           joinString=' ') + quote)
+        var_value = pp.Word(pp.printables) ^ pp.quotedString(pp.printables)
         sms_comment = pp.Word('#') + pp.Optional(pp.restOfLine)
         sms_var = pp.Group(pp.Keyword('edit') + identifier + var_value)
         sms_label = pp.Group(pp.Keyword('label') + identifier + var_value)
@@ -219,21 +229,30 @@ class SuiteObj(SMSGenericNode):
         sms_limit = pp.Group(pp.Keyword('limit') + identifier + pp.Word(pp.nums))
         sms_in_limit = pp.Group(pp.Keyword('inlimit') + sms_node_path + colon + identifier)
         sms_trigger = pp.Group(pp.Keyword('trigger') + pp.restOfLine)
-        sms_repeat = pp.Group(pp.Keyword('repeat') + pp.Keyword('date') + identifier + pp.Word(pp.nums) * 2 + pp.Optional(pp.Word(pp.nums)))
+        sms_repeat = pp.Group(pp.Keyword('repeat') + pp.Keyword('date') + \
+                identifier + pp.Word(pp.nums) * 2 + pp.Optional(pp.Word(pp.nums)))
         sms_defstatus = pp.Group(pp.Keyword('defstatus') + (pp.Keyword('suspended') ^ \
                         pp.Keyword('complete') ^ pp.Keyword('queued')))
-        sms_clock = pp.Group(pp.Keyword('clock') + pp.Keyword('hybrid') + pp.Word(pp.nums))
+        sms_clock = pp.Group(pp.Keyword('clock') + pp.Keyword('hybrid') + \
+                             pp.Word(pp.nums))
+        sms_time = pp.Group(
+            pp.Keyword('time') + pp.ZeroOrMore(
+                pp.Word(pp.nums + ':') ^ pp.Word(pp.nums + ':+')
+            )
+        )
         sms_task = pp.Group(
             pp.Keyword('task') + \
             identifier + \
             pp.ZeroOrMore(
-                sms_defstatus ^ sms_trigger ^ sms_in_limit ^ sms_label ^ sms_meter ^ sms_var
+                sms_defstatus ^ sms_trigger ^ sms_in_limit ^ sms_label ^ \
+                sms_meter ^ sms_var ^ sms_time
             )
         ) + pp.Optional(pp.Keyword('endtask').suppress())
         sms_family = pp.Forward()
         sms_family << pp.Group(
             pp.Keyword('family') + identifier + pp.ZeroOrMore(
-                sms_defstatus ^ sms_in_limit ^ sms_limit ^ sms_trigger ^ sms_var ^ sms_task ^ sms_family ^ sms_repeat
+                sms_defstatus ^ sms_in_limit ^ sms_limit ^ sms_trigger ^ \
+                sms_var ^ sms_task ^ sms_family ^ sms_repeat ^ sms_time
             )
         ) + pp.Keyword('endfamily').suppress()
         sms_suite = pp.Keyword('suite') + identifier + \
@@ -308,6 +327,7 @@ class SuiteObj(SMSGenericNode):
 class SMSTriggerNode(SMSGenericNode):
     trigger = ''
     in_limits = []
+    times = []
 
     def __init__(self, name, variables=None, defstatus=None, trigger=None, 
                  in_limits=None):
@@ -331,10 +351,12 @@ class SMSTriggerNode(SMSGenericNode):
                         new_exp += i
                     elif i in ('complete', 'unknown'):
                         new_exp += ' "%s" ' % i
-                    elif i in ('AND', 'OR'):
+                    elif i in ('AND', 'OR', 'and', 'or'):
                         new_exp += ' %s ' % i.lower()
                     elif i in ('==',):
                         new_exp += ' %s ' % i
+                    elif i == 'eq':
+                        new_exp += ' == '
                     else:
                         new_exp += ' "%s" '
                         nodes.append(self.get_node(i))
@@ -345,9 +367,8 @@ class SMSTriggerNode(SMSGenericNode):
     def _parse_in_limits(self):
         new_inlimits = []
         for item in self.in_limits:
-            #print('item: %s' % item)
             if isinstance(item, tuple):
-                node = self.get_suite().get_node(item[0])
+                node = self.get_node(item[0])
                 lim_name = item[1]
                 for lim in node.limits:
                     if lim_name == lim.name:
@@ -364,6 +385,12 @@ class SMSTriggerNode(SMSGenericNode):
         else:
             result = eval(exp % tuple([n.status for n in nodes]))
         return result
+
+    def _start_cdp_definition(self, indent_order=0):
+        output = super(SMSTriggerNode, self)._start_cdp_definition(indent_order)
+        for t in self.times:
+            output += t.cdp_definition(indent_order + 1)
+        return output
 
     def _specific_cdp_definition(self, indent_order=0):
         output = ''
@@ -414,6 +441,7 @@ class FamilyObj(SMSTriggerNode):
         the_tasks = []
         the_limits = []
         the_in_limits = []
+        the_times = []
         the_repeat = None
         for item in parse_obj[2:]:
             the_type = item[0]
@@ -436,21 +464,25 @@ class FamilyObj(SMSTriggerNode):
                 the_limits.append(Limit(item[1], int(item[2])))
             elif the_type == 'inlimit':
                 the_in_limits.append((item[1], item[2]))
+            elif the_type == 'time':
+                the_times.append(Time.from_parse_obj(item))
+
         f = FamilyObj(name=name, variables=the_variables, 
                       defstatus=the_defstatus, trigger=the_trigger,
                       repeat=the_repeat, families=the_families,
                       tasks=the_tasks, limits=the_limits, 
-                      in_limits=the_in_limits)
+                      in_limits=the_in_limits, times=the_times)
         return f
 
     def __init__(self, name, variables=None, defstatus=None, trigger=None,
                  in_limits=None, repeat=None, families=None, tasks=None, 
-                 limits=None):
+                 limits=None, times=None):
         super(FamilyObj, self).__init__(name, variables, defstatus, trigger,
                                         in_limits)
         self._families = []
         self._tasks = []
         self._limits = []
+        self.times = []
         if families is not None:
             for f in families:
                 self.add_family(f)
@@ -462,6 +494,8 @@ class FamilyObj(SMSTriggerNode):
                 self.add_limit(li)
         if repeat is not None:
             self.repeat = repeat
+        if times is not None:
+            self.times = times
 
     def _parse_triggers(self):
         self._parse_trigger()
@@ -539,7 +573,7 @@ class TaskObj(SMSTriggerNode):
     meters = dict()
 
     def __init__(self, name, variables=None, defstatus=None, trigger=None,
-                 in_limits=None, labels=None, meters=None):
+                 in_limits=None, labels=None, meters=None, times=None):
         super(TaskObj, self).__init__(name, variables, defstatus, trigger,
                                       in_limits)
         if labels is None:
@@ -550,6 +584,10 @@ class TaskObj(SMSTriggerNode):
             self.meters = dict()
         else:
             self.meters = meters
+        if times is None:
+            self.times = []
+        else:
+            self.times = times
 
     @staticmethod
     def from_parse_obj(parse_obj):
@@ -558,6 +596,7 @@ class TaskObj(SMSTriggerNode):
         the_trigger = ''
         the_defstatus = 'queued'
         the_in_limits = []
+        the_times = []
         the_labels = dict()
         the_meters = dict()
         for item in parse_obj[2:]:
@@ -575,11 +614,13 @@ class TaskObj(SMSTriggerNode):
             elif the_type == 'meter':
                 the_meters[item[1]] = {'min' : item[2], 'max' : item[3], 
                                        'threshold' : item[4]}
+            elif the_type == 'time':
+                the_times.append(Time.from_parse_obj(item))
 
         t = TaskObj(name= name, variables=the_variables, 
                     defstatus=the_defstatus, trigger=the_trigger, 
                     in_limits=the_in_limits, labels=the_labels, 
-                    meters=the_meters)
+                    meters=the_meters, times=the_times)
         return t
 
     def _node_from_path(self, path):
@@ -597,6 +638,7 @@ class TaskObj(SMSTriggerNode):
                                                m.get('min'), m.get('max'), 
                                                m.get('threshold'))
         return output
+
 
 class Limit(object):
     sms_type = 'limit'
@@ -676,6 +718,80 @@ class DateRepeat(GenericRepeat):
                  self.end_ymd.strftime('%Y%m%d'),
                  self.delta.days)
         return output
+
+
+class Time(object):
+
+    def __init__(self, start, end=None, delta=None, relative=False):
+        '''
+        Inputs:
+
+            start - A string in the form [H]H:mm
+        '''
+
+        self.relative = relative
+        self.start = self._parse_time_string(start)
+        if end is not None:
+            self.end = self._parse_time_string(end)
+        else:
+            self.end = self.start
+        if delta is not None:
+            the_time = self._parse_time_string(delta)
+            delta_seconds = the_time.hour * 60 * 60 + the_time.minute * 60
+            self.delta = dt.timedelta(seconds=delta_seconds)
+        else:
+            self.delta = dt.timedelta(seconds=0)
+
+    @staticmethod
+    def from_parse_obj(parse_obj):
+        if parse_obj[1].startswith('+'):
+            relative = True
+            start = parse_obj[1][1:]
+        else:
+            relative = False
+            start = parse_obj[1]
+        if len(parse_obj) == 2:
+            t = Time(start=start, relative=relative)
+        elif len(parse_obj) == 4:
+            t = Time(start=start, end=parse_obj[2], delta=parse_obj[3], 
+                     relative=relative)
+        else:
+            raise
+        return t
+
+    def _parse_time_string(self, time_string):
+        '''Parse a string in the form [H]H:mm into a datetime.time object.'''
+
+        if len(time_string) == 5:
+            hour = int(time_string[:2])
+            minute = int(time_string[3:])
+        elif len(time_string) == 4:
+            hour = int(time_string[0])
+            minute = int(time_string[2:])
+        else:
+            raise
+        return dt.time(hour=hour, minute=minute)
+
+    def cdp_definition(self, indent_order=0):
+        relative_part = ''
+        time_fmt = '%H:%M'
+        if self.relative:
+            relative_part = '+'
+        if self.start == self.end:
+            time_part = self.start.strftime(time_fmt)
+        else:
+            delta_hours = self.delta.seconds / 3600
+            delta_minutes = (self.delta.seconds / 3600.0 - delta_hours) * 60
+            delta = dt.time(delta_hours, int(delta_minutes))
+            time_part = self.start.strftime(time_fmt) + ' ' + \
+                        self.end.strftime(time_fmt) + ' ' + \
+                        delta.strftime(time_fmt)
+        output = '%stime %s%s\n' % ('\t' * indent_order, relative_part, time_part)
+        return output
+
+    def __repr__(self):
+        return 'time(%s, %s, %s)' % (self.start, self.end, self.delta)
+
 
 class SMSServer(models.Model):
     alias = models.CharField(max_length=100)
