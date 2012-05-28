@@ -1,3 +1,28 @@
+installing on a new machine:
+
+- install the needed dependencies:
+
+pip
+django (through pip)
+south (through pip)
+pycountry (through pip)
+python-pyparsing
+python-lxml
+python-tables
+python-imaging
+gdal-bin
+python-gdal
+python-mapscript
+libapache2-mod-wsgi
+cgi-mapserver
+mapserver-bin
+
+- copy the g2system.conf file from the apache directory to 
+/etc/apache2/sites-available and make the necessary adjustments 
+to the paths defined in the file
+
+- enable the site with sudo a2ensiste g2system.conf
+
 
 for monitoring apache2 logs:
 
