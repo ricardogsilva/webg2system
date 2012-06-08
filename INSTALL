@@ -1,5 +1,26 @@
 installing on a new machine:
 
+- PYTHON threading BUG
+
+    - Due to a bug in Python2.7 threading module that was only discovered
+      after the release, the code must be manually patched. So, edit the file
+      
+      /usr/lib/python2.7/threading.py
+
+      and add the following lines right after the def __stop(self) line #607:
+
+      if not hasattr(self, '_Thread__block'):
+          return
+
+
+      for more info check out the original bug report in:
+      http://bugs.python.org/issue14308
+
+
+      After the editing, remove the threading.pyc file (it gets regenerated on first 
+      usage).
+
+
 - install the needed dependencies:
 
 pip
@@ -16,6 +37,7 @@ python-mapscript
 libapache2-mod-wsgi
 cgi-mapserver
 mapserver-bin
+ttf-freefont
 
 - DJANGO SITE
 
