@@ -21,7 +21,47 @@ mapserver-bin
 /etc/apache2/sites-available and make the necessary adjustments 
 to the paths defined in the file
 
-- enable the site with sudo a2ensiste g2system.conf
+- enable the site with 
+	
+	sudo a2ensiste g2system.conf
+
+- disable the default website
+
+	sudo a2dissite 000-default
+
+- reload the webserver. There should be no errors or warnings reported.
+
+	sudo service apache2 reload
+
+- alter the following configurations in the webg2system/settings.py file:
+
+	STATIC_ROOT = '/home/geo5/webg2system/sitestatic'
+
+- run the collectstatic command
+
+	python manage.py collectstatic
+
+- at this point, the django site should be accessible at (replace 
+  geo5.meteo.pt with the actual host name)
+
+	http://geo5.meteo.pt/g2system
+
+- AUXILIARY WMS
+
+	- copy the map and database files from the archive
+
+		cd webg2system/aux_wms
+		scp g2user@192.168.151.29:/media/Data3/geoland2/STATIC_INPUTS/geoland2_aux/geoland2_aux.map .
+		scp g2user@192.168.151.29:/media/Data3/geoland2/STATIC_INPUTS/geoland2_aux/geoland2_db.sqlite .
+
+    - make the necessary path adjustments to the geoland2_aux.map file, including:
+        - SHAPEPATH
+        - wms_onlineresource
+
+	- copy the 'auxiliary' file in webg2system/apache/cgi-bin to 
+        /usr/lib/cgi-bin and change the path to the mapfile in order to point 
+        to the geoland2_aux.map file
+
 
 
 for monitoring apache2 logs:
