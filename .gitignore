@@ -11,3 +11,4 @@ python/*
 *.tgz
 sitestatic/*
 *.swp
+settings_local.py
