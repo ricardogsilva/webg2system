@@ -110,6 +110,7 @@ class RunningPackage(models.Model):
                     - update (string): None
                 QuickLookGenerator
                     - tile (string): None
+                    - move_to_webserver (bool): True
                 MetadataGenerator
                     - generate (bool): True
                     - tile (string): None

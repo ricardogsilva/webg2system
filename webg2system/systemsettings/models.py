@@ -340,7 +340,6 @@ class Dataset(models.Model):
     min_value = models.IntegerField(default=0)
     bit_depth= models.IntegerField(default=16)
 
-
     def __unicode__(self):
         return self.name
 

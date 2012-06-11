@@ -1955,13 +1955,18 @@ class QuickLookGenerator(ProcessingPackage):
                 quickLooks.append(ql)
         result = quickLooks
 
-    def run_main(self, callback=None, tile=None):
+    def run_main(self, callback=None, tile=None, move_to_webserver=True):
         geotiff = self.find_geotiff()
         mapfile = self.update_mapfile(geotiff)
         if tile is None:
             result = self._process_all_tiles(mapfile)
         else:
             result = self._process_single_tile(tile, mapfile)
+        if move_to_webserver:
+            self.logger.info('moving outputs to the webserver...')
+            self.move_outputs_to_webserver()
+            self.logger.info('deleting local files...')
+            self.delete_outputs()
         self.logger.info('All Done')
         return result
 
@@ -1978,6 +1983,17 @@ class QuickLookGenerator(ProcessingPackage):
             legendPath = self.mapper.generate_legend(mapfile, layers, 
                                                      outputDir, self.host)
         return legendPath
+
+    def move_outputs_to_webserver(self):
+        web_server = ss.WebServer.objects.get()
+        hf = HostFactory()
+        host_obj = hf.create_host(web_server.host)
+        g2fs = self._filter_g2f_list(self.outputs, 'fileType', 'geotiff')
+        send_result = self._send_files(
+            g2fs, 
+            destHost=host_obj
+        )
+        return send_result
 
 
 class MetadataGenerator(ProcessingPackage):
