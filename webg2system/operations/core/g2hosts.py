@@ -61,7 +61,8 @@ class HostFactory(object):
                                 % localName)
             localIP = None
         if hostSettings is None:
-            hostSettings = ss.Host.objects.get(name=localName)
+            #hostSettings = ss.Host.objects.get(name=localName)
+            hostSettings = ss.Host.objects.get(ip=localIP)
         name = hostSettings.name
         ip = hostSettings.ip
         #if name not in self._hosts.keys():
