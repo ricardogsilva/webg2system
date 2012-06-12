@@ -194,7 +194,6 @@ class G2File(GenericItem):
 
         found = self.find(useArchive=useArchive, 
                           restrictPattern=restrictPattern)
-        self.logger.debug('Aqui, ja fiz o find e correu bem')
         result = found['paths']
         if self.toCopy:
             if len(found['paths']) > 0:
