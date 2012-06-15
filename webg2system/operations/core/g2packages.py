@@ -1836,7 +1836,9 @@ class QuickLookGenerator(ProcessingPackage):
         '''
 
         g2f = self._filter_g2f_list(self.inputs, 'fileType', 'geotiff')[0]
-        fetched = self._fetch_files([g2f], self.workingDir, useArchive=True, 
+        #fetched = self._fetch_files([g2f], self.workingDir, useArchive=True, 
+        #                            decompress=True)
+        fetched = self._fetch_files([g2f], g2f.searchPaths[0], useArchive=True, 
                                     decompress=True)
         pathList = fetched[g2f]
         geotiff = None
@@ -1962,11 +1964,12 @@ class QuickLookGenerator(ProcessingPackage):
             result = self._process_all_tiles(mapfile)
         else:
             result = self._process_single_tile(tile, mapfile)
-        if move_to_webserver:
-            self.logger.info('moving outputs to the webserver...')
-            self.move_outputs_to_webserver()
-            self.logger.info('deleting local files...')
-            self.delete_outputs()
+        if ss.WebServer.objects.get().host.ip != self.host.host:
+            if move_to_webserver:
+                self.logger.info('moving outputs to the webserver...')
+                self.move_outputs_to_webserver()
+                self.logger.info('deleting local files...')
+                self.delete_outputs()
         self.logger.info('All Done')
         return result
 
