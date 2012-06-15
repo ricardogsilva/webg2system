@@ -120,6 +120,7 @@ def get_product_zip(request, prodName, tile, timeslot):
     area = ss.Area.objects.get(name='.*')
     pack = TileDistributor(settings, ts, area)
     theZip = pack.run_main(tile=tile)
+    pack.clean_up()
     if theZip is not None:
         response = HttpResponse(FileWrapper(open(theZip)), 
                                 content_type='application/zip')
