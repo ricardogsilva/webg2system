@@ -24,6 +24,10 @@ from pexpect import spawn
 #import glob
 #import fnmatch
 
+# django imports
+from django.core.exceptions import ObjectDoesNotExist
+
+
 import tables
 
 # specific imports
@@ -61,8 +65,10 @@ class HostFactory(object):
                                 % localName)
             localIP = None
         if hostSettings is None:
-            #hostSettings = ss.Host.objects.get(name=localName)
-            hostSettings = ss.Host.objects.get(ip=localIP)
+            try:
+                hostSettings = ss.Host.objects.get(name=localName)
+            except ObjectDoesNotExist:
+                hostSettings = ss.Host.objects.get(ip=localIP)
         name = hostSettings.name
         ip = hostSettings.ip
         #if name not in self._hosts.keys():
