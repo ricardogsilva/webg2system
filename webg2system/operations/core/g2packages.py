@@ -1693,7 +1693,8 @@ class OWSPreparator(ProcessingPackage):
                                                     globalTifName)
         return globalProd
 
-    def run_main(self, callback=None, generate=True, update=None):
+    def run_main(self, callback=None, generate=True, update=None, 
+                 archive=True):
         '''
         Inputs:
 
@@ -1706,6 +1707,11 @@ class OWSPreparator(ProcessingPackage):
                     'latest' - Update only the 'latest' mapfile.
                     'product' - Update only the 'product' mapfile.
                     'all' - Update both the 'latest' and 'product' mapfiles.
+
+            archive - Controls whether the outputs should be archived.
+                This is useful in this package, because the machine that
+                creates the global tiff files is not necessarily the same
+                that serves the WMS service.
         '''
 
         if generate:
@@ -1721,6 +1727,8 @@ class OWSPreparator(ProcessingPackage):
             if update == 'latest':
                 self.update_latest_mapfile(geotiff)
             self.logger.info('All Done')
+            if archive:
+                self.archive_outputs()
         else:
             self.logger.warning('Couldn\'t find the geotiff files.')
         return geotiff
