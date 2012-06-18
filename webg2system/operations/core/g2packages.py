@@ -1693,12 +1693,14 @@ class OWSPreparator(ProcessingPackage):
                                                     globalTifName)
         return globalProd
 
-    def run_main(self, callback=None, generate=True, update=None):
+    def run_main(self, callback=None, generate=True, update=None, 
+                 archive=True):
         '''
         Inputs:
 
             generate - A boolean flag indicating if the global geotif is to 
-                be generated. Defaults to True.
+                be generated. Defaults to True. If False, the global geotiff
+                is fetched from the archives.
 
             update - Controls whether the WMS mapfiles are to be updated.
                 Accepted values:
@@ -1706,6 +1708,11 @@ class OWSPreparator(ProcessingPackage):
                     'latest' - Update only the 'latest' mapfile.
                     'product' - Update only the 'product' mapfile.
                     'all' - Update both the 'latest' and 'product' mapfiles.
+
+            archive - Controls whether the outputs should be archived.
+                This is useful in this package, because the machine that
+                creates the global tiff files is not necessarily the same
+                that serves the WMS service.
         '''
 
         if generate:
@@ -1721,6 +1728,8 @@ class OWSPreparator(ProcessingPackage):
             if update == 'latest':
                 self.update_latest_mapfile(geotiff)
             self.logger.info('All Done')
+            if archive:
+                self.archive_outputs()
         else:
             self.logger.warning('Couldn\'t find the geotiff files.')
         return geotiff
@@ -1836,7 +1845,9 @@ class QuickLookGenerator(ProcessingPackage):
         '''
 
         g2f = self._filter_g2f_list(self.inputs, 'fileType', 'geotiff')[0]
-        fetched = self._fetch_files([g2f], self.workingDir, useArchive=True, 
+        #fetched = self._fetch_files([g2f], self.workingDir, useArchive=True, 
+        #                            decompress=True)
+        fetched = self._fetch_files([g2f], g2f.searchPaths[0], useArchive=True, 
                                     decompress=True)
         pathList = fetched[g2f]
         geotiff = None
@@ -1962,11 +1973,12 @@ class QuickLookGenerator(ProcessingPackage):
             result = self._process_all_tiles(mapfile)
         else:
             result = self._process_single_tile(tile, mapfile)
-        if move_to_webserver:
-            self.logger.info('moving outputs to the webserver...')
-            self.move_outputs_to_webserver()
-            self.logger.info('deleting local files...')
-            self.delete_outputs()
+        if ss.WebServer.objects.get().host.ip != self.host.host:
+            if move_to_webserver:
+                self.logger.info('moving outputs to the webserver...')
+                self.move_outputs_to_webserver()
+                self.logger.info('deleting local files...')
+                self.delete_outputs()
         self.logger.info('All Done')
         return result
 
