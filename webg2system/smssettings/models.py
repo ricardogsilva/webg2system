@@ -220,7 +220,7 @@ class SuiteObj(SMSGenericNode):
         l_paren = pp.Literal('(').suppress()
         r_paren = pp.Literal(')').suppress()
         sms_node_path = pp.Word('./_' + pp.alphanums)
-        identifier = pp.Word(pp.alphas, pp.alphanums + '_')
+        identifier = pp.Word(pp.alphanums, pp.alphanums + '_')
         var_value = pp.Word(pp.printables) ^ pp.quotedString(pp.printables)
         sms_comment = pp.Word('#') + pp.Optional(pp.restOfLine)
         sms_var = pp.Group(pp.Keyword('edit') + identifier + var_value)
