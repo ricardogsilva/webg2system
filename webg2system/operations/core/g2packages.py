@@ -1932,7 +1932,7 @@ class QuickLookGenerator(ProcessingPackage):
                         for filePath in found[g2f]['paths']:
                             reObj = re.search(newPatt, filePath)
                             if reObj is not None:
-                                theFilePath = filePath
+                                theFilePath = filePath.replace('.bz2','')
                                 isPresent = True
                                 break
                 current += 1
