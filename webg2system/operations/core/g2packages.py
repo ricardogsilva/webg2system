@@ -1699,7 +1699,8 @@ class OWSPreparator(ProcessingPackage):
         Inputs:
 
             generate - A boolean flag indicating if the global geotif is to 
-                be generated. Defaults to True.
+                be generated. Defaults to True. If False, the global geotiff
+                is fetched from the archives.
 
             update - Controls whether the WMS mapfiles are to be updated.
                 Accepted values:
