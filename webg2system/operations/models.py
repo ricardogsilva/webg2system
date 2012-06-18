@@ -131,20 +131,20 @@ class RunningPackage(models.Model):
         pack = self._initialize()
         callback((self.progress(2, processSteps), 
                  'Looking for previously available outputs...'))
-        if isinstance(pack, g2packages.OWSPreparator):
-            runPackage = True
-        else:
-            outputsAvailable = pack.outputs_available()
-            if outputsAvailable:
-                if self.force:
+        outputsAvailable = pack.outputs_available()
+        if outputsAvailable:
+            if self.force:
+                runPackage = True
+                callback((self.progress(3, processSteps), 
+                         'Deleting any previously present output files...'))
+                pack.delete_outputs()
+            else:
+                if isinstance(pack, g2packages.OWSPreparator):
                     runPackage = True
-                    callback((self.progress(3, processSteps), 
-                             'Deleting any previously present output files...'))
-                    pack.delete_outputs()
                 else:
                     runPackage = False
-            else:
-                runPackage = True
+        else:
+            runPackage = True
         if runPackage:
             callback((self.progress(4, processSteps), 
                      'Running main process...'))
