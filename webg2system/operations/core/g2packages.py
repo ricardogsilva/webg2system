@@ -161,7 +161,7 @@ class GenericPackage(GenericItem):
                 self.logger.info('%s is not supposed to be available at %s '\
                                  'hour. Skipping...' % (g2f.name, g2f.hour))
             else:
-                self.logger.info('Looking for %s...' % g2f.name)
+                self.logger.debug('Looking for %s...' % g2f.name)
                 result[g2f] = g2f.find(useArchive=useArchive, 
                                        restrictPattern=restrictPattern)
         return result
@@ -1953,13 +1953,17 @@ class QuickLookGenerator(ProcessingPackage):
         for g2f, foundDict in found.iteritems():
             hdfFiles += [p.replace('.bz2', '') for p in foundDict['paths']]
         if len(hdfFiles) > 0:
-            ql = self.generate_quicklook(mapfile, hdfFiles[0], 
+            firstFile = hdfFiles[0]
+            self.logger.debug('(1/%i) Generating quicklook for %s...' % 
+                              (len(hdfFiles), firstFile))
+            ql = self.generate_quicklook(mapfile, firstFile, 
                                          self.quickviewOutDir,
                                          generate_legend=True)
             quickLooks.append(ql)
         if len(hdfFiles) > 1:
-            for filePath in hdfFiles[1:]:
-                self.logger.debug('Converting %s to GeoTiff...' % filePath)
+            for index, filePath in enumerate(hdfFiles[1:]):
+                self.logger.debug('(%i/%i) Generating quicklook for %s...' % 
+                                  (index+2, len(hdfFiles), filePath))
                 ql = self.generate_quicklook(mapfile, filePath, 
                                              self.quickviewOutDir,
                                              generate_legend=False)
