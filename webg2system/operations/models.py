@@ -139,7 +139,8 @@ class RunningPackage(models.Model):
                          'Deleting any previously present output files...'))
                 pack.delete_outputs()
             else:
-                if isinstance(pack, g2packages.OWSPreparator):
+                if isinstance(pack, g2packages.OWSPreparator) or \
+                        isinstance(pack, g2packages.QuickLookGenerator):
                     runPackage = True
                 else:
                     runPackage = False
