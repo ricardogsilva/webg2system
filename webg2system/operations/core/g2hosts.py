@@ -71,26 +71,26 @@ class HostFactory(object):
                 hostSettings = ss.Host.objects.get(ip=localIP)
         name = hostSettings.name
         ip = hostSettings.ip
-        #if name not in self._hosts.keys():
-        #    self.logger.debug('Creating a new %s host object...' % 
-        #                     (name))
-        #    if name == localName or ip == localIP:
-        #        theClass = G2LocalHost
-        #    else:
-        #        theClass = G2RemoteHost
-        #    hostObj = theClass(hostSettings)
-        #    self._hosts[name] = hostObj
-        #return self._hosts.get(name)
+        if name not in self._hosts.keys():
+            self.logger.debug('Creating a new %s host object...' % 
+                             (name))
+            if name == localName or ip == localIP:
+                theClass = G2LocalHost
+            else:
+                theClass = G2RemoteHost
+            hostObj = theClass(hostSettings)
+            self._hosts[name] = hostObj
+        return self._hosts.get(name)
 
-        self.logger.debug('Creating a new %s host object...' % 
-                         (name))
-        if name == localName or ip == localIP:
-            theClass = G2LocalHost
-        else:
-            theClass = G2RemoteHost
-        hostObj = theClass(hostSettings)
+        #self.logger.debug('Creating a new %s host object...' % 
+        #                 (name))
+        #if name == localName or ip == localIP:
+        #    theClass = G2LocalHost
+        #else:
+        #    theClass = G2RemoteHost
+        #hostObj = theClass(hostSettings)
 
-        return hostObj
+        #return hostObj
 
 
 class G2Host(object):
@@ -523,7 +523,8 @@ class G2LocalHost(G2Host):
         newProcess = subprocess.Popen(commandList, cwd=workingDir, env=the_env,
                                       stdin=subprocess.PIPE,
                                       stdout=subprocess.PIPE, 
-                                      stderr=subprocess.PIPE)
+                                      stderr=subprocess.PIPE,
+                                      close_fds=True)
         stdout, stderr = newProcess.communicate()
         retCode = newProcess.returncode
         return stdout, stderr, retCode
