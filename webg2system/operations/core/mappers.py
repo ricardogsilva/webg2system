@@ -555,6 +555,8 @@ class NewNGPMapper(object):
 
         dirPath, fname = os.path.split(filePath)
         minx, miny, maxx, maxy = self.get_bounds(filePath, product.pixelSize)
+        if maxx < minx:
+            maxx += 360
         rawQuickPath = os.path.join(outputDir, 'rawquicklook_%s.png' % fname)
         command = 'shp2img -m %s -o %s -e %i %i %i %i -s '\
                   '400 400 -l %s' % (mapfile, rawQuickPath, minx, miny, 
