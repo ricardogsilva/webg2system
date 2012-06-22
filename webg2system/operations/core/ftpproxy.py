@@ -22,7 +22,7 @@ class FTPProxy(object):
     Connect to another server through FTP and perform various actions.
     '''
 
-    def __init__(self, localHost, remoteHost):
+    def __init__(self, localHost, remoteHost, log_level=logging.DEBUG):
         '''
         Inputs:
 
@@ -32,6 +32,7 @@ class FTPProxy(object):
 
         self.logger = logging.getLogger('.'.join((__name__, 
                                         self.__class__.__name__)))
+        self.logger.setLevel(log_level)
         self.connection = FTP()
         self.localHost = localHost
         self.remoteHost = remoteHost

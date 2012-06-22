@@ -1,6 +1,8 @@
 import os
 import sys
 import datetime as dt
+import logging
+import traceback
 
 from django.db import models
 from systemsettings.models import Package, Area
@@ -52,22 +54,23 @@ class RunningPackage(models.Model):
         return self.area.name
     show_area.short_description = 'Default area'
 
-    def _initialize(self):
+    def _initialize(self, log_level, callback):
         '''
         Temporary method to facilitate sharing some code between
         the run() and create_package() methods.
         '''
 
         packClass = eval('g2packages.%s' % self.settings.codeClass.className)
-        pack = packClass(self.settings, self.timeslot, self.area)
+        pack = packClass(self.settings, self.timeslot, self.area, 
+                         log_level=log_level, callback=callback)
         return pack
 
-    def create_package(self):
+    def create_package(self, log_level=logging.DEBUG, callback=None):
         '''
         Temporary method for testing package creation
         '''
 
-        pack = self._initialize()
+        pack = self._initialize(log_level, callback)
         return pack
 
     #def daemonize(self):
@@ -80,9 +83,8 @@ class RunningPackage(models.Model):
     #        os.close(r)
     #        daemon._start()
     #        #sys.exit(0)
-    #    print('Aqui')
 
-    def run(self, callback=None, *args, **kwargs):
+    def run(self, callback=None, log_level=logging.DEBUG, *args, **kwargs):
         '''
         Interfaces with the core packages, calling their public
         delete_outputs(), run_main() and clean_up() methods sequentially.
@@ -121,55 +123,55 @@ class RunningPackage(models.Model):
         if callback is None:
             def callback(*args):
                 pass
-        #try:
-        self.status = 'running'
-        self.result = False
-        self.save()
-        processSteps = 7
-        callback((self.progress(1, processSteps), 
-                 'Creating package for processing...'))
-        pack = self._initialize()
-        callback((self.progress(2, processSteps), 
-                 'Looking for previously available outputs...'))
-        outputsAvailable = pack.outputs_available()
-        if outputsAvailable:
-            if self.force:
-                runPackage = True
-                callback((self.progress(3, processSteps), 
-                         'Deleting any previously present output files...'))
-                pack.delete_outputs()
-            else:
-                if isinstance(pack, g2packages.OWSPreparator) or \
-                        isinstance(pack, g2packages.QuickLookGenerator):
+        try:
+            self.status = 'running'
+            self.result = False
+            self.save()
+            processSteps = 7
+            callback((self.progress(1, processSteps), 
+                     'Creating package for processing...'))
+            pack = self._initialize(log_level, callback)
+            callback((self.progress(2, processSteps), 
+                     'Looking for previously available outputs...'))
+            outputsAvailable = pack.outputs_available()
+            if outputsAvailable:
+                if self.force:
                     runPackage = True
+                    callback((self.progress(3, processSteps), 
+                             'Deleting any previously present output files...'))
+                    pack.delete_outputs()
                 else:
-                    runPackage = False
-        else:
-            runPackage = True
-        if runPackage:
-            callback((self.progress(4, processSteps), 
-                     'Running main process...'))
-            print('kwargs: %s' % kwargs)
-            mainResult = pack.run_main(callback, *args, **kwargs)
-            # Will be able to add other error codes later
-            if mainResult not in (1,):
-                self.result = True
+                    if isinstance(pack, g2packages.OWSPreparator) or \
+                            isinstance(pack, g2packages.QuickLookGenerator):
+                        runPackage = True
+                    else:
+                        runPackage = False
             else:
-                self.result = False
-            callback((self.progress(5, processSteps), 'Cleaning up...'))
-            cleanResult = pack.clean_up()
-        else:
-            callback((self.progress(6, processSteps),
-                     'Outputs are already available.'))
-            self.result = True
-        self.status = 'stopped'
-        self.save()
-        callback((self.progress(7, processSteps), 'All done!'))
-        #except:
-        #    print('something went wrong')
-        #    self.status = 'stopped'
-        #    self.result = False
-        #    self.save()
+                runPackage = True
+            if runPackage:
+                callback((self.progress(4, processSteps), 
+                         'Running main process...'))
+                mainResult = pack.run_main(callback, *args, **kwargs)
+                # Will be able to add other error codes later
+                if mainResult not in (1,):
+                    self.result = True
+                else:
+                    self.result = False
+                callback((self.progress(5, processSteps), 'Cleaning up...'))
+                cleanResult = pack.clean_up()
+            else:
+                callback((self.progress(6, processSteps),
+                         'Outputs are already available.'))
+                self.result = True
+        except Exception as e:
+            callback('something went wrong. This is the traceback:')
+            for line in traceback.format_exception(*sys.exc_info()):
+                callback(line)
+            self.result = False
+        finally:
+            self.status = 'stopped'
+            self.save()
+            callback((self.progress(7, processSteps), 'All done!'))
         return self.result
 
     def progress(self, currentStep, totalSteps=100):

@@ -27,6 +27,10 @@ def execute_package(request):
     if request.method == 'POST':
         f = CreatePackageForm(request.POST)
         if f.is_valid():
+            try:
+                log_level = eval('logging.%s' % f.cleaned_data['log_level'].upper())
+            except AttributeError:
+                log_level = logging.DEBUG
             timeslot = f.cleaned_data['timeslot']
             force = f.cleaned_data['force']
             username = request.POST['username']
@@ -60,7 +64,9 @@ def execute_package(request):
                             runkwargs = json.loads(runArgs)
                         else:
                             runkwargs = dict()
-                        runResult = rp.run(callback=callback, **runkwargs)
+                        runResult = rp.run(callback=callback, 
+                                           log_level=log_level, 
+                                           **runkwargs)
                         result = render_to_response(
                                     'operations/run_output.html',
                                     {

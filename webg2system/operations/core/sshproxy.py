@@ -5,6 +5,7 @@
 Script's doctring goes here.
 """
 
+import logging
 from pexpect import spawn
 import re
 import os
@@ -22,7 +23,8 @@ class SSHProxy(object):
     # for more detail
     CSIPattern = r'\x1b\[\d+.?\d*\w?'
 
-    def __init__(self, user=None, host=None, otherOptions=None):
+    def __init__(self, user=None, host=None, log_level=logging.DEBUG, 
+                 otherOptions=None):
         '''
         Inputs:
 
@@ -33,6 +35,9 @@ class SSHProxy(object):
             otherOptions - A string with extra commands for the ssh login.
         '''
 
+        self.logger = logging.getLogger('.'.join((__name__, 
+                                        self.__class__.__name__)))
+        self.logger.setLevel(log_level)
         self.connection = None
         self.user = user
         self.host = host

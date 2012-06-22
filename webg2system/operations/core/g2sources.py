@@ -5,8 +5,6 @@
 Script's doctring goes here.
 """
 
-from django.core.exceptions import ObjectDoesNotExist
-
 import systemsettings.models as ss
 
 class G2Source(object):

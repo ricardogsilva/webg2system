@@ -43,9 +43,10 @@ class HostFactory(object):
 
     _hosts = dict()
 
-    def __init__(self):
+    def __init__(self, log_level=logging.DEBUG):
         self.logger = logging.getLogger('.'.join((__name__, 
                                         self.__class__.__name__)))
+        self.logger.setLevel(log_level)
 
     def create_host(self, hostSettings=None):
         '''
@@ -78,7 +79,7 @@ class HostFactory(object):
                 theClass = G2LocalHost
             else:
                 theClass = G2RemoteHost
-            hostObj = theClass(hostSettings)
+            hostObj = theClass(hostSettings, log_level=self.logger.level)
             self._hosts[name] = hostObj
         return self._hosts.get(name)
 
@@ -97,7 +98,7 @@ class G2Host(object):
 
     name=''
 
-    def __init__(self, settings):
+    def __init__(self, settings, log_level=logging.DEBUG):
         '''
         Inputs:
 
@@ -123,6 +124,7 @@ class G2Host(object):
         '''
 
         self.logger = logging.getLogger('.'.join((__name__, self.__class__.__name__)))
+        self.logger.setLevel(log_level)
         self.name = settings.name
         self.connections = dict()
         self.dataPath = settings.dataPath
@@ -703,7 +705,7 @@ class G2RemoteHost(G2Host):
     '''
 
 
-    def __init__(self, settings):
+    def __init__(self, settings, log_level=logging.DEBUG):
         '''
         Inputs:
 
@@ -728,15 +730,16 @@ class G2RemoteHost(G2Host):
             -->
         '''
 
-        super(G2RemoteHost, self).__init__(settings)
+        super(G2RemoteHost, self).__init__(settings, log_level=log_level)
         # _localConnection is the connection by which the local machine
         # sends commands to this remoteHost
-        factory = HostFactory()
+        factory = HostFactory(log_level=log_level)
         localHost = factory.create_host()
         self._localConnection = {
-                'ftp' : FTPProxy(localHost=localHost, remoteHost=self),
+                'ftp' : FTPProxy(localHost=localHost, remoteHost=self, 
+                                 log_level=log_level),
                 #'ssh' : SSHProxy(self.user, self.host, self.password),
-                'ssh' : SSHProxy(self.user, self.host),
+                'ssh' : SSHProxy(self.user, self.host, log_level=log_level),
                 }
 
     def find(self, pathList, restrictPattern=None, protocol='ftp'):

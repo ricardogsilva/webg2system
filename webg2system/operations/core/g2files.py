@@ -7,6 +7,7 @@
 
 import os
 import re
+import logging
 
 from systemsettings import models as ss
 
@@ -19,7 +20,7 @@ class G2File(GenericItem):
     _originatorPackages = []
 
     def __init__(self, fileSettings, timeslot, areaSettings, hostSettings, 
-                 optional=False, parent=None):
+                 optional=False, parent=None, log_level=logging.DEBUG):
         '''
         Inputs
 
@@ -37,7 +38,8 @@ class G2File(GenericItem):
             parent - A operations.core.g2pacakges.G2Package object.
         '''
 
-        super(G2File, self).__init__(timeslot, areaSettings, hostSettings)
+        super(G2File, self).__init__(timeslot, areaSettings, 
+                                     host=hostSettings, log_level=log_level)
         self.name = fileSettings.name
         self.parent = parent
         self.optional = optional
@@ -62,7 +64,7 @@ class G2File(GenericItem):
         for searchPattObj in fileSettings.filepattern_set.all():
             pattern = utilities.parse_marked(searchPattObj, self)
             self.searchPatterns.append(pattern)
-        hf = HostFactory()
+        hf = HostFactory(log_level=log_level)
         self.archives = [hf.create_host(hs) for hs in fileSettings.specificArchives.all()]
 
     def find(self, restrictPattern=None, useArchive=False, 

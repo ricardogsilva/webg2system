@@ -10,6 +10,7 @@ class CreatePackageForm(forms.Form):
     area = forms.CharField(max_length=255)
     timeslot = forms.DateTimeField()
     force = forms.BooleanField(required=False)
+    log_level = forms.CharField(max_length=20)
     extra = forms.CharField(
                 max_length=255, 
                 required=False, 
