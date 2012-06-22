@@ -199,10 +199,18 @@ LOGGING = {
                 'propagate' : False,
                 'level' : 'ERROR',
             },
-            'operations.views' : {
-                'handlers' : ['console'],
-                'level' : 'DEBUG',
-            },
+            #'operations' : {
+            #    'handlers' : ['console'],
+            #    'level' : 'DEBUG',
+            #},
+            #'operations.models' : {
+            #    'handlers' : ['console'],
+            #    'level' : 'DEBUG',
+            #},
+            #'operations.views' : {
+            #    'handlers' : ['console'],
+            #    'level' : 'DEBUG',
+            #},
             'operations.core' : {
                 'handlers' : ['console', 'mail_admins'],
                 'level' : 'DEBUG',

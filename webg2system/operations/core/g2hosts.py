@@ -43,10 +43,11 @@ class HostFactory(object):
 
     _hosts = dict()
 
-    def __init__(self, log_level=logging.DEBUG):
-        self.logger = logging.getLogger('.'.join((__name__, 
-                                        self.__class__.__name__)))
-        self.logger.setLevel(log_level)
+    def __init__(self, logger=None):
+        if logger is not None:
+            self.logger = logger
+        else:
+            self.logger = logging.getLogger(__name__)
 
     def create_host(self, hostSettings=None):
         '''
@@ -73,13 +74,13 @@ class HostFactory(object):
         name = hostSettings.name
         ip = hostSettings.ip
         if name not in self._hosts.keys():
-            self.logger.debug('Creating a new %s host object...' % 
-                             (name))
+            #self.logger.debug('Creating a new %s host object...' % 
+            #                 (name))
             if name == localName or ip == localIP:
                 theClass = G2LocalHost
             else:
                 theClass = G2RemoteHost
-            hostObj = theClass(hostSettings, log_level=self.logger.level)
+            hostObj = theClass(hostSettings, logger=self.logger)
             self._hosts[name] = hostObj
         return self._hosts.get(name)
 
@@ -98,7 +99,7 @@ class G2Host(object):
 
     name=''
 
-    def __init__(self, settings, log_level=logging.DEBUG):
+    def __init__(self, settings, logger=None):
         '''
         Inputs:
 
@@ -123,8 +124,7 @@ class G2Host(object):
             -->
         '''
 
-        self.logger = logging.getLogger('.'.join((__name__, self.__class__.__name__)))
-        self.logger.setLevel(log_level)
+        self.logger = logger
         self.name = settings.name
         self.connections = dict()
         self.dataPath = settings.dataPath
@@ -360,11 +360,13 @@ class G2LocalHost(G2Host):
             self.connections[host.name] = dict()
         if self.connections.get(host.name).get(protocol) is None:
             if protocol == 'ssh':
-                self.connections[host.name]['ssh'] = SSHProxy(
-                        host.user, host.host)
+                self.connections[host.name]['ssh'] = SSHProxy(host.user, 
+                                                              host.host, 
+                                                              logger=self.logger)
             elif protocol == 'ftp':
                 self.connections[host.name]['ftp'] = FTPProxy(localHost=self, 
-                                                              remoteHost=host)
+                                                              remoteHost=host,
+                                                              logger=self.logger)
         return self.connections[host.name][protocol]
 
     def send(self, fullPaths, destDir, destHost=None):
@@ -578,6 +580,7 @@ class G2LocalHost(G2Host):
         fullPath = os.path.join(basePath, directory)
         if not self.is_dir(fullPath):
             os.makedirs(fullPath)
+        return fullPath
 
     def remove_dir(self, directory, relativeTo='data'):
         '''
@@ -705,7 +708,7 @@ class G2RemoteHost(G2Host):
     '''
 
 
-    def __init__(self, settings, log_level=logging.DEBUG):
+    def __init__(self, settings, logger=None):
         '''
         Inputs:
 
@@ -730,16 +733,16 @@ class G2RemoteHost(G2Host):
             -->
         '''
 
-        super(G2RemoteHost, self).__init__(settings, log_level=log_level)
+        super(G2RemoteHost, self).__init__(settings, logger=logger)
         # _localConnection is the connection by which the local machine
         # sends commands to this remoteHost
-        factory = HostFactory(log_level=log_level)
+        factory = HostFactory(logger=self.logger)
         localHost = factory.create_host()
         self._localConnection = {
                 'ftp' : FTPProxy(localHost=localHost, remoteHost=self, 
-                                 log_level=log_level),
+                                 logger=self.logger),
                 #'ssh' : SSHProxy(self.user, self.host, self.password),
-                'ssh' : SSHProxy(self.user, self.host, log_level=log_level),
+                'ssh' : SSHProxy(self.user, self.host, logger=self.logger),
                 }
 
     def find(self, pathList, restrictPattern=None, protocol='ftp'):

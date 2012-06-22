@@ -33,7 +33,7 @@ class Mapper(object):
     blockXSize = 200
     blockYSize = 200
 
-    def __init__(self, g2File, productSettings):
+    def __init__(self, g2File, productSettings, logger=None):
         '''
         Inputs:
 
@@ -43,8 +43,9 @@ class Mapper(object):
                 generated.
         '''
 
-        self.logger = logging.getLogger(
-                '.'.join((__name__, self.__class__.__name__)))
+        #self.logger = logging.getLogger(
+        #        '.'.join((__name__, self.__class__.__name__)))
+        self.logger = logger
         self.nLines = int(g2File.nLines)
         self.nCols = int(g2File.nCols)
         self.product = productSettings

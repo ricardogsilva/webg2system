@@ -20,7 +20,7 @@ class G2File(GenericItem):
     _originatorPackages = []
 
     def __init__(self, fileSettings, timeslot, areaSettings, hostSettings, 
-                 optional=False, parent=None, log_level=logging.DEBUG):
+                 optional=False, parent=None, logger=None):
         '''
         Inputs
 
@@ -39,7 +39,7 @@ class G2File(GenericItem):
         '''
 
         super(G2File, self).__init__(timeslot, areaSettings, 
-                                     host=hostSettings, log_level=log_level)
+                                     host=hostSettings, logger=logger)
         self.name = fileSettings.name
         self.parent = parent
         self.optional = optional
@@ -64,7 +64,8 @@ class G2File(GenericItem):
         for searchPattObj in fileSettings.filepattern_set.all():
             pattern = utilities.parse_marked(searchPattObj, self)
             self.searchPatterns.append(pattern)
-        hf = HostFactory(log_level=log_level)
+        #hf = HostFactory(log_level=log_level)
+        hf = HostFactory()
         self.archives = [hf.create_host(hs) for hs in fileSettings.specificArchives.all()]
 
     def find(self, restrictPattern=None, useArchive=False, 

@@ -7,7 +7,9 @@ import traceback
 from django.db import models
 from systemsettings.models import Package, Area
 
-from core import g2packages#, rpdaemon
+from cloghandler import ConcurrentRotatingFileHandler
+
+from core import g2packages, g2hosts
 
 class RunningPackage(models.Model):
     STATUS_CHOICES = (('running', 'running'),('stopped', 'stopped'))
@@ -54,15 +56,14 @@ class RunningPackage(models.Model):
         return self.area.name
     show_area.short_description = 'Default area'
 
-    def _initialize(self, log_level, callback):
+    def _initialize(self, logger, callback):
         '''
         Temporary method to facilitate sharing some code between
         the run() and create_package() methods.
         '''
 
         packClass = eval('g2packages.%s' % self.settings.codeClass.className)
-        pack = packClass(self.settings, self.timeslot, self.area, 
-                         log_level=log_level, callback=callback)
+        pack = packClass(self.settings, self.timeslot, self.area, logger=logger)
         return pack
 
     def create_package(self, log_level=logging.DEBUG, callback=None):
@@ -70,19 +71,35 @@ class RunningPackage(models.Model):
         Temporary method for testing package creation
         '''
 
-        pack = self._initialize(log_level, callback)
+        logger = self._get_logger(log_level)
+        pack = self._initialize(logger, callback)
         return pack
 
-    #def daemonize(self):
-    #    daemon = rpdaemon.RPDaemon(self, '/tmp/rpdaemon.pid', 'RPDaemon')
-    #    r, w = os.pipe() # file descriptors
-    #    pid = os.fork()
-    #    if pid: # this is the parent process
-    #        os.close(w)
-    #    else: # this is the child process
-    #        os.close(r)
-    #        daemon._start()
-    #        #sys.exit(0)
+    def _get_logger(self, log_level):
+        logger = logging.getLogger(__name__)
+        hf = g2hosts.HostFactory(log_level)
+        host = hf.create_host()
+        formatter = logging.Formatter('%(levelname)s %(asctime)s %(module)s ' \
+                                      '%(process)s %(message)s')
+        log_dir = host.make_dir(self.timeslot.strftime('LOGS/%Y/%m/%d'), relativeTo='data')
+        log_file = os.path.join(log_dir, '%s_%s.log' % \
+                   (self.settings.name, 
+                    self.timeslot.strftime('%Y%m%d%H%M')))
+        handler = ConcurrentRotatingFileHandler(log_file, 'a', 512*1024, 3)
+        handler.setFormatter(formatter)
+        existing_handlers = logger.handlers
+        for hdlr in existing_handlers:
+            logger.removeHandler(hdlr)
+        logger.addHandler(handler)
+        logger.setLevel(log_level)
+        # reassing the host's logger to ensure it gets the created handler
+        # this is because the HostFactory class has a caching mechanism
+        # and it will not create new hosts
+        host.logger = logger
+        for host_name, conn_dict in host.connections.iteritems():
+            for proxy_obj in conn_dict.values():
+                proxy_obj.host = host
+        return logger
 
     def run(self, callback=None, log_level=logging.DEBUG, *args, **kwargs):
         '''
@@ -120,25 +137,34 @@ class RunningPackage(models.Model):
                     - generate_series: False
         '''
 
+        logger = self._get_logger(log_level)
+        logger.info('--- Starting execution')
         if callback is None:
             def callback(*args):
                 pass
+        def log_callbacks(*args):
+            callback(*args)
+            for arg in args:
+                logger.info(arg)
         try:
             self.status = 'running'
             self.result = False
             self.save()
             processSteps = 7
-            callback((self.progress(1, processSteps), 
-                     'Creating package for processing...'))
-            pack = self._initialize(log_level, callback)
-            callback((self.progress(2, processSteps), 
+            #callback((self.progress(1, processSteps), 
+            #         'Creating package for processing...'))
+            log_callbacks((self.progress(1, processSteps), 
+                          'Creating package for processing...'))
+            pack = self._initialize(logger, callback)
+            log_callbacks((self.progress(2, processSteps), 
                      'Looking for previously available outputs...'))
             outputsAvailable = pack.outputs_available()
             if outputsAvailable:
                 if self.force:
                     runPackage = True
-                    callback((self.progress(3, processSteps), 
-                             'Deleting any previously present output files...'))
+                    log_callbacks((self.progress(3, processSteps), 
+                                  'Deleting any previously present output ' \
+                                  'files...'))
                     pack.delete_outputs()
                 else:
                     if isinstance(pack, g2packages.OWSPreparator) or \
@@ -149,29 +175,31 @@ class RunningPackage(models.Model):
             else:
                 runPackage = True
             if runPackage:
-                callback((self.progress(4, processSteps), 
-                         'Running main process...'))
+                log_callbacks((self.progress(4, processSteps), 
+                              'Running main process...'))
                 mainResult = pack.run_main(callback, *args, **kwargs)
                 # Will be able to add other error codes later
                 if mainResult not in (1,):
                     self.result = True
                 else:
                     self.result = False
-                callback((self.progress(5, processSteps), 'Cleaning up...'))
+                log_callbacks((self.progress(5, processSteps), 
+                              'Cleaning up...'))
                 cleanResult = pack.clean_up()
             else:
-                callback((self.progress(6, processSteps),
-                         'Outputs are already available.'))
+                log_callbacks((self.progress(6, processSteps),
+                              'Outputs are already available.'))
                 self.result = True
         except Exception as e:
-            callback('something went wrong. This is the traceback:')
+            log_callbacks('something went wrong. This is the traceback:')
             for line in traceback.format_exception(*sys.exc_info()):
-                callback(line)
+                log_callbacks(line)
             self.result = False
         finally:
             self.status = 'stopped'
             self.save()
-            callback((self.progress(7, processSteps), 'All done!'))
+            log_callbacks((self.progress(7, processSteps), 'All done!'))
+            logger.info('--- Finished execution')
         return self.result
 
     def progress(self, currentStep, totalSteps=100):

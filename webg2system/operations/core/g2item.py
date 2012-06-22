@@ -13,18 +13,6 @@ from systemsettings.models import Area
 from g2sources import G2Source
 from g2hosts import HostFactory
 
-
-class CallBackHandler(logging.Handler):
-
-    def __init__(self, callback, level=logging.NOTSET):
-        super(CallBackHandler, self).__init__(level)
-        self.callback = callback
-
-    def emit(self, record):
-        msg = self.format(record)
-        self.callback(msg)
-
-
 class GenericItem(object):
     '''
     All GenericItems must have:
@@ -33,8 +21,7 @@ class GenericItem(object):
         - host
     '''
 
-    def __init__(self, timeslot, area, host=None, 
-                 log_level=logging.DEBUG, callback=None):
+    def __init__(self, timeslot, area, host=None, logger=None, callback=None):
         '''
         Inputs:
 
@@ -52,12 +39,13 @@ class GenericItem(object):
             self.callback = cb
         else:
             self.callback = callback
-        self.logger = logging.getLogger(
-                '.'.join((__name__, self.__class__.__name__)))
-        self.logger.setLevel(log_level)
+        #self.logger = logging.getLogger(
+        #        '.'.join((__name__, self.__class__.__name__)))
+        #self.logger.setLevel(log_level)
+        self.logger = logger
         self.timeslot = timeslot
         self.source = G2Source(area, timeslot)
-        hf = HostFactory(log_level=log_level)
+        hf = HostFactory()
         self.host = hf.create_host(host)
         # a random number for generating unique working dirs
         self.random = randint(0, 100)

@@ -7,7 +7,7 @@ import zipfile
 
 import systemsettings.models as ss
 
-from g2item import GenericItem, CallBackHandler
+from g2item import GenericItem
 from g2files import G2File
 from g2hosts import HostFactory
 import mappers
@@ -30,11 +30,9 @@ class Outra(object):
     '''
 
     def __init__(self, *args, **kwargs):
-        self.logger = logging.getLogger(
-                '.'.join((__name__, self.__class__.__name__)))
-        self.logger.setLevel(kwargs['log_level'])
-        cb_handler = CallBackHandler(kwargs['callback'])
-        self.logger.addHandler(cb_handler)
+        self.logger = kwargs['logger']
+        #cb_handler = CallBackHandler(kwargs['callback'])
+        #self.logger.addHandler(cb_handler)
         self.logger.debug('In the __init__ method')
 
     def clean_up(self, callback=None):
@@ -134,7 +132,7 @@ class GenericPackage(GenericItem):
                                        hostSettings, 
                                        optional=specificSettings.optional,
                                        parent=self,
-                                       log_level=self.logger.level)
+                                       logger=self.logger)
                     objects.append(newObject)
         return objects
 
@@ -348,16 +346,15 @@ class GenericPackage(GenericItem):
 
 class ProcessingPackage(GenericPackage):
 
-    def __init__(self, settings, timeslot, area, host=None, 
-                 log_level=logging.DEBUG):
+    def __init__(self, settings, timeslot, area, host=None, logger=None):
         '''
         This class inherits all the extra variables and has the 'normal'
         implementation for find_inputs, find_outputs, fetch_inputs and
         
         '''
 
-        super(ProcessingPackage, self).__init__(timeslot, area.name, 
-                                                host=host, log_level=log_level)
+        super(ProcessingPackage, self).__init__(timeslot, area.name, host=host, 
+                                                logger=logger)
         for extraInfo in settings.packageextrainfo_set.all():
             #exec('self.%s = "%s"' % (extraInfo.name, extraInfo.string))
             exec('self.%s = utilities.parse_marked(extraInfo, self)' % 
@@ -487,7 +484,7 @@ class FetchData(ProcessingPackage):
     '''
 
     def __init__(self, settings, timeslot, area, host=None,
-                 log_level=logging.DEBUG, createIO=True):
+                 logger=None, createIO=True):
         '''
         Inputs:
 
@@ -505,7 +502,7 @@ class FetchData(ProcessingPackage):
         '''
 
         super(FetchData, self).__init__(settings, timeslot, area, 
-                                        host=host, log_level=log_level)
+                                        host=host, logger=logger)
         self.rawSettings = settings
         self.name = settings.name
         relativeOutDir = utilities.parse_marked(
@@ -646,9 +643,9 @@ class PreProcessor(ProcessingPackage):
 class LRITPreprocessor(PreProcessor):
 
     def __init__(self, settings, timeslot, area, host, 
-                 log_level=logging.DEBUG, createIO=True):
+                 logger=None, createIO=True):
         super(LRITPreprocessor, self).__init__(settings, timeslot, area, 
-                                               host=host, log_level=log_level)
+                                               host=host, logger=logger)
         self.rawSettings = settings
         self.name = settings.name
         relOutDir = utilities.parse_marked(
@@ -723,9 +720,9 @@ class LRITPreprocessor(PreProcessor):
 class GRIBPreprocessor(PreProcessor):
 
     def __init__(self, settings, timeslot, area, host, 
-                 log_level=logging.DEBUG, createIO=True):
+                 logger=None, createIO=True):
         super(GRIBPreprocessor, self).__init__(settings, timeslot, area, 
-                                               host=host, log_level=log_level)
+                                               host=host, logger=logger)
         self.rawSettings = settings
         self.name = settings.name
         relOutDir = utilities.parse_marked(
@@ -810,7 +807,7 @@ class GRIBPreprocessor(PreProcessor):
 class Processor(ProcessingPackage):
 
     def __init__(self, settings, timeslot, area, host=None,
-                 log_level=logging.DEBUG, createIO=True):
+                 logger=None, createIO=True):
         '''
         Inputs:
 
@@ -827,7 +824,7 @@ class Processor(ProcessingPackage):
         '''
 
         super(Processor, self).__init__(settings, timeslot, area, 
-                                        host=host, log_level=log_level)
+                                        host=host, logger=logger)
         self.rawSettings = settings
         self.name = settings.name
         relOutDir = utilities.parse_marked(
@@ -951,9 +948,9 @@ class Processor(ProcessingPackage):
 class GSAProcessor(ProcessingPackage):
     
     def __init__(self, settings, timeslot, area, host=None, 
-                 log_level=logging.DEBUG, createIO=True):
+                 logger=None, createIO=True):
         super(GSAProcessor, self).__init__(settings, timeslot, area, 
-                                           host=host, log_level=log_level)
+                                           host=host, logger=logger)
         self.rawSettings = settings
         self.name = settings.name
         relOutDir = utilities.parse_marked(
@@ -986,7 +983,7 @@ class GSAProcessor(ProcessingPackage):
 class SWIProcessor(ProcessingPackage):
 
     def __init__(self, settings, timeslot, area, host=None, 
-                 log_level=logging.DEBUG, createIO=True):
+                 logger=None, createIO=True):
         '''
         Inputs:
 
@@ -1003,7 +1000,7 @@ class SWIProcessor(ProcessingPackage):
         '''
 
         super(SWIProcessor, self).__init__(settings, timeslot, area, 
-                                           host=host, log_level=log_level)
+                                           host=host, logger=logger)
         self.rawSettings = settings
         self.name = settings.name
         relOutDir = utilities.parse_marked(
@@ -1222,7 +1219,7 @@ class DataFusion(ProcessingPackage):
     '''
 
     def __init__(self, settings, timeslot, area, host=None, 
-                 log_level=logging.DEBUG, createIO=True):
+                 logger=None, createIO=True):
         '''
         Inputs:
 
@@ -1236,7 +1233,7 @@ class DataFusion(ProcessingPackage):
         '''
 
         super(DataFusion, self).__init__(settings, timeslot, area, 
-                                         host=host, log_level=log_level)
+                                         host=host, logger=logger)
         self.rawSettings = settings
         self.name = settings.name
         relativeOutDir = utilities.parse_marked(
@@ -1583,8 +1580,8 @@ class OWSPreparator(ProcessingPackage):
         - update the mapfiles
     '''
 
-    def __init__(self, settings, timeslot, area, host=None, 
-                 log_level=logging.DEBUG, createIO=True):
+    def __init__(self, settings, timeslot, area, host=None, logger=None, 
+                 createIO=True):
         '''
         Inputs:
 
@@ -1598,7 +1595,7 @@ class OWSPreparator(ProcessingPackage):
         '''
 
         super(OWSPreparator, self).__init__(settings, timeslot, area, 
-                                            host=host, log_level=log_level)
+                                            host=host, logger=logger)
         self.rawSettings = settings
         self.name = settings.name
         self.product = settings.product
@@ -1633,7 +1630,8 @@ class OWSPreparator(ProcessingPackage):
                 'output', 
                 settings.packageOutput_systemsettings_packageoutput_related.all()
             )
-            self.mapper = mappers.NGPMapper(self.inputs[0], self.product)
+            self.mapper = mappers.NGPMapper(self.inputs[0], self.product, 
+                                            logger=self.logger)
 
     def update_latest_mapfile(self, geotifPath):
         '''
@@ -1751,7 +1749,6 @@ class OWSPreparator(ProcessingPackage):
         if geotiff is not None:
             if update == 'latest':
                 self.update_latest_mapfile(geotiff)
-            self.logger.info('All Done')
             if archive:
                 self.archive_outputs()
         else:
@@ -1797,7 +1794,7 @@ class QuickLookGenerator(ProcessingPackage):
     '''
 
     def __init__(self, settings, timeslot, area, host=None, 
-                 log_level=logging.DEBUG, createIO=True):
+                 logger=None, createIO=True):
         '''
         Inputs:
 
@@ -1812,7 +1809,7 @@ class QuickLookGenerator(ProcessingPackage):
         self.name = settings.name
         self.product = settings.product
         super(QuickLookGenerator, self).__init__(settings, timeslot, area, 
-                                                 host=host, log_level=log_level)
+                                                 host=host, logger=logger)
         relCodeDir = utilities.parse_marked(
                 settings.packagepath_set.get(name='codeDir'), self)
         self.codeDir = os.path.join(self.host.codePath, relCodeDir)
@@ -2044,7 +2041,7 @@ class MetadataGenerator(ProcessingPackage):
     '''
 
     def __init__(self, settings, timeslot, area, host=None, 
-                 log_level=logging.DEBUG, createIO=True):
+                 logger=None, createIO=True):
         '''
         Inputs:
 
@@ -2059,7 +2056,7 @@ class MetadataGenerator(ProcessingPackage):
         self.name = settings.name
         self.product = settings.product
         super(MetadataGenerator, self).__init__(settings, timeslot, area,
-                                                host=host, log_level=log_level)
+                                                host=host, logger=logger)
         relCodeDir = utilities.parse_marked(
                 settings.packagepath_set.get(name='codeDir'), self)
         self.codeDir = os.path.join(self.host.codePath, relCodeDir)
@@ -2293,10 +2290,10 @@ class Archivor(GenericAggregationPackage):
     '''
 
     def __init__(self, settings, timeslot, area, host=None, 
-                 log_level=logging.DEBUG):
+                 logger=None):
 
         super(Archivor, self).__init__(timeslot, area.name, host=host, 
-                                       log_level=log_level)
+                                       logger=logger)
         for extraInfo in settings.packageextrainfo_set.all():
             #exec('self.%s = "%s"' % (extraInfo.name, extraInfo.string))
             exec('self.%s = utilities.parse_marked(extraInfo, self)' % extraInfo.name)
@@ -2337,10 +2334,10 @@ class TileDistributor(GenericAggregationPackage):
     '''
 
     def __init__(self, settings, timeslot, area, host=None,
-                 log_level=logging.DEBUG):
+                 logger=None):
 
         super(TileDistributor, self).__init__(timeslot, area.name, host=host,
-                                              log_level=log_level)
+                                              logger=logger)
         self.name = settings.name
         for extraInfo in settings.packageextrainfo_set.all():
             #exec('self.%s = "%s"' % (extraInfo.name, extraInfo.string))
