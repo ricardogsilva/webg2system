@@ -132,6 +132,7 @@ def main():
     package = '&PACKAGE&'
     area = '&AREA&'
     extra = '&EXTRA_KWARGS&'
+    log_level = '&LOG_LEVEL&'
 
     g2systemURL = 'http://%s/g2system/operations/create/' % codeHost
     values = {
@@ -141,6 +142,7 @@ def main():
         'username': username,
         'password': password,
         'force' : force,
+        'log_level' : log_level,
         'extra' : extra
     }
     data = urlencode(values)

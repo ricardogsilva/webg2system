@@ -27,6 +27,7 @@ pip
 django (through pip)
 south (through pip)
 pycountry (through pip)
+ConcurrentLogHandler (through pip)
 python-pexpect
 python-pyparsing
 python-lxml
