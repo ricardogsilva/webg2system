@@ -78,9 +78,12 @@ class MetadataGenerator(object):
         3 : 'distributorTransferOptions',
     }
 
-    def __init__(self, template, timeslot, product):
-        self.logger = logging.getLogger(
-                '.'.join((__name__, self.__class__.__name__)))
+    def __init__(self, template, timeslot, product, logger=None):
+        if logger is None:
+            self.logger = logging.getLogger(
+                    '.'.join((__name__, self.__class__.__name__)))
+        else:
+            self.logger = logger
         self.timeslot = timeslot
         self.product = product
         self.tree = etree.parse(template)
@@ -1092,7 +1095,7 @@ class MetadataGenerator(object):
         data = urllib.urlencode({"username": username, "password": password})
         logoutReq = urllib2.Request(logout_url) # first, always log out
         response = urllib2.urlopen(logoutReq)
-        #print response.read() # debug
+        #self.logger.debug(response.read())
         # send authentication request
         loginReq = urllib2.Request(login_url, data, headers_auth)
         response = urllib2.urlopen(loginReq)
@@ -1108,21 +1111,28 @@ class MetadataGenerator(object):
             # Process up to 10 files in each transaction in order to
             # prevent out of memory errors on the CSW server
             requestList = []
+            results = []
             for index, fp in enumerate(filePaths):
                 requestList.append(fp)
                 if (index + 1) % 10 == 0:
-                    self._execute_csw_insert_request(requestList, csw_url, 
-                                                     headers_xml, opener)
+                    result = self._execute_csw_insert_request(requestList, 
+                                                              csw_url, 
+                                                              headers_xml, 
+                                                              opener)
+                    results.append(result)
                     requestList = []
             else:
-                self._execute_csw_insert_request(requestList, csw_url, 
-                                                 headers_xml, opener)
+                result = self._execute_csw_insert_request(requestList, csw_url, 
+                                                          headers_xml, opener)
+                results.append(result)
         else:
-            self._execute_csw_insert_request([self.tree], csw_url, 
-                                             headers_xml, opener)
+            result = self._execute_csw_insert_request([self.tree], csw_url, 
+                                                      headers_xml, opener)
+            results.append(result)
+        self.logger.debug('results: %s' % results)
         logoutReq = urllib2.Request(logout_url) # Last, always log out
         response = opener.open(logoutReq)
-        #print response.read() # debug
+        #self.logger.debug(response.read())
 
     def _execute_csw_insert_request(self, fileList, url, headers, opener):
         theRequest = '<?xml version="1.0" encoding="UTF-8"?>'\
@@ -1133,15 +1143,21 @@ class MetadataGenerator(object):
             theRequest += '<csw:Insert>' + etree.tostring(theXML) + '</csw:Insert>'
         theRequest += '</csw:Transaction>'
         try:
+            result = False
             insertReq = urllib2.Request(url, theRequest, headers)
             response = opener.open(insertReq)
             # CSW response
             xml_response = response.read()
-            print('insertReq response:')
-            print xml_response  # debug
-            print('------')
+            tree = etree.fromstring(xml_response)
+            if tree.tag == '{%s}TransactionResponse' % tree.nsmap['ows']:
+                result = True
+            elif tree.tag == '{%s}ExceptionReport' % tree.nsmap['ows']:
+                self.logger.debug(xml_response)
+            else:
+                self.logger.debug('unspecified condition')
         except urllib2.HTTPError, error:
-            print(error.read())
+            self.logger.error(error.read())
+        return result
 
     def _re_order(self, parent_element, order_dict):
         re_order = []

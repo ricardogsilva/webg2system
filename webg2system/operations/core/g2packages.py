@@ -2081,7 +2081,10 @@ class MetadataGenerator(ProcessingPackage):
             )
             theTemplate = os.path.join(self.xmlTemplateDir, self.xmlTemplate)
             self.mapper = mappers.NewNGPMapper()
-            self.mdGenerator = metadatas.MetadataGenerator(theTemplate, self.timeslot, self.product)
+            self.mdGenerator = metadatas.MetadataGenerator(theTemplate, 
+                                                           self.timeslot, 
+                                                           self.product,
+                                                           logger=self.logger)
 
     def _process_all_tiles(self):
         '''
@@ -2190,6 +2193,7 @@ class MetadataGenerator(ProcessingPackage):
             result = xmlFiles[0]
         if populateCSW:
             inserted = self.insert_metadata_csw(xmlFiles)
+            self.logger.debug('inserted: %s' % inserted)
         if generate_series:
             self.create_series_metadata(xmlFiles)
         self.logger.info('All Done')

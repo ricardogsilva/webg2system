@@ -456,7 +456,7 @@ class G2LocalHost(G2Host):
             else:
                 toCompress.append(thePath)
         if len(toCompress) > 0:
-            stdout, stderr, retCode = self.run_program('bzip2 %s' % \
+            stdout, stderr, retCode = self.run_program('bzip2 -f %s' % \
                                                        ' '.join(toCompress))
             if retCode == 0:
                 newPaths += [p+'.bz2' for p in toCompress]

@@ -81,7 +81,7 @@ class RunningPackage(models.Model):
         host = hf.create_host()
         formatter = logging.Formatter('%(levelname)s %(asctime)s %(module)s ' \
                                       '%(process)s %(message)s')
-        log_dir = host.make_dir(self.timeslot.strftime('LOGS/%Y/%m/%d'), relativeTo='data')
+        log_dir = host.make_dir(self.timeslot.strftime('LOGS/%Y/%m/%d/%H'), relativeTo='data')
         log_file = os.path.join(log_dir, '%s_%s.log' % \
                    (self.settings.name, 
                     self.timeslot.strftime('%Y%m%d%H%M')))
@@ -151,8 +151,6 @@ class RunningPackage(models.Model):
             self.result = False
             self.save()
             processSteps = 7
-            #callback((self.progress(1, processSteps), 
-            #         'Creating package for processing...'))
             log_callbacks((self.progress(1, processSteps), 
                           'Creating package for processing...'))
             pack = self._initialize(logger, callback)
@@ -167,11 +165,15 @@ class RunningPackage(models.Model):
                                   'files...'))
                     pack.delete_outputs()
                 else:
-                    if isinstance(pack, g2packages.OWSPreparator) or \
-                            isinstance(pack, g2packages.QuickLookGenerator):
-                        runPackage = True
-                    else:
-                        runPackage = False
+                    special_classes = [
+                        g2packages.OWSPreparator,
+                        g2packages.QuickLookGenerator,
+                        g2packages.MetadataGenerator,
+                    ]
+                    runPackage = False
+                    for cls in special_classes:
+                        if isinstance(pack, cls):
+                            runPackage = True
             else:
                 runPackage = True
             if runPackage:
