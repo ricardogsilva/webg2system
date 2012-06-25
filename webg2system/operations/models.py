@@ -183,9 +183,6 @@ class RunningPackage(models.Model):
                     self.result = True
                 else:
                     self.result = False
-                log_callbacks((self.progress(5, processSteps), 
-                              'Cleaning up...'))
-                cleanResult = pack.clean_up()
             else:
                 log_callbacks((self.progress(6, processSteps),
                               'Outputs are already available.'))
@@ -196,6 +193,9 @@ class RunningPackage(models.Model):
                 log_callbacks(line)
             self.result = False
         finally:
+            log_callbacks((self.progress(5, processSteps), 
+                          'Cleaning up...'))
+            cleanResult = pack.clean_up()
             self.status = 'stopped'
             self.save()
             log_callbacks((self.progress(7, processSteps), 'All done!'))
