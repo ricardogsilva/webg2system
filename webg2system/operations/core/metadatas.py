@@ -1107,11 +1107,11 @@ class MetadataGenerator(object):
         redirect_handler= urllib2.HTTPRedirectHandler()
         # save cookie and redirect handler for future HTTP Posts
         opener = urllib2.build_opener(redirect_handler,cookie_handler)
+        results = []
         if filePaths is not None:
             # Process up to 10 files in each transaction in order to
             # prevent out of memory errors on the CSW server
             requestList = []
-            results = []
             for index, fp in enumerate(filePaths):
                 requestList.append(fp)
                 if (index + 1) % 10 == 0:
@@ -1133,6 +1133,11 @@ class MetadataGenerator(object):
         logoutReq = urllib2.Request(logout_url) # Last, always log out
         response = opener.open(logoutReq)
         #self.logger.debug(response.read())
+        if len(results) > 0:
+            the_result = not False in results
+        else:
+            the_result = False
+        return the_result
 
     def _execute_csw_insert_request(self, fileList, url, headers, opener):
         theRequest = '<?xml version="1.0" encoding="UTF-8"?>'\
@@ -1152,6 +1157,8 @@ class MetadataGenerator(object):
             if tree.tag == '{%s}TransactionResponse' % tree.nsmap['ows']:
                 result = True
             elif tree.tag == '{%s}ExceptionReport' % tree.nsmap['ows']:
+                self.logger.error('Couldn\'t send the data to the catalogue '\
+                                  'server. This is the server\'s response:')
                 self.logger.debug(xml_response)
             else:
                 self.logger.debug('unspecified condition')

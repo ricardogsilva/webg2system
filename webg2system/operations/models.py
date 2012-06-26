@@ -181,9 +181,9 @@ class RunningPackage(models.Model):
                               'Running main process...'))
                 mainResult = pack.run_main(callback, *args, **kwargs)
                 # Will be able to add other error codes later
-                if mainResult not in (1,):
+                if mainResult:
                     self.result = True
-                else:
+                elif not mainResult or mainResult in (1,):
                     self.result = False
             else:
                 log_callbacks((self.progress(6, processSteps),

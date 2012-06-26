@@ -2176,7 +2176,6 @@ class MetadataGenerator(ProcessingPackage):
         csw_url = '/'.join((cswSetts.base_URL, cswSetts.csw_URI))
         login_url = '/'.join((cswSetts.base_URL, cswSetts.login_URI))
         logout_url = '/'.join((cswSetts.base_URL, cswSetts.logout_URI))
-        self.logger.info('Sending metadata to CSW server...')
         result = self.mdGenerator.insert_csw(csw_url, login_url, logout_url,
                                              cswSetts.username, 
                                              cswSetts.password,
@@ -2192,11 +2191,11 @@ class MetadataGenerator(ProcessingPackage):
             xmlFiles = [self._process_single_tile(tile)]
             result = xmlFiles[0]
         if populateCSW:
+            self.logger.info('Sending metadata to CSW server...')
             inserted = self.insert_metadata_csw(xmlFiles)
-            self.logger.debug('inserted: %s' % inserted)
+            result = inserted
         if generate_series:
             self.create_series_metadata(xmlFiles)
-        self.logger.info('All Done')
         return result
 
     def clean_up(self):
