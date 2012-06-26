@@ -2086,6 +2086,7 @@ class MetadataGenerator(ProcessingPackage):
                                                            self.product,
                                                            logger=self.logger)
 
+    #FIXME - Refactor the _process_all_tiles and _process_single_tile in order to avoid code duplication
     def _process_all_tiles(self):
         '''
         Returns a list of xml filepaths.
@@ -2094,13 +2095,25 @@ class MetadataGenerator(ProcessingPackage):
         g2fs = self._filter_g2f_list(self.inputs, 'fileType', 'hdf5')
         found = self._find_files(g2fs, useArchive=True)
         result = []
+        already_there = self.host.list_dir(self.xmlOutDir)
         for g2f, foundDict in found.iteritems():
             self.logger.info('Processing %s files...' % g2f.name)
             for index, tilePath in enumerate(foundDict['paths']):
-                #self.logger.info('%i/%i - Generating metadata file...' % \
-                #        (index + 1, len(foundDict['paths'])))
-                xmlFile = self.generate_xml_metadata(tilePath)
-                result.append(xmlFile)
+                self.logger.info('%i/%i - Processing...' % \
+                        (index + 1, len(foundDict['paths'])))
+
+                dirname, fname_with_ext = os.path.split(tilePath)
+                fname = os.path.splitext(fname_with_ext)
+                self.logger.debug('file: %s' % fname)
+                generate = True
+                for metadata in already_there:
+                    if fname in metadata:
+                        self.logger.debug('found the xml metadata. no need to regenerate.')
+                        generate = False
+                if generate:
+                    self.logger.debug('Didn\'t find the xml metadata. Will generate it.')
+                    xmlFile = self.generate_xml_metadata(tilePath)
+                    result.append(xmlFile)
         return result
 
     def _process_single_tile(self, tile, force=False):

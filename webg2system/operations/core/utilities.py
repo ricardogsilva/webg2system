@@ -194,3 +194,18 @@ def get_host_path(oldHost, oldPath, newHost):
         pathType = 'codePath'
     newPath = os.path.join(eval('newHost.%s' % pathType), relativePath[1:])
     return newPath
+
+def get_tile_name(fileName):
+    hvPatt = re.compile(r'H(\d{2})V(\d{2})')
+    reObj = hvPatt.search(fileName)
+    if reObj is not None:
+        areaName = reObj.group()
+    else:
+        try:
+            areaName = os.path.basename(fileName).split('_')[4]
+        except IndexError:
+            logger.error('Couldn\'t find area from the file name.')
+            areaName = None
+    return areaName
+
+
