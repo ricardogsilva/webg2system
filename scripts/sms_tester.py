@@ -154,6 +154,10 @@ def main():
         response = urlopen(req)
         theResponse = response.read()
         print(theResponse)
+        result = get_result(theResponse)
+        if not result:
+            error('The task did not execute correctly. Check the output and '\
+                  'the logs.')
     except URLError, e:
         if hasattr(e, 'reason'):
             print('Failed to reach %s host' % codeHost)
@@ -162,6 +166,12 @@ def main():
             print('The server couldn\'t fulfill the request.')
             print('Error code: %s' % e.code)
         raise 
+
+def get_result(response_text):
+    result_pat = re.compile(r'<span id=["\']result["\']>(\w+)</span>')
+    re_obj = result_pat.search(response_text)
+    result = eval(re_obj.group(1))
+    return result
 
 if __name__ == "__main__":
     try:
