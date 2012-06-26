@@ -131,7 +131,7 @@ def main():
     force = '&FORCE&'
     package = '&PACKAGE&'
     area = '&AREA&'
-    extra = '&EXTRA_KWARGS&'
+    extra = '&EXTRA_KWARGS&'.strip()
     log_level = '&LOG_LEVEL&'
 
     g2systemURL = 'http://%s/g2system/operations/create/' % codeHost
