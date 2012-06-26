@@ -609,7 +609,7 @@ class MetadataGenerator(object):
         minx, miny, maxx, maxy = mapper.get_bounds(filePath, 
                                                    self.product.pixelSize)
         rowSize, colSize = mapper.get_lines_cols(filePath)
-        tileName = mapper._get_tile_name(filePath)
+        tileName = utilities.get_tile_name(filePath)
         uuid = str(uuid1())
         rootAttribs = self.tree.getroot().attrib
         rootAttribs['id'] = '%sMetadata' % self.product.short_name
@@ -1153,10 +1153,11 @@ class MetadataGenerator(object):
             response = opener.open(insertReq)
             # CSW response
             xml_response = response.read()
+            self.logger.info('xml_response: %s' % xml_response)
             tree = etree.fromstring(xml_response)
-            if tree.tag == '{%s}TransactionResponse' % tree.nsmap['ows']:
+            if 'TransactionResponse' in tree.tag:
                 result = True
-            elif tree.tag == '{%s}ExceptionReport' % tree.nsmap['ows']:
+            elif 'ExceptionReport' in tree.tag:
                 self.logger.error('Couldn\'t send the data to the catalogue '\
                                   'server. This is the server\'s response:')
                 self.logger.debug(xml_response)

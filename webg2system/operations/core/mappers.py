@@ -605,7 +605,7 @@ class NewNGPMapper(object):
                                                              pixelSize)
             elif len(smallTile) == 0:
                 # it's a continental tile
-                areaName = self._get_tile_name(filePath)
+                areaName = utilities.get_tile_name(filePath)
                 ulTile = fileSettings.fileextrainfo_set.get(name='%s_upper_left_tile' % areaName).string
                 ulTileFile = filePath.replace(areaName, ulTile)
                 ulSettings = utilities.get_file_settings(ulTileFile)
@@ -639,7 +639,7 @@ class NewNGPMapper(object):
                 rowSize = fileSettings.fileextrainfo_set.get(name='nLines').string
                 colSize = fileSettings.fileextrainfo_set.get(name='nCols').string
             elif len(smallTile) == 0: # continental tile
-                areaName = self._get_tile_name(filePath)
+                areaName = utilities.get_tile_name(filePath)
                 ulTile = fileSettings.fileextrainfo_set.get(name='%s_upper_left_tile' % areaName).string
                 ulTileFile = filePath.replace(areaName, ulTile)
                 ulSettings = utilities.get_file_settings(ulTileFile)
@@ -687,19 +687,6 @@ class NewNGPMapper(object):
         layer.metadata.set('wms_abstract', layerAbstract)
         mapObj.save(mapfile)
         return mapfile
-
-    def _get_tile_name(self, fileName):
-        hvPatt = re.compile(r'H(\d{2})V(\d{2})')
-        reObj = hvPatt.search(fileName)
-        if reObj is not None:
-            areaName = reObj.group()
-        else:
-            try:
-                areaName = os.path.basename(fileName).split('_')[4]
-            except IndexError:
-                self.logger.error('Couldn\'t find area from the file name.')
-                areaName = None
-        return areaName
 
     def _get_tile_bbox(self, filePath, fileSettings, pixelSize):
         nLines = int(fileSettings.fileextrainfo_set.get(name='nLines').string)
