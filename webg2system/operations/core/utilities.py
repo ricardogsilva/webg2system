@@ -208,4 +208,17 @@ def get_tile_name(fileName):
             areaName = None
     return areaName
 
+def put_tile_into_pattern(tile_name, g2f):
+    for pattern in g2f.searchPatterns:
+        result = pattern
+        newPatt = re.sub(
+                        r'\(\?P<tile_name>.*\)',
+                        tile_name,
+                        pattern
+                  )
+        if newPatt != pattern:
+            result = newPatt
+            break
+    return result
+
 

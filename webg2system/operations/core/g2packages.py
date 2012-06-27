@@ -2086,67 +2086,106 @@ class MetadataGenerator(ProcessingPackage):
                                                            self.product,
                                                            logger=self.logger)
 
-    #FIXME - Refactor the _process_all_tiles and _process_single_tile in order to avoid code duplication
-    def _process_all_tiles(self):
+    def _process_all_tiles(self, use_archive=True, force=True):
         '''
-        Returns a list of xml filepaths.
         '''
 
         g2fs = self._filter_g2f_list(self.inputs, 'fileType', 'hdf5')
-        found = self._find_files(g2fs, useArchive=True)
-        result = []
-        already_there = self.host.list_dir(self.xmlOutDir)
+        found = self._find_files(g2fs, useArchive=use_archive)
+        results = []
         for g2f, foundDict in found.iteritems():
-            self.logger.info('Processing %s files...' % g2f.name)
-            for index, tilePath in enumerate(foundDict['paths']):
-                self.logger.info('%i/%i - Processing...' % \
-                        (index + 1, len(foundDict['paths'])))
+            for index, tile_path in enumerate(foundDict['paths']):
+                metadata_path = self._process_single_tile_path(
+                                    tile_path, 
+                                    force=force
+                                )
+                results.append(metadata_path)
+        return results
 
-                dirname, fname_with_ext = os.path.split(tilePath)
-                fname = os.path.splitext(fname_with_ext)
-                self.logger.debug('file: %s' % fname)
-                generate = True
-                for metadata in already_there:
-                    if fname in metadata:
-                        self.logger.debug('found the xml metadata. no need to regenerate.')
-                        generate = False
-                if generate:
-                    self.logger.debug('Didn\'t find the xml metadata. Will generate it.')
-                    xmlFile = self.generate_xml_metadata(tilePath)
-                    result.append(xmlFile)
-        return result
-
-    def _process_single_tile(self, tile, force=False):
-        result = None
-        alreadyThere = self.host.list_dir(self.xmlOutDir)
-        for metadata in alreadyThere:
-            if tile in metadata:
-                self.logger.debug('Found the xml metadata. No need to generate.')
-                result = metadata
-        if result is None:
-            g2fs = self._filter_g2f_list(self.inputs, 'fileType', 'hdf5')
-            theFilePath = None
-            current = 0
-            while (theFilePath is None) and (current < len(g2fs)):
-                g2f = g2fs[current]
-                found = self._find_files([g2f], useArchive=True)
-                isPresent = False
-                for patt in g2f.searchPatterns:
-                    if not isPresent:
-                        newPatt = re.sub(r'\(.*\)', tile, patt)
-                        for filePath in found[g2f]['paths']:
-                            reObj = re.search(newPatt, filePath)
-                            if reObj is not None:
-                                theFilePath = filePath
-                                isPresent = True
-                                break
-                current += 1
-            if theFilePath is not None:
-                self.logger.debug('About to generate a new xml.')
-                result = self.generate_xml_metadata(theFilePath)
+    def _process_single_tile_path(self, tile_path, force=True):
+        self.logger.debug('tile_path: %s' % tile_path)
+        if force:
+            metadata_path = self.generate_xml_metadata(tile_path)
+        else:
+            tile = utilities.get_tile_name(tile_path)
+            already_there = self._find_output_by_tile(
+                                tile, 
+                                use_archive=False
+                            )
+            if already_there is None:
+                metadata_path = self.generate_xml_metadata(tile_path)
             else:
-                self.logger.error('The requested tile was not found.')
-        return result
+                metadata_path = already_there
+                self.logger.info('Using already present tile.')
+        return metadata_path
+
+    def _process_single_tile(self, tile, use_archive=True, force=True):
+        '''
+        '''
+
+        metadata_path = None
+        if force:
+            metadata_path = self._force_new_metadata(
+                                tile, 
+                                use_archive=use_archive
+                            )
+        else:
+            already_there = self._find_output_by_tile(
+                                tile, 
+                                use_archive=use_archive
+                            )
+            if already_there is None:
+                metadata_path = self._force_new_metadata(
+                                    tile, 
+                                    use_archive=use_archive
+                                )
+            else:
+                metadata_path = already_there
+                self.logger.info('Using already present tile.')
+        return metadata_path
+
+    def _force_new_metadata(self, tile_name, use_archive=True):
+        metadata_path = None
+        input_tile = self._find_input_by_tile(tile_name, 
+                                              use_archive=use_archive)
+        if input_tile is not None:
+            metadata_path = self.generate_xml_metadata(input_tile)
+        return metadata_path
+
+    def _find_input_by_tile(self, tile_name, use_archive=True):
+        tile_path = self._find_by_tile(tile_name, use_archive=use_archive,
+                                       io_type='input', filter_by='fileType',
+                                       filter_value='hdf5')
+        return tile_path
+
+    def _find_output_by_tile(self, tile_name, use_archive=True):
+        tile_path = self._find_by_tile(tile_name, use_archive=use_archive,
+                                       io_type='output', filter_by='fileType',
+                                       filter_value='xml')
+        return tile_path
+
+    def _find_by_tile(self, tile_name, use_archive=True, io_type='input', 
+                      filter_by='fileType', filter_value='hdf5'):
+        if io_type == 'input':
+            io = self.inputs
+        elif io_type == 'output':
+            io = self.outputs
+        g2fs = self._filter_g2f_list(io, filter_by, filter_value)
+        theFilePath = None
+        current = 0
+        while (theFilePath is None) and (current < len(g2fs)):
+            g2f = g2fs[current]
+            found = self._find_files([g2f], useArchive=use_archive)
+            isPresent = False
+            newPatt = utilities.put_tile_into_pattern(tile_name, g2f)
+            for filePath in found[g2f]['paths']:
+                reObj = re.search(newPatt, filePath)
+                if reObj is not None:
+                    theFilePath = filePath
+            current += 1
+        if theFilePath is None:
+            self.logger.error('The requested tile was not found.')
+        return theFilePath
 
     def generate_xml_metadata(self, tilePath):
         '''
@@ -2196,12 +2235,15 @@ class MetadataGenerator(ProcessingPackage):
         return result
 
     def run_main(self, callback=None, tile=None, populateCSW=True, 
-                 generate_series=False):
+                 generate_series=False, use_archive=True, force=False):
         if tile is None:
-            xmlFiles = self._process_all_tiles()
+            xmlFiles = self._process_all_tiles(use_archive=use_archive,
+                                               force=force)
             result = xmlFiles
         else:
-            xmlFiles = [self._process_single_tile(tile)]
+            xmlFiles = [self._process_single_tile(tile, 
+                                                  use_archive=use_archive, 
+                                                  force=force)]
             result = xmlFiles[0]
         if populateCSW:
             self.logger.info('Sending metadata to CSW server...')
