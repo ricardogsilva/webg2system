@@ -21,6 +21,7 @@ from core.g2packages import QuickLookGenerator, TileDistributor
 import core.g2hosts as g2hosts
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 @csrf_exempt
 def execute_package(request):
@@ -39,7 +40,6 @@ def execute_package(request):
             if user is not None:
                 if user.is_active:
                     login(request, user)
-                    logger.debug(f.cleaned_data)
                     try:
                         p = Package.objects.get(name=f.cleaned_data['package'])
                         a = Area.objects.get(name=f.cleaned_data['area'])
@@ -47,7 +47,7 @@ def execute_package(request):
                                                         area=a, 
                                                         timeslot=timeslot)
                     except (Package.DoesNotExist, Area.DoesNotExist):
-                        logger.debug('Some of the input arguments are invalid: ' \
+                        logger.error('Some of the input arguments are invalid: ' \
                                      'package or area inexistent.')
                         rp = None
                     except RunningPackage.DoesNotExist:
@@ -80,15 +80,15 @@ def execute_package(request):
                     logout(request)
                 else:
                     # user is not valid
-                    logger.debug('Invalid user')
+                    logger.error('Invalid user')
                     pass
             else:
                 # user is none
-                logger.debug('User is None')
+                logger.error('User is None')
                 pass
         else:
             # form was invalid
-            logger.debug('form was invalid')
+            logger.warning('form was invalid')
             f = CreatePackageForm()
             result = render_to_response(
                         'operations/create_running_package.html',
@@ -124,7 +124,7 @@ def get_product_zip(request, prodName, tile, timeslot):
     settings = ss.Package.objects.get(codeClass__className='TileDistributor',
                                       product__short_name=prodName)
     area = ss.Area.objects.get(name='.*')
-    pack = TileDistributor(settings, ts, area)
+    pack = TileDistributor(settings, ts, area, logger=logger)
     theZip = pack.run_main(tile=tile)
     pack.clean_up()
     if theZip is not None:
@@ -142,7 +142,7 @@ def get_quicklook(request, prodName, tile, timeslot):
     settings = ss.Package.objects.get(codeClass__className='QuickLookGenerator',
                                       product__short_name=prodName)
     area = ss.Area.objects.get(name='.*')
-    pack = QuickLookGenerator(settings, ts, area)
+    pack = QuickLookGenerator(settings, ts, area, logger=logger)
     if pack is not None:
         theQuickLook = pack.run_main(tile=tile)
         pack.clean_up()
