@@ -39,9 +39,6 @@ class GenericItem(object):
             self.callback = cb
         else:
             self.callback = callback
-        #self.logger = logging.getLogger(
-        #        '.'.join((__name__, self.__class__.__name__)))
-        #self.logger.setLevel(log_level)
         self.logger = logger
         self.timeslot = timeslot
         self.source = G2Source(area, timeslot)

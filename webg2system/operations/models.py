@@ -87,10 +87,13 @@ class RunningPackage(models.Model):
                     self.timeslot.strftime('%Y%m%d%H%M')))
         handler = ConcurrentRotatingFileHandler(log_file, 'a', 512*1024, 3)
         handler.setFormatter(formatter)
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(formatter)
         existing_handlers = logger.handlers
         for hdlr in existing_handlers:
             logger.removeHandler(hdlr)
         logger.addHandler(handler)
+        logger.addHandler(console_handler)
         logger.setLevel(log_level)
         # reassing the host's logger to ensure it gets the created handler
         # this is because the HostFactory class has a caching mechanism
