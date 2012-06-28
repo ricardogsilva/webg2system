@@ -2313,7 +2313,7 @@ class GenericAggregationPackage(GenericItem):
                     #self.logger.debug('area: %s' % spArea) 
                     className = eval(generalPackSettings.codeClass.className)
                     newObject = className(generalPackSettings, spTimeslot, spArea,
-                                          hostSettings)
+                                          hostSettings, logger=self.logger)
                     #self.logger.debug('----------') 
                     objects.append(newObject)
         return objects
