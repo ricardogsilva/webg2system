@@ -565,6 +565,8 @@ class G2LocalHost(G2Host):
                 pass
 
     def get_cwd(self):
+        cwd = os.getcwd()
+        self.logger.info('cwd: %s' % cwd)
         return os.getcwd()
 
     def change_dir(self, destination):
