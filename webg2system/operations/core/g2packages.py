@@ -1737,23 +1737,33 @@ class OWSPreparator(ProcessingPackage):
                 that serves the WMS service.
         '''
 
+        result = False
         if generate:
             fetched = self.fetch_inputs(useArchive=True)
             fileList = []
             for g2f, pathList in fetched.iteritems():
                 if g2f.fileType == 'hdf5':
                     fileList += pathList
-            geotiff = self.generate_geotiff(fileList)
+            if len(fileList) == 0:
+                self.logger.error('Couldn\'t find the input HDF5 tiles. ' \
+                                  'No Geotiff can be generated.')
+                geotiff = None
+            else:
+                self.logger.info('Generating a new Geotiff file from %s ' \
+                                 'fetched tiles...' % len(fileList))
+                geotiff = self.generate_geotiff(fileList)
+                self.logger.info('geotiff file: %s' % geotiff)
         else:
             geotiff = self.fetch_geotiff(useArchive=True)
         if geotiff is not None:
+            result = True
             if update == 'latest':
                 self.update_latest_mapfile(geotiff)
             if archive:
                 self.archive_outputs()
         else:
             self.logger.warning('Couldn\'t find the geotiff files.')
-        return geotiff
+        return result
 
     def fetch_geotiff(self, useArchive=True):
         g2f = [inp for inp in self.outputs if inp.fileType=='geotiff'][0]
