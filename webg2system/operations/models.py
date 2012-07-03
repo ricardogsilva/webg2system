@@ -25,6 +25,9 @@ class RunningPackage(models.Model):
     result = models.BooleanField(default=False, editable=False)
     timestamp = models.DateTimeField(editable=False)
 
+    class Meta:
+        ordering = ['-id']
+
     def __unicode__(self):
         return unicode(self.settings)
 
