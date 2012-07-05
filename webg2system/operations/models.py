@@ -25,6 +25,9 @@ class RunningPackage(models.Model):
     result = models.BooleanField(default=False, editable=False)
     timestamp = models.DateTimeField(editable=False)
 
+    class Meta:
+        ordering = ['-id']
+
     def __unicode__(self):
         return unicode(self.settings)
 
@@ -201,6 +204,7 @@ class RunningPackage(models.Model):
             log_callbacks((self.progress(5, processSteps), 
                           'Cleaning up...'))
             cleanResult = pack.clean_up()
+            del pack
             self.status = 'stopped'
             self.save()
             log_callbacks((self.progress(7, processSteps), 'All done!'))

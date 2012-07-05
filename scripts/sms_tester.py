@@ -156,7 +156,7 @@ def main():
         print(theResponse)
         result = get_result(theResponse)
         if not result:
-            error('The task did not execute correctly. Check the output and '\
+            print('The task did not execute correctly. Check the output and '\
                   'the logs.')
     except URLError, e:
         if hasattr(e, 'reason'):
