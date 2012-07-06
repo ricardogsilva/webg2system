@@ -15,7 +15,7 @@ import time
 
 import pysftp
 
-class SFTPPProxy(object):
+class SFTPProxy(object):
     '''
     Connect to another server through SFTP and perform various actions.
     '''
@@ -31,16 +31,24 @@ class SFTPPProxy(object):
         self.logger = logger
         self.local_host = local_host
         self.remote_host = remote_host
-        try:
-            self.connection = pysftp.Connection(
-                                  host=self.remote_host.host, 
-                                  username=self.remote_host.username,
-                                  password=self.remote_host.password
-                              )
-        except pysftp.AuthenticationException:
-            self.connection = None
+        self.connection = None
 
-    # FIXME - test this method out
+    def _connect(self):
+        result = True
+        if self.connection is None:
+            try:
+                self.logger.debug('Connecting to %s...' % \
+                                  self.remote_host.host)
+                self.connection = pysftp.Connection(
+                                      host=self.remote_host.host, 
+                                      username=self.remote_host.user,
+                                      password=self.remote_host.password
+                                  )
+            except pysftp.paramiko.AuthenticationException:
+                self.connection = None
+                result = False
+        return result
+
     def find(self, path_list, restrict_pattern=None):
         '''
         Return a list of paths that match the 'path_list' argument.
@@ -51,30 +59,33 @@ class SFTPPProxy(object):
                 to search. Each string is interpreted as a regular expression.
         '''
 
-        file_list = []
-        for path in path_list:
-            search_dir, search_pattern = os.path.split(path)
-            #self.logger.debug('search_dir: %s' % search_dir)
-            #self.logger.debug('search_pattern: %s' % search_pattern)
-            patt_RE = re.compile(search_pattern)
-            try:
-                self.connection.chdir(search_dir)
-                current_dir = self.connection.getcwd()
-                raw_file_list = self.connection.listdir()
-                for raw_path in raw_file_list:
-                    if patt_RE.search(raw_path) is not None:
-                        if restrict_pattern is not None:
-                            if re.search(restrict_pattern, raw_path) is not None:
+        if self._connect():
+            file_list = []
+            for path in path_list:
+                search_dir, search_pattern = os.path.split(path)
+                #self.logger.debug('search_dir: %s' % search_dir)
+                #self.logger.debug('search_pattern: %s' % search_pattern)
+                patt_RE = re.compile(search_pattern)
+                try:
+                    self.connection.chdir(search_dir)
+                    current_dir = self.connection.getcwd()
+                    raw_file_list = self.connection.listdir()
+                    for raw_path in raw_file_list:
+                        if patt_RE.search(raw_path) is not None:
+                            if restrict_pattern is not None:
+                                if re.search(restrict_pattern, raw_path) is not None:
+                                    file_list.append(os.path.join(current_dir, 
+                                                     raw_path))
+                            else:
                                 file_list.append(os.path.join(current_dir, 
                                                  raw_path))
-                        else:
-                            file_list.append(os.path.join(current_dir, 
-                                             raw_path))
-            except IOError as err:
-                self.logger.error(err)
-        return fileList
+                except IOError as err:
+                    self.logger.error(err)
+        else:
+            self.logger.error('Not connected to the remote SFTP host')
+            file_list = []
+        return file_list
 
-    # FIXME - test this method out
     def fetch(self, paths, destination):
         '''
         Fetch the input paths from remoteHost.
@@ -94,13 +105,75 @@ class SFTPPProxy(object):
         '''
 
         copied_paths = []
-        old_dir = self.local_host.get_cwd()
-        if not self.local_host.is_dir(destination):
-            self.local_host.make_dir(destination)
-        self.local_host.change_dir(destination)
-        for path in paths:
-            dirPath, fname = os.path.split(path)
-            self.connection.get(path)
-            copied_paths.append(os.path.join(destination, fname))
-        self.local_host.change_dir(old_dir)
+        if self._connect():
+            old_dir = self.local_host.get_cwd()
+            if not self.local_host.is_dir(destination):
+                self.local_host.make_dir(destination)
+            self.local_host.change_dir(destination)
+            for path in paths:
+                dirPath, fname = os.path.split(path)
+                self.connection.get(path)
+                copied_paths.append(os.path.join(destination, fname))
+            self.local_host.change_dir(old_dir)
+        else:
+            self.logger.error('Not connected to the remote SFTP host')
         return copied_paths
+
+    def send(self, paths, destination):
+        '''
+        Put the local paths to the remote server.
+
+        Inputs:
+
+            paths - A list of paths in the local file system. This list is
+                assumed to contain full paths to files and not search 
+                patterns.
+
+            destination - The directory on the remote server where the
+                paths will be put. It will be created in case it doesn't 
+                exist.
+
+        Returns:
+
+            The total return code of the transfer(s).
+        '''
+
+        result = 0
+        if self._connect():
+            for path in paths:
+                directory, fname = os.path.split(path)
+                if os.path.isdir(directory):
+                    dirs = self._create_remote_dirs(destination)
+                    if dirs:
+                        result = self.connection.put(
+                                    path, 
+                                    os.path.join(destination, fname)
+                                )
+                    else:
+                        raise
+        else:
+            self.logger.error('Not connected to the remote SFTP host')
+            result = 1
+        return result
+
+    def _create_remote_dirs(self, path):
+        """
+        Create the directory structure specified by 'path' on the remote host.
+        """
+
+        result = False
+        if self._connect:
+            out_list = self.connection.execute('mkdir -p %s' % path)
+            if len(out_list) > 0:
+                # Either the path already exists or it could not be created
+                if 'exists' in out_list[0]:
+                    self.logger.info(out_list[0])
+                    result = True
+                else:
+                    # something went wrong. 
+                    self.logger.error(out_list[0])
+            else:
+                result = True
+        else:
+            self.logger.error('Not connected to the remote SFTP host')
+        return result

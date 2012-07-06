@@ -34,6 +34,7 @@ import tables
 import systemsettings.models as ss
 from sshproxy import SSHProxy
 from ftpproxy import FTPProxy
+from sftpproxy import SFTPProxy
 
 # TODO
 # - Review all the methods that have a FIXME tag
@@ -257,7 +258,7 @@ class G2LocalHost(G2Host):
                 
             relativeDestinationDir - The directory on the local host where
                 the files will be copied to. It will be created in case it
-                doens't exist. This directory is relative to the host's
+                doesn't exist. This directory is relative to the host's
                 codePath or dataPath attribute (see the 'relativeTo' input).
             
             sourceHost - A G2host instance representing the host where the
@@ -274,7 +275,7 @@ class G2LocalHost(G2Host):
         else:
             self.logger.debug('About to perform a remote fetch...')
             result = self._fetch_from_remote(fullPaths, relativeDestinationDir, 
-                                             sourceHost)
+                                             sourceHost) 
         return result
 
     def _fetch_from_local(self, fullPaths, directory):
@@ -292,7 +293,8 @@ class G2LocalHost(G2Host):
             fullDestPaths.append(newPath)
         return fullDestPaths
 
-    def _fetch_from_remote(self, fullPaths, directory, sourceHost):
+    def _fetch_from_remote(self, fullPaths, directory, sourceHost, 
+                           protocol='sftp'):
         '''
         Fetch the files from the remote host.
 
@@ -309,7 +311,7 @@ class G2LocalHost(G2Host):
             A list of string with the full paths to the newly fetched files.
         '''
         
-        connection = self._get_connection(sourceHost, 'ftp')
+        connection = self._get_connection(sourceHost, protocol)
         outputDir = os.path.join(self.dataPath, directory)
         newPaths = connection.fetch(fullPaths, outputDir)
         return newPaths
@@ -323,7 +325,7 @@ class G2LocalHost(G2Host):
             host - A G2Host object.
 
             protocol - A string with the name of the connection protocol.
-                Currently planned protocols are 'ftp' and 'ssh'.
+                Currently planned protocols are 'ftp' and 'sftp'.
         '''
 
         hostConnections = self.connections.get(host.name)
@@ -360,13 +362,23 @@ class G2LocalHost(G2Host):
             self.connections[host.name] = dict()
         if self.connections.get(host.name).get(protocol) is None:
             if protocol == 'ssh':
-                self.connections[host.name]['ssh'] = SSHProxy(host.user, 
-                                                              host.host, 
-                                                              logger=self.logger)
+                self.connections[host.name]['ssh'] = SSHProxy(
+                    host.user, 
+                    host.host, 
+                    logger=self.logger
+                )
             elif protocol == 'ftp':
-                self.connections[host.name]['ftp'] = FTPProxy(localHost=self, 
-                                                              remoteHost=host,
-                                                              logger=self.logger)
+                self.connections[host.name]['ftp'] = FTPProxy(
+                    localHost=self, 
+                    remoteHost=host,
+                    logger=self.logger
+                )
+            elif protocol == 'sftp':
+                self.connections[host.name]['sftp'] = SFTPProxy(
+                    local_host=self,
+                    remote_host=host,
+                    logger=self.logger
+                )
         return self.connections[host.name][protocol]
 
     def send(self, fullPaths, destDir, destHost=None):
@@ -416,8 +428,8 @@ class G2LocalHost(G2Host):
             result.append(os.path.join(fullDestDir, os.path.basename(path)))
         return (0, result)
 
-    def _send_to_remote(self, paths, destDir, destHost):
-        connection = self._get_connection(destHost, 'ftp')
+    def _send_to_remote(self, paths, destDir, destHost, protocol='sftp'):
+        connection = self._get_connection(destHost, protocol)
         returnCode = connection.send(paths, destDir)
         if returnCode == 0: # sending went OK
             remotePaths = [
@@ -745,9 +757,10 @@ class G2RemoteHost(G2Host):
                                  logger=self.logger),
                 #'ssh' : SSHProxy(self.user, self.host, self.password),
                 'ssh' : SSHProxy(self.user, self.host, logger=self.logger),
+                'sftp' : SFTPProxy(localHost, self, logger=self.logger),
                 }
 
-    def find(self, pathList, restrictPattern=None, protocol='ftp'):
+    def find(self, pathList, restrictPattern=None, protocol='sftp'):
         '''
         Find the paths.
 
@@ -757,8 +770,7 @@ class G2RemoteHost(G2Host):
             are treated as regular expressions.
 
             protocol - The name of the protocol used to find the files.
-                Available values are 'ftp' (the default) and 'ssh'.
-                NOTE: currently only the 'ftp' protocol is implemented.
+                Available values are 'ftp' (the default) and 'sftp'.
 
         Returns:
 
@@ -766,15 +778,18 @@ class G2RemoteHost(G2Host):
         '''
 
         foundFiles = []
+        fullSearchPaths = []
+        for path in pathList:
+            if path.startswith(os.path.sep):
+                fullSearchPaths.append(path)
+            else:
+                fullSearchPaths.append(os.path.join(self.dataPath, path))
         if protocol == 'ftp':
-            fullSearchPaths = []
-            for path in pathList:
-                if path.startswith(os.path.sep):
-                    fullSearchPaths.append(path)
-                else:
-                    fullSearchPaths.append(os.path.join(self.dataPath, path))
             foundFiles = self._localConnection['ftp'].find(fullSearchPaths, 
                                                            restrictPattern)
+        elif protocol == 'sftp':
+            foundFiles = self._localConnection['sftp'].find(fullSearchPaths,
+                                                            restrictPattern)
         else:
             raise NotImplementedError
         return foundFiles
@@ -807,248 +822,3 @@ class G2RemoteHost(G2Host):
         result = ssh.run_command(command)
         stdout = ''.join(result)
         return stdout, '', 0
-
-# older code
-
-#class G2SCPHost(G2Host):
-#    """
-#    ...
-#    """
-#
-#    def __init__(self, isLocal, name, paramDict, searchPaths):
-#        G2Host.__init__(self, isLocal, name, paramDict, searchPaths)
-#        self.logger = logging.getLogger("G2ProcessingLine.G2SCPHost")
-#        self.connection = paramDict["connection"]
-#        self.ip = paramDict["ip"]
-#        self.username = paramDict["username"]
-#        self.logger.debug("self.connection: %s" % self.connection)
-#        self.logger.debug("self.ip: %s" % self.ip)
-#        self.logger.debug("self.username: %s" % self.username)
-#
-#    def find(self, g2file):
-#        self.logger.debug("find method called.")
-#        remoteFileList = []
-#        remoteCommands = ""
-#        for searchPath in self.searchPaths:
-#            self.logger.debug("searching in: %s" % searchPath)
-#            for pattern in self._split_pattern(g2file):
-#                self.logger.debug("searching for: %s" % pattern)
-#                remoteCommands += "ls %s/%s;" % (searchPath, pattern)
-#        sshCommand = ["ssh",
-#                      "%s@%s" % (self.username, self.ip),
-#                      "%s" % remoteCommands]
-#        self.logger.debug("sshCommand: %s" % sshCommand)
-#        externalProcess = subprocess.Popen(sshCommand, stdout=subprocess.PIPE, 
-#                                           stdin=subprocess.PIPE, stderr=subprocess.PIPE)
-#        stdOutput, stdError = externalProcess.communicate()
-#        remoteFileList = stdOutput.split("\n")
-#        errorsList = stdError.split("\n")
-#        self.logger.debug("remoteFileList: %s" % remoteFileList)
-#        self.logger.debug("errorsList: %s" % errorsList)
-#        if len(remoteFileList) != 0:
-#            remoteFileList.pop() # the last element in the list is just a blank string, so we remove it
-#        self.logger.debug("find method exiting.")
-#        return remoteFileList
-#
-#    def fetch(self, fileList, g2file, numTries=3):
-#        """
-#        Copy remote files to the local working directory using SCP.
-#
-#        Inputs: fileList - a list of paths to copy
-#                numTries - an integer specifying how many attempts
-#                           will be made to copy the remote files.
-#
-#        Returns: a list of strings with the new path to the files,
-#                 on the workingDir.
-#        """
-#
-#        self.logger.debug("fetch method called.")
-#        scpString = "%s@%s:" % (self.username, self.ip)
-#        if len(fileList) > 1:
-#            scpString += "\\{"
-#        for path in fileList:
-#            scpString += "%s," % path
-#        scpString = scpString[:-1] # removing the last comma sign
-#        if len(fileList) > 1:
-#            scpString += "\\}"
-#        scpCommand = "scp %s %s" % (scpString, g2file.package.workingDir)
-#        self.logger.debug("scpCommand: %s" % scpCommand)
-#        self.logger.debug("copying the remote files to the local working directory...")
-#        result = self._execute_scp_operation(scpCommand, numTries)
-#        self.logger.debug("fetch method exiting.")
-#        return ["%s/%s" % (g2file.package.workingDir, os.path.basename(path)) for path in fileList]
-#
-#    def send(self, fileList, path=None, numTries=3):
-#        """
-#        Returns: 0 in case of success and > 0 in case something went wrong.
-#        """
-#
-#        self.logger.debug("send method called.")
-#        if path is None:
-#            path = self.searchPaths[0]
-#        scpString = ""
-#        if len(fileList) > 1:
-#            scpString += "\\{"
-#        for path in fileList:
-#            scpString += "%s," % path
-#        scpString = scpString[:-1] # removing the last comma sign
-#        if len(fileList) > 1:
-#            scpString += "\\}"
-#        scpCommand = "scp %s %s@%s:%s" % (scpString, self.username, self.ip,
-#                                          path)
-#        self.logger.debug("scpCommand: %s" % scpCommand)
-#        self.logger.debug("copying the remote files to the local working directory...")
-#        result = self._execute_scp_operation(scpCommand, numTries)
-#        self.logger.debug("send method exiting.")
-#        return result
-#
-#    def _execute_scp_operation(self, scpCommand, numTries):
-#        self.logger.debug("_execute_scp_operation method called.")
-#        exitCode = -1
-#        currentTry = 1
-#        while exitCode != 0 and currentTry <= numTries:
-#            self.logger.debug("try number: %i/%i" % (currentTry, numTries))
-#            scpProcess = subprocess.Popen(scpCommand, shell=True, 
-#                                          stdin=subprocess.PIPE, 
-#                                          stdout=subprocess.PIPE,
-#                                          stderr=subprocess.PIPE)
-#            resultStdOut, resultStdErr = scpProcess.communicate()
-#            exitCode = int(scpProcess.returncode)
-#            self.logger.debug("returnCode: %i" % exitCode)
-#            currentTry += 1
-#        if exitCode > 0: #there was an error with the external scp process
-#            raise Exception
-#        else:
-#            self.logger.debug("files processed successfully.")
-#        self.logger.debug("_execute_scp_operation method exiting.")
-#        return exitCode
-
-
-
-# code from trunk
-
-#class G2FTPHost(G2Host):
-#    """
-#    ...
-#    """
-#
-#    ftp = ftplib.FTP()
-#
-#    def __init__(self, name, paramDict, searchPaths):
-#        G2Host.__init__(self, name, paramDict, searchPaths)
-#        self.logger = logging.getLogger("G2ProcessingLine.G2FTPHost")
-#        self.connection = paramDict["connection"]
-#        self.ip = paramDict["ip"]
-#        self.username = paramDict["username"]
-#        self.password = paramDict["password"]
-#        self._connect()
-#
-#    def _connect(self):
-#        #are we already connected?
-#        try:
-#            self.ftp.nlst()
-#            self.logger.debug('The connection already exists')
-#        except AttributeError:
-#            #no, the connection hasn't been established yet
-#            self.logger.debug('No connection exists yet')
-#            try:
-#                self.ftp.connect(self.ip)
-#                self.ftp.login(self.username, self.password)
-#                self.logger.info('Connection successful')
-#            except socket.error, errorTup:
-#                if errorTup[0] == 113:
-#                    raise IOError("%s is unreachable. Maybe the host is down?" % self.ip)
-#                else:
-#                    self.logger.error('socket error: %s\t%s' % (errorTup[0], errorTup[1]))
-#            except ftplib.error_temp, errMsg:
-#                patt = re.compile(r'(^\d+)')
-#                errNum = patt.search(str(errMsg)).group(1)
-#                if errNum == '421':
-#                    # try to connect again in secs seconds
-#                    secs = 15
-#                    self.logger.info('Too many connections at the moment. Waiting %i seconds' % secs)
-#                    time.sleep(secs)
-#                    self._connect()
-#
-#    def find(self, g2file):
-#        self.logger.debug("find method called.")
-#        self.logger.debug("searchPattern: %s" % g2file.searchPattern)
-#        for searchPath in self.searchPaths:
-#            self.logger.debug("searchPath: %s" % searchPath)
-#            try:
-#                self.ftp.cwd(searchPath)
-#                fileList = [os.path.join(searchPath, fn)\
-#                            for fn in self.ftp.nlst(g2file.searchPattern)]
-#                self.logger.debug("fileList: %s" % fileList)
-#            except ftplib.error_perm, msg:
-#                self.logger.debug(msg)
-#                raise IOError(msg)
-#        self.logger.debug("find method exiting.")
-#        return fileList
-#
-#    def fetch(self, fileList, g2file, numTries=3):
-#        self.logger.debug("fetch method called.")
-#        oldDir = os.getcwd()
-#        self.logger.debug("Currently on %s" % os.getcwd())
-#        os.chdir(g2file.package.workingDir)
-#        self.logger.debug("Currently on %s" % os.getcwd())
-#        resultFileList = []
-#        for filePath in fileList:
-#            self.logger.debug("Retrieving %s from %s" % (filePath, self.ip))
-#            dirPath, fname = os.path.split(filePath)
-#            self.ftp.cwd(dirPath)
-#            self.ftp.retrbinary("RETR %s" % fname,
-#                                open(fname, "wb").write)
-#            resultFileList.append(os.path.join(g2file.package.workingDir, fname))
-#        os.chdir(oldDir)
-#        self.logger.debug("Currently on %s" % os.getcwd())
-#        self.logger.debug("fetch method exiting.")
-#        return resultFileList
-#            
-#    def send(self, fileList, path=None, numTries=3):
-#        """
-#        Returns: 0 in case of success and 1 in case something went wrong.
-#        """
-#
-#        self.logger.debug("send method called.")
-#        if path is None:
-#            path = self.searchPaths[0]
-#        oldDir = os.getcwd()
-#        resultList = []
-#        for filePath in fileList:
-#            dirPath, fname = os.path.split(filePath)
-#            self.logger.debug("dirPath: %s" % dirPath)
-#            self.logger.debug("fname: %s" % fname)
-#            self.logger.debug("remote path: %s" % path)
-#            if os.path.isdir(dirPath):
-#                os.chdir(dirPath)
-#                self._create_remote_dirs(path)
-#                self.ftp.cwd(path)
-#                self.logger.debug("Sending %s to %s:%s" % (filePath, self.ip, path))
-#                result = self.ftp.storbinary("STOR %s" % fname, open(fname, "rb"))
-#                resultList.append(float(result.split()[0]))
-#        os.chdir(oldDir)
-#        endResult = 1
-#        if not False in [i == 226.0 for i in resultList]:
-#            # 226 is the FTP return code that indicates a successful transfer
-#            endResult = 0
-#        self.logger.debug("send method exiting.")
-#        return endResult
-#
-#    def _create_remote_dirs(self, path):
-#        """
-#        Create the directory structure specified by 'path' on the host.
-#        """
-#
-#        self.logger.debug("_create_remote_dirs method called.")
-#        oldDir = self.ftp.pwd()
-#        self.logger.debug("path: %s" % path)
-#        self.ftp.cwd("/")
-#        for part in path.split("/"):
-#            try:
-#                self.ftp.cwd(part)
-#            except ftplib.error_perm:
-#                self.ftp.mkd(part)
-#                self.ftp.cwd(part)
-#        self.ftp.cwd(oldDir)
-#        self.logger.debug("_create_remote_dirs method exiting.")
