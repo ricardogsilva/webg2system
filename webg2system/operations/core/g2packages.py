@@ -2002,20 +2002,52 @@ class QuickLookGenerator(ProcessingPackage):
                 quickLooks.append(ql)
         result = quickLooks
 
-    def run_main(self, callback=None, tile=None, move_to_webserver=True):
+    def run_main(self, callback=None, tile=None, move_to_webserver=True, 
+                 archive=False, delete_local=True):
         geotiff = self.find_geotiff()
         mapfile = self.update_mapfile(geotiff)
         if tile is None:
             result = self._process_all_tiles(mapfile)
         else:
-            result = self._process_single_tile(tile, mapfile)
+            result = self._get_single_tile(tile)
+        if archive:
+            self.archive_outputs()
         if ss.WebServer.objects.get().host.ip != self.host.host:
             if move_to_webserver:
                 self.logger.info('moving outputs to the webserver...')
                 self.move_outputs_to_webserver()
-                self.logger.info('deleting local files...')
-                self.delete_outputs()
+        if delete_local:
+            self.logger.info('deleting local files...')
+            self.delete_outputs()
         self.logger.info('All Done')
+        return result
+
+    def _get_single_tile(self, tile):
+        result = None
+        already_generated = self.find_outputs(useArchive=True)
+        for g2f, found_dict in already_generated.iteritems():
+            if g2f.fileType == 'geotiff':
+                for p in found_dict['paths']:
+                    if tile in p:
+                        if found_dict['host'] == self.host:
+                            self.logger.debug('found the quicklook on the ' \
+                                              'local host.')
+                            result = p
+                        else:
+                            self.logger.debug('found the quicklook on an ' \
+                                              'archive host. Fetching...')
+
+                            fetched = self._fetch_files(
+                                          [g2f], self.quickviewOutDir, 
+                                          True, decompress=True,
+                                          restrictPattern=tile
+                                      )
+                            result = fetched[g2f]
+        if result is None:
+            self.logger.debug('About to generate a new quicklook.')
+            geotiff = self.find_geotiff()
+            mapfile = self.update_mapfile(geotiff)
+            result = self._process_single_tile(tile, mapfile)
         return result
 
     def clean_up(self):
