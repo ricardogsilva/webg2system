@@ -25,7 +25,11 @@ DATABASES = {
         'PASSWORD': '',                  # Not used with sqlite3.
         'HOST': '',                      # Set to empty string for localhost. Not used with sqlite3.
         'PORT': '',                      # Set to empty string for default. Not used with sqlite3.
-    }
+    },
+    'operations_db': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': os.path.join(SITE_ROOT, 'operations_db.db'),
+    },
 }
 
 # Local time zone for this installation. Choices can be found here:

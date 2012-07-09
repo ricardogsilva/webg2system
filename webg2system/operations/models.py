@@ -14,9 +14,15 @@ from core import g2packages, g2hosts
 class RunningPackage(models.Model):
     STATUS_CHOICES = (('running', 'running'),('stopped', 'stopped'))
     timeslot = models.DateTimeField()
-    settings = models.ForeignKey(Package)
-    area = models.ForeignKey(Area, verbose_name='Default Area', help_text='The name '\
-                             '(or regular expression) for the area.')
+
+    settings = models.CharField(max_length=255)
+    area = models.CharField(max_length=255, verbose_name='Default area',
+                            help_text='The name (or regexp) for the area.')
+
+
+    #settings = models.ForeignKey(Package)
+    #area = models.ForeignKey(Area, verbose_name='Default Area', help_text='The name '\
+    #                         '(or regular expression) for the area.')
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, 
                               default='stopped', editable=False)
     force = models.BooleanField(default=False, help_text='Should the package'\
@@ -41,6 +47,7 @@ class RunningPackage(models.Model):
         '''
 
         self.timestamp = dt.datetime.utcnow()
+        #super(RunningPackage, self).save(using='operations_db')
         super(RunningPackage, self).save()
 
     def show_timeslot(self):
@@ -51,13 +58,13 @@ class RunningPackage(models.Model):
         return self.timestamp.strftime('%Y-%m-%d %H:%M')
     show_timestamp.short_description = 'Timestamp'
 
-    def show_settings(self):
-        return self.settings.package.name
-    show_settings.short_description = 'Package'
+    #def show_settings(self):
+    #    return self.settings.package.name
+    #show_settings.short_description = 'Package'
 
-    def show_area(self):
-        return self.area.name
-    show_area.short_description = 'Default area'
+    #def show_area(self):
+    #    return self.area.name
+    #show_area.short_description = 'Default area'
 
     def _initialize(self, logger, callback):
         '''
@@ -65,8 +72,15 @@ class RunningPackage(models.Model):
         the run() and create_package() methods.
         '''
 
-        packClass = eval('g2packages.%s' % self.settings.codeClass.className)
-        pack = packClass(self.settings, self.timeslot, self.area, logger=logger)
+        try:
+            settings_obj = Package.objects.get(name=self.settings)
+            area_obj = Area.objects.get(area=self.area)
+            packClass = eval('g2packages.%s' % settings_obj.codeClass.className)
+            pack = packClass(settings_obj, self.timeslot, area_obj, logger=logger)
+        except (Package.DoesNotExist, Area.DoesNotExist):
+            logger.error('Some of the input arguments are invalid: ' \
+                         'package or area inexistent.')
+            pack = None
         return pack
 
     def create_package(self, log_level=logging.DEBUG, callback=None):

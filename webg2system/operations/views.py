@@ -39,17 +39,15 @@ def execute_package(request):
             user = authenticate(username=username, password=password)
             if user is not None:
                 if user.is_active:
+                    p = f.cleaned_data['package']
+                    a = f.cleaned_data['area']
                     login(request, user)
                     try:
-                        p = Package.objects.get(name=f.cleaned_data['package'])
-                        a = Area.objects.get(name=f.cleaned_data['area'])
-                        rp = RunningPackage.objects.get(settings=p, 
-                                                        area=a, 
-                                                        timeslot=timeslot)
-                    except (Package.DoesNotExist, Area.DoesNotExist):
-                        logger.error('Some of the input arguments are invalid: ' \
-                                     'package or area inexistent.')
-                        rp = None
+                        rp = RunningPackage.objects.using('operations_db').get(
+                                 settings=p, 
+                                 area=a, 
+                                 timeslot=timeslot
+                             )
                     except RunningPackage.DoesNotExist:
                         logger.info('The package does not exist. It will be ' \
                                     'created.')
