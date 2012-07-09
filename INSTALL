@@ -41,6 +41,23 @@ cgi-mapserver
 mapserver-bin
 ttf-freefont
 
+- Operations database
+
+    The system is configured to use two different databases: 
+
+        - One database for storing the various settings. This is an sqlite 
+          database stored in the sqlite.db file.
+        
+        - Another database for logging the operations. This is also an sqlite
+          database, stored in the operations_db.db file. This second database
+          is not saved on the repository, it must be created in any new
+          machine where the system is to be installed.
+    
+    Run the following commands:
+
+        cd path_to_working_copy/webg2system
+        python manage.py syncdb --database=operations_db
+
 - DJANGO SITE
 
     - copy the g2system.conf file from the apache directory to 
