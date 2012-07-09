@@ -31,6 +31,7 @@ DATABASES = {
         'NAME': os.path.join(SITE_ROOT, 'operations_db.db'),
     },
 }
+DATABASE_ROUTERS = ['db_router.MyAppRouter']
 
 # Local time zone for this installation. Choices can be found here:
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name

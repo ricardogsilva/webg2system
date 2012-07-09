@@ -20,9 +20,6 @@ class RunningPackage(models.Model):
                             help_text='The name (or regexp) for the area.')
 
 
-    #settings = models.ForeignKey(Package)
-    #area = models.ForeignKey(Area, verbose_name='Default Area', help_text='The name '\
-    #                         '(or regular expression) for the area.')
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, 
                               default='stopped', editable=False)
     force = models.BooleanField(default=False, help_text='Should the package'\
@@ -47,7 +44,6 @@ class RunningPackage(models.Model):
         '''
 
         self.timestamp = dt.datetime.utcnow()
-        #super(RunningPackage, self).save(using='operations_db')
         super(RunningPackage, self).save()
 
     def show_timeslot(self):
@@ -58,14 +54,6 @@ class RunningPackage(models.Model):
         return self.timestamp.strftime('%Y-%m-%d %H:%M')
     show_timestamp.short_description = 'Timestamp'
 
-    #def show_settings(self):
-    #    return self.settings.package.name
-    #show_settings.short_description = 'Package'
-
-    #def show_area(self):
-    #    return self.area.name
-    #show_area.short_description = 'Default area'
-
     def _initialize(self, logger, callback):
         '''
         Temporary method to facilitate sharing some code between
@@ -74,7 +62,7 @@ class RunningPackage(models.Model):
 
         try:
             settings_obj = Package.objects.get(name=self.settings)
-            area_obj = Area.objects.get(area=self.area)
+            area_obj = Area.objects.get(name=self.area)
             packClass = eval('g2packages.%s' % settings_obj.codeClass.className)
             pack = packClass(settings_obj, self.timeslot, area_obj, logger=logger)
         except (Package.DoesNotExist, Area.DoesNotExist):
@@ -100,7 +88,7 @@ class RunningPackage(models.Model):
                                       '%(process)s %(message)s')
         log_dir = host.make_dir(self.timeslot.strftime('LOGS/%Y/%m/%d/%H'), relativeTo='data')
         log_file = os.path.join(log_dir, '%s_%s.log' % \
-                   (self.settings.name, 
+                   (self.settings, 
                     self.timeslot.strftime('%Y%m%d%H%M')))
         handler = ConcurrentRotatingFileHandler(log_file, 'a', 512*1024, 3)
         handler.setFormatter(formatter)

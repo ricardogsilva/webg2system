@@ -43,7 +43,7 @@ def execute_package(request):
                     a = f.cleaned_data['area']
                     login(request, user)
                     try:
-                        rp = RunningPackage.objects.using('operations_db').get(
+                        rp = RunningPackage.objects.get(
                                  settings=p, 
                                  area=a, 
                                  timeslot=timeslot
