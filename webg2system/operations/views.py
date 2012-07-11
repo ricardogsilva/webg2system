@@ -142,9 +142,10 @@ def get_quicklook(request, prodName, tile, timeslot):
     area = ss.Area.objects.get(name='.*')
     pack = QuickLookGenerator(settings, ts, area, logger=logger)
     if pack is not None:
-        theQuickLook = pack.run_main(tile=tile)
+        quickLooks = pack.run_main(tile=tile, delete_local=False)
         pack.clean_up()
-        if theQuickLook is not None:
+        if len(quickLooks) != 0:
+            theQuickLook = quickLooks[0]
             imgData = open(theQuickLook).read()
             response = HttpResponse(imgData, mimetype='image/png')
         else:
