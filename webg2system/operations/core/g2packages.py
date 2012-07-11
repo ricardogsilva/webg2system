@@ -2493,7 +2493,12 @@ class TileDistributor(GenericAggregationPackage):
             if len(fetched) > 0:
                 theProduct = self.host.compress(fetched)[0]
         # get the quicklook
-        theQuickLook = qlPack.run_main(tile=tile, move_to_webserver=False)
+        quicklooks = qlPack.run_main(tile=tile, move_to_webserver=False, 
+                                     delete_local=False)
+        if len(quicklooks) != 0:
+            theQuickLook = quicklooks[0]
+        else:
+            raise
         # get the xml
         xmlPack = self._filter_g2pack_list(self.inputPackages, 
                                            'MetadataGenerator')[0]
