@@ -2002,14 +2002,46 @@ class QuickLookGenerator(ProcessingPackage):
                 quickLooks.append(ql)
         result = quickLooks
 
+    def _get_all_tiles(self, use_archive=True):
+        result = self._find_quicklook(use_archive=use_archive)
+        if len(result) == 0:
+            self.logger.debug('About to generate new quicklooks.')
+            geotiff = self.find_geotiff()
+            mapfile = self.update_mapfile(geotiff)
+            result = self._process_all_tiles(mapfile)
+        return result
+
+    def _find_quicklook(self, tile=None, use_archive=True):
+        result = []
+        g2fs = self._filter_g2f_list(self.outputs, 'fileType', 'geotiff')
+        already_generated = self._find_files(g2fs, useArchive=use_archive, 
+                                             restrictPattern=tile)
+        for g2f, found_dict in already_generated.iteritems():
+            if found_dict['host'] == self.host and \
+                    len(found_dict['paths']) > 0:
+                self.logger.debug('found quicklook on the ' \
+                                  'local host.')
+                result += found_dict['paths']
+            elif found_dict['host'] != self.host:
+                self.logger.debug('found quicklook on an ' \
+                                  'archive host. Fetching...')
+                fetched = self._fetch_files(
+                              [g2f], self.quickviewOutDir, 
+                              useArchive=use_archive, 
+                              decompress=True,
+                              restrictPattern=tile
+                          )
+                result += fetched[g2f]
+        return result
+
     def run_main(self, callback=None, tile=None, move_to_webserver=True, 
                  archive=False, delete_local=True):
         geotiff = self.find_geotiff()
         mapfile = self.update_mapfile(geotiff)
         if tile is None:
-            result = self._process_all_tiles(mapfile)
+            result = self._get_all_tiles(use_archive=True)
         else:
-            result = self._get_single_tile(tile)
+            result = self._get_single_tile(tile, use_archive=True)
         if archive:
             self.archive_outputs()
         if ss.WebServer.objects.get().host.ip != self.host.host:
@@ -2022,28 +2054,9 @@ class QuickLookGenerator(ProcessingPackage):
         self.logger.info('All Done')
         return result
 
-    def _get_single_tile(self, tile):
-        result = None
-        already_generated = self.find_outputs(useArchive=True)
-        for g2f, found_dict in already_generated.iteritems():
-            if g2f.fileType == 'geotiff':
-                for p in found_dict['paths']:
-                    if tile in p:
-                        if found_dict['host'] == self.host:
-                            self.logger.debug('found the quicklook on the ' \
-                                              'local host.')
-                            result = p
-                        else:
-                            self.logger.debug('found the quicklook on an ' \
-                                              'archive host. Fetching...')
-
-                            fetched = self._fetch_files(
-                                          [g2f], self.quickviewOutDir, 
-                                          True, decompress=True,
-                                          restrictPattern=tile
-                                      )
-                            result = fetched[g2f]
-        if result is None:
+    def _get_single_tile(self, tile, use_archive=True):
+        result = self._find_quicklook(tile=tile, use_archive=use_archive)
+        if len(result) == 0:
             self.logger.debug('About to generate a new quicklook.')
             geotiff = self.find_geotiff()
             mapfile = self.update_mapfile(geotiff)
@@ -2480,7 +2493,12 @@ class TileDistributor(GenericAggregationPackage):
             if len(fetched) > 0:
                 theProduct = self.host.compress(fetched)[0]
         # get the quicklook
-        theQuickLook = qlPack.run_main(tile=tile, move_to_webserver=False)
+        quicklooks = qlPack.run_main(tile=tile, move_to_webserver=False, 
+                                     delete_local=False)
+        if len(quicklooks) != 0:
+            theQuickLook = quicklooks[0]
+        else:
+            raise
         # get the xml
         xmlPack = self._filter_g2pack_list(self.inputPackages, 
                                            'MetadataGenerator')[0]
