@@ -307,6 +307,7 @@ class MetadataGenerator(object):
             extra_keywords.append(re_obj.string)
         else:
             extra_keywords.append(tile)
+        return extra_keywords
 
 
     def _apply_other_keywords(self, productSettings, tile):
