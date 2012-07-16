@@ -296,7 +296,20 @@ class MetadataGenerator(object):
                 entry.append(k)
         return vocabularies
 
-    def _apply_other_keywords(self, productSettings):
+    def _prepare_extra_keywords(self, tile):
+        re_obj = re.search(r'(?P<h>H\d{2})(?P<v>V\d{2})', tile)
+        extra_keywords = [
+            self.timeslot.strftime('%Y%m%d%H%M'),
+        ]
+        if re_obj is not None:
+            extra_keywords.append(re_obj.group('h'))
+            extra_keywords.append(re_obj.group('v'))
+            extra_keywords.append(re_obj.string)
+        else:
+            extra_keywords.append(tile)
+
+
+    def _apply_other_keywords(self, productSettings, tile):
         '''
         Apply the keywords to the object's metadata tree.
         '''
@@ -306,13 +319,28 @@ class MetadataGenerator(object):
                                         namespaces=self.ns)[0]
         vocabularyDict = self._sort_keywords(productSettings)
         for vocab, keywordSettings in vocabularyDict.iteritems():
-            if len(keywordSettings) != 0:
+            if vocab is None:
                 descKeywordsEl = etree.SubElement(parentElement, 
                                                   '{%s}descriptiveKeywords' % \
                                                   self.ns['gmd'])
                 mdKeywordsEl = etree.SubElement(descKeywordsEl, 
                                                 '{%s}MD_Keywords' % \
                                                 self.ns['gmd'])
+                for extra_key in self._prepare_extra_keywords(tile):
+                    keywordEl = etree.SubElement(mdKeywordsEl, '{%s}keyword' % \
+                                                 self.ns['gmd'])
+                    charStringEl = etree.SubElement(keywordEl, 
+                                                    '{%s}CharacterString' % \
+                                                    self.ns['gco'])
+                    charStringEl.text = extra_key
+            else:
+                if len(keywordSettings) != 0:
+                    descKeywordsEl = etree.SubElement(parentElement, 
+                                                      '{%s}descriptiveKeywords' % \
+                                                      self.ns['gmd'])
+                    mdKeywordsEl = etree.SubElement(descKeywordsEl, 
+                                                    '{%s}MD_Keywords' % \
+                                                    self.ns['gmd'])
             for keySett in keywordSettings:
                 keywordEl = etree.SubElement(mdKeywordsEl, '{%s}keyword' % \
                                              self.ns['gmd'])
@@ -355,6 +383,7 @@ class MetadataGenerator(object):
                         'ML_gmxCodelists.xml#CI_DateTypeCode'
                 codeElAttribs['codeListValue'] = vocSettings.date_type
                 dateTypeCodeEl.text = vocSettings.date_type
+
 
     def _apply_INSPIRE_keyword(self, productSettings):
         '''
@@ -414,10 +443,10 @@ class MetadataGenerator(object):
         codeElAttribs['codeListValue'] = dateType
         dateTypeCodeEl.text = dateType
 
-    def _apply_keywords(self, productSettings):
+    def _apply_keywords(self, productSettings, tile=None):
         self._remove_original_keywords()
         self._apply_INSPIRE_keyword(productSettings)
-        self._apply_other_keywords(productSettings)
+        self._apply_other_keywords(productSettings, tile)
 
     def _remove_original_keywords(self):
         parent = self.tree.xpath('gmd:identificationInfo/'\
@@ -648,7 +677,7 @@ class MetadataGenerator(object):
         self._apply_graphic_overview(tileName, self.product)
         self._apply_aggregation_infos()
         self._apply_temporal_extent(self.product, fileTimeslot)
-        self._apply_keywords(self.product)
+        self._apply_keywords(self.product, tileName)
         self.update_element('resolution', '%.2f' % self.product.pixelSize)
         self._apply_topic_categories(self.product)
         self.update_element('eastLongitude', '%.2f' % maxx)
@@ -910,8 +939,11 @@ class MetadataGenerator(object):
         scaleFactor = str(dataset.scalingFactor)
         offset = '0.0'
         self._apply_content_info_dimension(parent, seqIDName, seqIDType, 
-                                           descriptor, maxVal, minVal,
-                                           bitDepth, scaleFactor, offset)
+                                           descriptor, maxVal, minVal, 
+                                           unit=dataset.unit, 
+                                           bitDepth=bitDepth, 
+                                           scaleFactor=scaleFactor, 
+                                           offset=offset)
 
     def _apply_content_info_dimension_physical_value(self, parent, dataset):
         seqIDName = 'Physical Value'
@@ -921,7 +953,8 @@ class MetadataGenerator(object):
         minVal = str(dataset.min_value)
         #units are missing
         self._apply_content_info_dimension(parent, seqIDName, seqIDType,
-                                           descriptor, maxVal, minVal)
+                                           descriptor, maxVal, minVal, 
+                                           unit=dataset.unit)
 
     def _apply_content_info_dimension_invalid(self, parent, dataset):
         seqIDName = 'Invalid'
@@ -932,10 +965,11 @@ class MetadataGenerator(object):
         bitDepth = str(dataset.bit_depth)
         self._apply_content_info_dimension(parent, seqIDName, seqIDType,
                                            descriptor, maxVal, minVal, 
+                                           unit=dataset.unit, 
                                            bitDepth=bitDepth)
 
     def _apply_content_info_dimension(self, parent, seqIDName, seqIDType, 
-                                      descriptor, maxVal, minVal, 
+                                      descriptor, maxVal, minVal, unit=None,
                                       bitDepth=None, scaleFactor=None, 
                                       offset=None):
 
@@ -972,6 +1006,12 @@ class MetadataGenerator(object):
                                          self.ns['gmd'])
         minGco = etree.SubElement(minValEl, '{%s}Real' % self.ns['gco'])
         minGco.text = minVal
+        if unit is not None:
+            unitEl = etree.SubElement(bandEl, '{%s}units' % \
+                                      self.ns['gmd'])
+            unitGco = etree.SubElement(unitEl, '{%s}CharacterString' % \
+                                       self.ns['gco'])
+            unitGco.text = unit
         if bitDepth is not None:
             bitsEl = etree.SubElement(bandEl, '{%s}bitsPerValue' % \
                                            self.ns['gmd'])

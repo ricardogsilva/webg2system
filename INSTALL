@@ -58,6 +58,9 @@ ttf-freefont
         cd path_to_working_copy/webg2system
         python manage.py syncdb --database=operations_db
 
+    For more information on using django-south with multiple databases check out:
+http://stackoverflow.com/questions/7029228/is-using-multiple-databases-and-south-together-possible
+
 - DJANGO SITE
 
     - copy the g2system.conf file from the apache directory to 
