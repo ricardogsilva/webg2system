@@ -2503,14 +2503,24 @@ class TileDistributor(GenericAggregationPackage):
         xmlPack = self._filter_g2pack_list(self.inputPackages, 
                                            'MetadataGenerator')[0]
         theXml = xmlPack.run_main(tile=tile, populateCSW=False)
+        # get the xsl file
+        theStylesheet = self._find_stylesheet()
         # bundle them into a zip file
         zipName = os.path.basename(os.path.splitext(theProduct)[0]) + '.zip'
         theZip = os.path.join(self.zipOutDir, zipName)
         zf = zipfile.ZipFile(theZip, mode='w')
-        for filePath in (theProduct, theQuickLook, theXml):
+        for filePath in (theProduct, theQuickLook, theXml, theStylesheet):
             zf.write(filePath, arcname=os.path.basename(filePath))
         zf.close()
         return theZip
+
+    def _find_stylesheet(self):
+        sub_pack = self._filter_g2pack_list(self.inputPackages,
+                                            'MetadataGenerator')[0]
+        templates = self.host.list_dir(sub_pack.xmlTemplateDir, 
+                                       relativeTo='code')
+        stylesheet = [t for t in templates if t.endswith('.xsl')][0]
+        return stylesheet
 
     def get_zip(self, tile):
         # first try to find the already generated zip file

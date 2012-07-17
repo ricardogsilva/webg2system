@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<!--<?xml-stylesheet type="text/xsl" href="g2_BIOPAR_IM_ProductSet.xsl"?>-->
+<?xml-stylesheet type="text/xsl" href="g2_BIOPAR_IM_ProductSet.xsl"?>
 <MD_Metadata id="VGTFCOVERMetadata" xmlns="http://www.isotc211.org/2005/gmd" xmlns:gmx="http://www.isotc211.org/2005/gmx" xmlns:gmd="http://www.isotc211.org/2005/gmd" xmlns:gco="http://www.isotc211.org/2005/gco" xmlns:gsr="http://www.isotc211.org/2005/gsr" xmlns:gss="http://www.isotc211.org/2005/gss" xmlns:gts="http://www.isotc211.org/2005/gts" xmlns:gml="http://www.opengis.net/gml" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.isotc211.org/2005/gmd http://www.isotc211.org/2005/gmd/gmd.xsd">
   <fileIdentifier>
     <gco:CharacterString>1542e309-b483-4623-8e28-d7de768a1212</gco:CharacterString>
