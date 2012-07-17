@@ -257,6 +257,13 @@ class Product(models.Model):
                                          ' Identifier', help_text='INSPIRE '\
                                          'metadata element: UUID of the '\
                                          'parent metadata series.')
+    parent_id_continental = models.CharField(max_length=255, 
+                                             verbose_name='Parent Identifier' \
+                                             ' for the continental tiles', 
+                                             help_text='INSPIRE metadata ' \
+                                             'element: UUID of the parent' \
+                                             'metadata series for the ' \
+                                             'continental tiles.')
     ireferenceSystemID = models.CharField(max_length=10, 
                                           verbose_name='Reference system '\
                                           'EPSG code', help_text='INSPIRE '\

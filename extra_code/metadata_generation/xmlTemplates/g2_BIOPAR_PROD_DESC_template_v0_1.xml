@@ -1224,7 +1224,7 @@
                 <gco:CharacterString>Geoland2 BioPar IPMA catalog</gco:CharacterString>
               </name>
               <description>
-                <gco:CharacterString>Search and Order products on IPMA or VITO Biopar Dataset Catalogue and Ordering service</gco:CharacterString>
+                <gco:CharacterString>Download product</gco:CharacterString>
               </description>
               <function>
                 <CI_OnLineFunctionCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/Codelist/ML_gmxCodelists.xml#CI_OnLineFunctionCode" codeListValue="download">download</CI_OnLineFunctionCode>

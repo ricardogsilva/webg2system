@@ -644,7 +644,12 @@ class MetadataGenerator(object):
         rootAttribs = self.tree.getroot().attrib
         rootAttribs['id'] = '%sMetadata' % self.product.short_name
         self.update_element('fileIdentifier', uuid)
-        self.update_element('parentIdentifier', self.product.iParentIdentifier)
+        if utilities.is_smal_tile(filePath):
+            self.update_element('parentIdentifier', 
+                                self.product.iParentIdentifier)
+        else:
+            self.update_element('parentIdentifier', 
+                                self.product.parent_id_continental)
         self.update_element('hierarchyLevel', 'dataset')
         self._remove_contact_info(self.tree.getroot(), 'contact')
         self._apply_contact_info(self.tree.getroot(), 'contact', 

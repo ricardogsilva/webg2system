@@ -208,6 +208,14 @@ def get_tile_name(fileName):
             areaName = None
     return areaName
 
+def is_smal_tile(file_path):
+    re_obj = re.search(r'H\d{2}V\d{2}', file_path)
+    if re_obj is None:
+        result = False
+    else:
+        result = True
+    return result
+
 def put_tile_into_pattern(tile_name, g2f):
     for pattern in g2f.searchPatterns:
         result = pattern
