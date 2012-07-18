@@ -2001,6 +2001,7 @@ class QuickLookGenerator(ProcessingPackage):
                                              generate_legend=False)
                 quickLooks.append(ql)
         result = quickLooks
+        return result
 
     def _get_all_tiles(self, use_archive=True):
         result = self._find_quicklook(use_archive=use_archive)
@@ -2042,12 +2043,12 @@ class QuickLookGenerator(ProcessingPackage):
             result = self._get_all_tiles(use_archive=True)
         else:
             result = self._get_single_tile(tile, use_archive=True)
-        if archive:
-            self.archive_outputs()
         if ss.WebServer.objects.get().host.ip != self.host.host:
             if move_to_webserver:
                 self.logger.info('moving outputs to the webserver...')
                 self.move_outputs_to_webserver()
+        if archive:
+            self.archive_outputs()
         if delete_local:
             self.logger.info('deleting local files...')
             self.delete_outputs()

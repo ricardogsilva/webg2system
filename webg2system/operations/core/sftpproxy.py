@@ -145,7 +145,7 @@ class SFTPProxy(object):
                 if os.path.isdir(directory):
                     dirs = self._create_remote_dirs(destination)
                     if dirs:
-                        result = self.connection.put(
+                        ret_code = self.connection.put(
                                     path, 
                                     os.path.join(destination, fname)
                                 )

@@ -138,6 +138,8 @@ class RunningPackage(models.Model):
                 QuickLookGenerator
                     - tile (string): None
                     - move_to_webserver (bool): True
+                    - archive(bool): False
+                    - delete_local(bool): True
                 MetadataGenerator
                     - generate (bool): True
                     - tile (string): None
