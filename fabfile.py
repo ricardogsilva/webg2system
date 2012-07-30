@@ -10,10 +10,6 @@ from fabric.api import env, local, cd, run, settings
 
 # define hosts here
 HOSTS = {
-    '180.180.30.98' : {
-        'user' : 'geoland', 
-        'code_dir' : '/home/geoland/silvar/webg2system'
-    },
     '180.180.30.99' : {
         'user' : 'geo5',
         'code_dir' : '/home/geo5/silvar/webg2system'
