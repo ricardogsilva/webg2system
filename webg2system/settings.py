@@ -227,7 +227,10 @@ LOGGING = {
         },
 }
 
-# local settings overrides. MUst be the last import!
+# do not run migrations when testing
+SOUTH_TESTS_MIGRATE = False
+
+# local settings overrides. Must be the last import!
 try:
     from settings_local import *
 except ImportError:
