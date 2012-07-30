@@ -90,7 +90,7 @@ class ProductAdmin(admin.ModelAdmin):
                             'inspireKeyword', 'keywords', 'topicCategories',
                             'pixelSize', 'iResourceTitle', 
                             'iResourceAbstract', 'iParentIdentifier', 
-                            'parent_id_continental',
+                            'parent_id_continental', 'sdi_service_id',
                             'ireferenceSystemID', 'iCredit',
                             'graphic_overview_description',
                             'graphic_overview_type', 'supplemental_info',
