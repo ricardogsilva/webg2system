@@ -205,9 +205,6 @@ class CodeClass(models.Model):
         return self.className
 
 class Product(models.Model):
-    #RESOURCE_TYPE_CHOICES = (('dataset', 'dataset'), 
-    #                         ('series', 'series'), 
-    #                         ('service', 'service'))
     OVERVIEW_TYPE_CHOICES = (('png', 'png'),)
     name = models.CharField(max_length=100)
     short_name = models.CharField(max_length=20)
@@ -235,9 +232,6 @@ class Product(models.Model):
                                              ' chosen here will complement '\
                                              'the ones that already match '\
                                              'the selected INSPIRE data theme')
-    #description = models.TextField(null=True, blank=True)
-    #nRows = models.IntegerField(default=0, verbose_name='Number of rows')
-    #nCols = models.IntegerField(default=0, verbose_name='Number of columns')
     pixelSize = models.DecimalField(max_digits=4, decimal_places=2, default=0,
                                     verbose_name='Pixel size')
     iResourceTitle = models.CharField(max_length=255, 
@@ -249,10 +243,6 @@ class Product(models.Model):
                                       help_text='INSPIRE metadata element: '\
                                       'Brief narrative summary of the '\
                                       'contents of the resource(s).')
-    #resource_type = models.CharField(max_length=20, help_text='INSPIRE '\
-    #                                 'metadata element: Scope to which '\
-    #                                 'metadata applies.',
-    #                                 choices=RESOURCE_TYPE_CHOICES)
     iParentIdentifier = models.CharField(max_length=255, verbose_name='Parent'\
                                          ' Identifier', help_text='INSPIRE '\
                                          'metadata element: UUID of the '\
@@ -264,6 +254,9 @@ class Product(models.Model):
                                              'element: UUID of the parent' \
                                              'metadata series for the ' \
                                              'continental tiles.')
+    sdi_service_id = models.CharField(max_length=255, help_text='Service id '\
+                                      'used by VITO\'s SDI to refer to this '\
+                                      'product.')
     ireferenceSystemID = models.CharField(max_length=10, 
                                           verbose_name='Reference system '\
                                           'EPSG code', help_text='INSPIRE '\

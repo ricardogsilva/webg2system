@@ -821,9 +821,12 @@ class MetadataGenerator(object):
     def _apply_linkage(self, tileName, product):
         baseURL = ss.WebServer.objects.get().public_URL
         ts = self.timeslot.strftime('%Y%m%d%H%M')
+        vito_sdi_url = 'http://web.vgt.vito.be/download_g2.php?'
         url = '%s/operations/products/%s/%s/%s/product' % \
                 (baseURL, product.short_name, tileName, ts)
-        self.update_element('linkage', url)
+        vito_url = '%sfile=&amp;path=%s&amp;serviceid=%s' % \
+                   (vito_sdi_url, url, product.sdi_service_id)
+        self.update_element('linkage', vito_url)
 
     def _apply_graphic_overview(self, tileName, product):
         fileNameEl = self.tree.xpath('gmd:identificationInfo/*/'\
