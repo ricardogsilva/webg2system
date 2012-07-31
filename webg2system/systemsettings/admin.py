@@ -1,6 +1,9 @@
 from models import *
 from django.contrib import admin
 
+class HostRoleAdmin(admin.ModelAdmin):
+    pass
+
 class HostAdmin(admin.ModelAdmin):
     list_display = ('name', 'dataPath', 'codePath', 'ip')
 
@@ -114,6 +117,7 @@ class CatalogueServerAdmin(admin.ModelAdmin):
 
 #admin.site.register(ExceptHour)
 admin.site.register(TimeslotDisplacer)
+admin.site.register(HostRole, HostRoleAdmin)
 admin.site.register(CodeClass, CodeClassAdmin)
 admin.site.register(Host, HostAdmin)
 admin.site.register(Package, PackageAdmin)

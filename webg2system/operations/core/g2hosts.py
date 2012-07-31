@@ -136,6 +136,7 @@ class G2Host(object):
         self.host = settings.ip
         self.user = settings.username
         self.password = settings.password
+        self.roles = [r.name for r in settings.role.all()]
 
     def __repr__(self):
         return self.name
