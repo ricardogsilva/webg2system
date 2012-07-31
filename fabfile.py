@@ -76,13 +76,12 @@ def deploy():
         run('touch webg2system/wsgi.py')
 
 #FIXME - Finish this method
-def get_private_code(repository_url=None):
+def get_private_code():
     '''
     Checkout the latest changes to the main product algorithms.
     '''
 
-    if repository_url is None:
-        repository_url = 'http://gridpt13.meteo.pt/ciac/G2System/trunk'
+    repository_url = 'http://gridpt13.meteo.pt/ciac/G2System/trunk'
     ext_code = {
         'GRIB2HDF5_g2' : 'PRE_PROCESS/GRIB2HDF5_g2/GRIB2HDF5_g2_v%s',
         'LRIT2HDF5_g2' : 'PRE_PROCESS/LRIT2HDF5_g2/LRIT2HDF5_g2_v%s',
@@ -113,6 +112,4 @@ def get_private_code(repository_url=None):
         if extra_url is not None:
             url = '/'.join((repository_url, extra_url % version))
             print('url: %s' % url)
-
-
-
+    host_obj = sm.Host.objects.get(ip=env['host'])
