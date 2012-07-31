@@ -65,10 +65,56 @@ class G2File(GenericItem):
             pattern = utilities.parse_marked(searchPattObj, self)
             self.searchPatterns.append(pattern)
         #hf = HostFactory(log_level=log_level)
+        specific_archives = fileSettings.specificArchives.all()
+        if len(specific_archives) == 0:
+            specific_archives = [hs for hs in ss.Host.objects.filter(role__name='archive')]
         hf = HostFactory()
-        self.archives = [hf.create_host(hs) for hs in fileSettings.specificArchives.all()]
+        #self.archives = [hf.create_host(hs) for hs in specific_archives]
+        self.archives = self._get_archives(fileSettings)
+        self.io_buffers = self._get_io_buffers(fileSettings)
 
-    def find(self, restrictPattern=None, useArchive=False, 
+    def _get_archives(self, settings):
+        '''
+        Return a list of G2Host instances that are the archives for this file.
+
+        The G2Host list is created from the specificArchives attribute. If
+        there are no specificArchives defined, then all the hosts that have
+        the 'archive' role and are 'active' will be used.
+        A specificArchive will only be created if it is not already the same
+        host that this instance is using.
+        '''
+
+        specific_archives = settings.specificArchives.all()
+        if len(specific_archives) == 0:
+            specific_archives = [hs for hs in \
+                ss.Host.objects.filter(role__name='archive', active=True)]
+        the_archives = []
+        for arch in specific_archives:
+            if arch.name != self.host.name:
+                the_archives.append(arch)
+            else:
+                self.logger.debug('%s is already the file\'s host, so no ' \
+                                  'need to add it as an archive.' % arch.name)
+        hf = HostFactory()
+        return [hf.create_host(hs) for hs in the_archives]
+
+    def _get_io_buffers(self, settings):
+        specific_buffers = settings.specific_io_buffers.all()
+        if len(specific_buffers) == 0:
+            specific_buffers = [hs for hs in \
+                ss.Host.objects.filter(role__name='io buffer', active=True)]
+        the_buffers = []
+        for buf in specific_buffers:
+            if buf.name != self.host.name:
+                the_buffers.append(buf)
+            else:
+                self.logger.debug('%s is already the file\'s host, so no ' \
+                                  'need to add it as an io buffer.' % buf.name)
+        hf = HostFactory()
+        return [hf.create_host(hs) for hs in the_buffers]
+
+    def find(self, restrictPattern=None, use_archive=False, 
+             use_io_buffer=True,
              staticFiles='latest timeslot absolute'):
         '''
         Find the files and return their fullPaths.
@@ -80,8 +126,11 @@ class G2File(GenericItem):
                 useful for finding just a single tile from all the possible 
                 ones.
 
-            useArchive - A boolean indicating if the file's specific 
+            use_archive - A boolean indicating if the file's specific 
                 archives are to be searched. Defaults to False.
+
+            use_io_buffer - A boolean indicating if the file's io_buffer
+                hosts are to be searched. Defaults to True.
 
             staticFiles - A string indicating what behaviour to adopt for
                 static files. Accepted values:
@@ -105,6 +154,18 @@ class G2File(GenericItem):
             A dictionary with keys 'host' and 'paths'. The values are a G2Host
             object and a list with the full paths to the files.
 
+        NOTE: The files may be searched for, in order, in the following hosts:
+                - the file\'s own host;
+                - the file\'s io_buffers. This can be disabled with the 
+                  use_io_buffer argument;
+                - the file\'s archives. This can be disabled with the
+                  use_archive argument.
+              By default, this method will search for the files in the file\'s
+              own host and then in the io_buffers, not using the archives at
+              all. The prefered way to execute a thorough search is to try to
+              find the files in the io_buffer and let the io_buffer connect to
+              the archives to search for the files there.
+
         This method will also remove any duplicate files from the list. A
         duplicate is a file that has the same name as another one, regardless
         of its path or compression state.
@@ -115,7 +176,9 @@ class G2File(GenericItem):
         for path in self.searchPaths:
             allPaths += [os.path.join(path, p) for p in self.searchPatterns]
         hostList = [self.host]
-        if useArchive:
+        if use_io_buffer:
+            hostList +=self.io_buffers
+        if use_archive:
             hostList += self.archives
         hostIndex = 0
         allFound = False
@@ -124,7 +187,7 @@ class G2File(GenericItem):
         while (not allFound) and (not lastHost):
             theHost = hostList[hostIndex]
             if theHost is not self.host:
-                self.logger.info('Trying the archives: %s' % theHost)
+                self.logger.info('Trying %s...' % theHost)
             pathsFound = theHost.find(allPaths, restrictPattern)
             numFound = len(pathsFound)
             if numFound > 0:

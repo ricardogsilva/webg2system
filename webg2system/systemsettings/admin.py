@@ -1,8 +1,11 @@
 from models import *
 from django.contrib import admin
 
+class HostRoleAdmin(admin.ModelAdmin):
+    list_display = ('name', 'description')
+
 class HostAdmin(admin.ModelAdmin):
-    list_display = ('name', 'dataPath', 'codePath', 'ip')
+    list_display = ('name', 'active', 'dataPath', 'codePath', 'ip')
 
 class SpecificSourceInline(admin.StackedInline):
     model = SpecificSource
@@ -122,6 +125,7 @@ class CatalogueServerAdmin(admin.ModelAdmin):
 
 #admin.site.register(ExceptHour)
 admin.site.register(TimeslotDisplacer)
+admin.site.register(HostRole, HostRoleAdmin)
 admin.site.register(CodeClass, CodeClassAdmin)
 admin.site.register(Host, HostAdmin)
 admin.site.register(Package, PackageAdmin)
