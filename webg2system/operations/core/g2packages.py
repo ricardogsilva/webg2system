@@ -616,6 +616,12 @@ class PreProcessor(ProcessingPackage):
     It provides some common methods.
     '''
 
+    def __init__(self, settings, timeslot, area, host, logger=None, 
+                 createIO=True):
+        super(PreProcessor, self).__init__(settings, timeslot, area, 
+                                           host=host, logger=logger)
+        self.version = settings.external_code.version
+
     def write_pcf(self, availableDict):
         '''
         Write the product configuration file.
@@ -660,9 +666,13 @@ class LRITPreprocessor(PreProcessor):
                 settings.packagepath_set.get(name='workingDir'), 
                 self)
         self.workingDir = os.path.join(self.host.dataPath, relWorkingDir)
+        #relCodeDir = utilities.parse_marked(
+        #        settings.packagepath_set.get(name='codeDir'), 
+        #        self)
         relCodeDir = utilities.parse_marked(
-                settings.packagepath_set.get(name='codeDir'), 
-                self)
+            settings.external_code.externalcodeextrainfo_set.get(name='path'),
+            settings.external_code
+        )
         self.codeDir = os.path.join(self.host.codePath, relCodeDir)
         if createIO:
             self.inputs = self._create_files(
@@ -733,9 +743,13 @@ class GRIBPreprocessor(PreProcessor):
                 settings.packagepath_set.get(name='workingDir'), 
                 self)
         self.workingDir = os.path.join(self.host.dataPath, relWorkingDir)
+        #relCodeDir = utilities.parse_marked(
+        #        settings.packagepath_set.get(name='codeDir'), 
+        #        self)
         relCodeDir = utilities.parse_marked(
-                settings.packagepath_set.get(name='codeDir'), 
-                self)
+            settings.external_code.externalcodeextrainfo_set.get(name='path'),
+            settings.external_code
+        )
         self.codeDir = os.path.join(self.host.codePath, relCodeDir)
         self.tempOutputDir = os.path.join(self.workingDir, 'tempOutput')
         if createIO:
@@ -827,22 +841,31 @@ class Processor(ProcessingPackage):
                                         host=host, logger=logger)
         self.rawSettings = settings
         self.name = settings.name
+        self.version = settings.external_code.version
         relOutDir = utilities.parse_marked(
                 settings.packagepath_set.get(name='outputDir'), 
                 self)
         self.outputDir = os.path.join(self.host.dataPath, relOutDir)
+        #relCodeDir = utilities.parse_marked(
+        #        settings.packagepath_set.get(name='codeDir'), 
+        #        self)
         relCodeDir = utilities.parse_marked(
-                settings.packagepath_set.get(name='codeDir'), 
-                self)
+            settings.external_code.externalcodeextrainfo_set.get(name='path'),
+            settings.external_code
+        )
         self.codeDir = os.path.join(self.host.codePath, relCodeDir)
         relWorkDir = utilities.parse_marked(
                 settings.packagepath_set.get(name='workingDir'), 
                 self)
         self.workingDir = os.path.join(self.host.dataPath, relWorkDir)
-        relAcfTemplateDir = utilities.parse_marked(
-                settings.packagepath_set.get(name='acfTemplate'), 
-                self)
-        self.acfTemplateDir = os.path.join(self.host.dataPath, relAcfTemplateDir)
+        try:
+            acfTemplate = settings.packagepath_set.get(name='acfTemplate')
+            relAcfTemplateDir = utilities.parse_marked(acfTemplate, self)
+            self.acfTemplateDir = os.path.join(self.host.codePath, 
+                                               relAcfTemplateDir)
+        except ss.PackagePath.DoesNotExist:
+            # this package does not define the acfTemplate variable, no problemsettings
+            pass
         if createIO:
             self.inputs = self._create_files(
                 'input', 
@@ -1202,7 +1225,7 @@ class SWIProcessor(ProcessingPackage):
         return 0
 
 
-class DataFusion(ProcessingPackage):
+class DataFusion(Processor):
     '''
     !This class is not finished yet!
 
@@ -1218,45 +1241,48 @@ class DataFusion(ProcessingPackage):
             version
     '''
 
-    def __init__(self, settings, timeslot, area, host=None, 
-                 logger=None, createIO=True):
-        '''
-        Inputs:
+    pass
 
-            settings - A systemsettings.models.Package object
+    #def __init__(self, settings, timeslot, area, host=None, 
+    #             logger=None, createIO=True):
+    #    '''
+    #    Inputs:
 
-            timeslot - A datetime.datetime object
+    #        settings - A systemsettings.models.Package object
 
-            area - A systemsettings.models.Area object
+    #        timeslot - A datetime.datetime object
 
-            host - A systemsettings.models.Host object
-        '''
+    #        area - A systemsettings.models.Area object
 
-        super(DataFusion, self).__init__(settings, timeslot, area, 
-                                         host=host, logger=logger)
-        self.rawSettings = settings
-        self.name = settings.name
-        relativeOutDir = utilities.parse_marked(
-                settings.packagepath_set.get(name='outputDir'), 
-                self)
-        relativeCodeDir = utilities.parse_marked(
-                settings.packagepath_set.get(name='codeDir'), 
-                self)
-        relativeWorkDir = utilities.parse_marked(
-                settings.packagepath_set.get(name='workingDir'), 
-                self)
-        self.outputDir = os.path.join(self.host.dataPath, relativeOutDir)
-        self.codeDir = os.path.join(self.host.codePath, relativeCodeDir)
-        self.workingDir = os.path.join(self.host.dataPath, relativeWorkDir)
-        if createIO:
-            self.inputs = self._create_files(
-                'input', 
-                settings.packageInput_systemsettings_packageinput_related.all()
-            )
-            self.outputs = self._create_files(
-                'output', 
-                settings.packageOutput_systemsettings_packageoutput_related.all()
-            )
+    #        host - A systemsettings.models.Host object
+    #    '''
+
+    #    super(DataFusion, self).__init__(settings, timeslot, area, 
+    #                                     host=host, logger=logger)
+    #    self.rawSettings = settings
+    #    self.name = settings.name
+    #    self.version = settings.external_code.version
+    #    relativeOutDir = utilities.parse_marked(
+    #            settings.packagepath_set.get(name='outputDir'), 
+    #            self)
+    #    relativeCodeDir = utilities.parse_marked(
+    #            settings.packagepath_set.get(name='codeDir'), 
+    #            self)
+    #    relativeWorkDir = utilities.parse_marked(
+    #            settings.packagepath_set.get(name='workingDir'), 
+    #            self)
+    #    self.outputDir = os.path.join(self.host.dataPath, relativeOutDir)
+    #    self.codeDir = os.path.join(self.host.codePath, relativeCodeDir)
+    #    self.workingDir = os.path.join(self.host.dataPath, relativeWorkDir)
+    #    if createIO:
+    #        self.inputs = self._create_files(
+    #            'input', 
+    #            settings.packageInput_systemsettings_packageinput_related.all()
+    #        )
+    #        self.outputs = self._create_files(
+    #            'output', 
+    #            settings.packageOutput_systemsettings_packageoutput_related.all()
+    #        )
 
 
 class WebDisseminator(ProcessingPackage):

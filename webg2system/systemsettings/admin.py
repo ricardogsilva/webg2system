@@ -16,6 +16,10 @@ class AreaInline(admin.StackedInline):
     model = Area
     extra = 1
 
+class ExternalCodeExtraInfoInline(admin.StackedInline):
+    model = ExternalCodeExtraInfo
+    extra = 0
+
 class FilePathInline(admin.StackedInline):
     model = FilePath
     extra = 0
@@ -67,8 +71,12 @@ class FileAdmin(admin.ModelAdmin):
 
 class PackageAdmin(admin.ModelAdmin):
     inlines = [PackagePathInline, PackageInputInline, PackageOutputInline, PackageExtraInfoInline]
-    list_display = ('name', 'codeClass', 'get_inputs', 'get_outputs')
-    search_fields = ['name', 'codeClass__className']
+    list_display = ('name', 'get_inputs', 'get_outputs')
+    search_fields = ['name']
+
+class ExternalCodeAdmin(admin.ModelAdmin):
+    inlines = [ExternalCodeExtraInfoInline]
+    list_display = ('name', 'version', 'get_repository')
 
 class SourceAdmin(admin.ModelAdmin):
     inlines = [AreaInline, SpecificSourceInline, SourceExtraInfoInline]
@@ -117,6 +125,7 @@ admin.site.register(TimeslotDisplacer)
 admin.site.register(CodeClass, CodeClassAdmin)
 admin.site.register(Host, HostAdmin)
 admin.site.register(Package, PackageAdmin)
+admin.site.register(ExternalCode, ExternalCodeAdmin)
 admin.site.register(File, FileAdmin)
 admin.site.register(Source, SourceAdmin)
 admin.site.register(Product, ProductAdmin)

@@ -418,7 +418,7 @@ class G2File(GenericItem):
         else:
             # get the default area
             theArea = ss.Area.objects.get(name='.*')
-        theClass = packSettings.codeClass.className
+        theClass = packSettings.code_class.className
         theHost = ss.Host.objects.get(name=self.host.name)
 
         pack = None

@@ -63,7 +63,7 @@ class RunningPackage(models.Model):
         try:
             settings_obj = Package.objects.get(name=self.settings)
             area_obj = Area.objects.get(name=self.area)
-            packClass = eval('g2packages.%s' % settings_obj.codeClass.className)
+            packClass = eval('g2packages.%s' % settings_obj.code_class.className)
             pack = packClass(settings_obj, self.timeslot, area_obj, logger=logger)
         except (Package.DoesNotExist, Area.DoesNotExist):
             logger.error('Some of the input arguments are invalid: ' \

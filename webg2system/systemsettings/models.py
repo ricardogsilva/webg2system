@@ -56,7 +56,8 @@ class Item(models.Model):
         return self.name
 
 class Package(Item):
-    codeClass = models.ForeignKey('CodeClass')
+    external_code = models.ForeignKey('ExternalCode', null=True, blank=True)
+    code_class = models.ForeignKey('CodeClass')
     inputs = models.ManyToManyField(Item, through='PackageInput',
                                     related_name='inputs')
     product = models.ForeignKey('Product', null=True, blank=True)
@@ -70,6 +71,30 @@ class Package(Item):
         outs = [o.outputItem.name for o in self.packageOutput_systemsettings_packageoutput_related.all()]
         return ', '.join(outs)
     get_outputs.short_description = 'Outputs'
+
+class ExternalCode(models.Model):
+    name = models.CharField(max_length=100)
+    version = models.CharField(max_length=50, blank=True, null=True)
+    version_control_sw = models.CharField(max_length=20, help_text='The ' \
+                                          'software used for storing the ' \
+                                          'code. Only works with \'svn\'.',
+                                          default = 'svn')
+    compilation_environment = models.CharField(max_length=255, null=True, 
+                                               blank=True, 
+                                               help_text='Environment ' \
+                                               'variables to be used during '\
+                                               'compilation of the code.')
+
+    def __unicode__(self):
+        return self.name
+
+    def get_repository(self):
+        marked_string = self.externalcodeextrainfo_set.get(name='repository')
+        return marked_string.string
+    get_repository.short_description = 'Repository'
+
+class ExternalCodeExtraInfo(MarkedString):
+    the_package = models.ForeignKey(ExternalCode)
 
 class File(Item):
     numFiles = models.IntegerField()
