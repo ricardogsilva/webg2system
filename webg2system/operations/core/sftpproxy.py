@@ -88,19 +88,31 @@ class SFTPProxy(object):
             file_list = []
         return file_list
 
-    def remote_find(self, other_host, path_list, restrict_pattern=None):
-        '''
-        Perform a remote find on other_host.
+    #def remote_find(self, other_host, path_list, restrict_pattern=None):
+    #    '''
+    #    Perform a remote find on other_host.
 
-        The connection to other_host is established by this instance\'s
-        remote_host. This means that the local_host will not connect
-        to other_host, it will use remote_host as a proxy between
-        itself and other_host.
-        '''
+    #    The connection to other_host is established by this instance\'s
+    #    remote_host. This means that the local_host will not connect
+    #    to other_host, it will use remote_host as a proxy between
+    #    itself and other_host.
+    #    '''
 
+    #    if self._connect():
+    #        ls_result = self.connection.execute('ls -al')
+    #        self.logger.debug('ls_result: %s' % ls_result)
+
+    def run_command(self, command, working_dir=None):
+        result = None
         if self._connect():
-            ls_result = self.connection.execute('ls -al')
-            self.logger.debug('ls_result: %s' % ls_result)
+            if working_dir is not None:
+                old_dir = self.connection.execute('pwd')
+                self.connection.execute('cd %s' % working_dir)
+                result = self.connection.execute(command)
+                self.connection.execute('cd %s' % old_dir)
+            else:
+                result = self.connection.execute(command)
+        return result
 
     def fetch(self, paths, destination):
         '''
@@ -193,3 +205,8 @@ class SFTPProxy(object):
         else:
             self.logger.error('Not connected to the remote SFTP host')
         return result
+
+    def close_connection(self):
+        if self.connection is not None:
+            self.connection.close()
+

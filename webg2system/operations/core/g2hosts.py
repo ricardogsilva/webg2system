@@ -208,7 +208,7 @@ class G2LocalHost(G2Host):
             self.logger.warning('No such directory: %s' % fullPath)
         return dirList
 
-    def find(self, pathList, restrictPattern=None):
+    def find(self, pathList, restrict_pattern=None):
         '''
         Search for the paths in the local directory tree.
 
@@ -239,8 +239,8 @@ class G2LocalHost(G2Host):
             if dirExists:
                 for item in os.listdir(searchDir):
                     if patt.search(item) is not None:
-                        if restrictPattern is not None:
-                            if re.search(restrictPattern, item) is not None:
+                        if restrict_pattern is not None:
+                            if re.search(restrict_pattern, item) is not None:
                                 foundFiles.append(os.path.join(searchDir, item))
                         else:
                             foundFiles.append(os.path.join(searchDir, item))
@@ -496,6 +496,7 @@ class G2LocalHost(G2Host):
         decompressed = [p for p in paths if not p.endswith('.bz2')]
         newPaths = decompressed
         if len(compressed) > 0:
+            self.logger.debug('Decompressing files...')
             stdout, stderr, retCode = self.run_program('bunzip2 %s' % \
                                                        ' '.join(compressed))
             if retCode == 0:
@@ -761,7 +762,7 @@ class G2RemoteHost(G2Host):
                 'sftp' : SFTPProxy(localHost, self, logger=self.logger),
                 }
 
-    def find(self, pathList, restrictPattern=None, protocol='sftp'):
+    def find(self, pathList, restrict_pattern=None, protocol='sftp'):
         '''
         Find the paths.
 
@@ -787,16 +788,41 @@ class G2RemoteHost(G2Host):
                 fullSearchPaths.append(os.path.join(self.dataPath, path))
         if protocol == 'ftp':
             foundFiles = self._localConnection['ftp'].find(fullSearchPaths, 
-                                                           restrictPattern)
+                                                           restrict_pattern)
         elif protocol == 'sftp':
             foundFiles = self._localConnection['sftp'].find(fullSearchPaths,
-                                                            restrictPattern)
+                                                            restrict_pattern)
         else:
             raise NotImplementedError
         return foundFiles
 
-    #FIXME - Incorporate the workingDir argument
-    def run_program(self, command, workingDir=None, env=None):
+    def find_in_remote(self, remote_host, path_list, restrict_pattern=None, 
+                       protocol='sftp'):
+        '''
+        Find paths in a remote host.
+
+        Inputs:
+
+        Returns:
+
+        This method will run an external script directly on the remote host
+        and will return its output.
+        '''
+
+        work_dir = os.path.join(remote_host.dataPath, 'scripts')
+        command = 'remote_finder.py'
+        if restrict_pattern is not None:
+            command += ' --restrict_pattern=%s' % restrict_pattern
+        command += ' %s' % remote_host.name
+        for path in path_list:
+            command += ' %s' % path
+        result = self.run_program(command, workingDir=work_dir, 
+                                  protocol=protocol)
+        return result
+
+    #FIXME - Refactor the ssh part
+    def run_program(self, command, working_dir=None, env=None, 
+                    protocol='sftp'):
         '''
         Run an external program.
 
@@ -816,10 +842,21 @@ class G2RemoteHost(G2Host):
 
             A tuple with the commands' stdout, stderr and return code.
         '''
-        ssh = self._localConnection.get('ssh')
-        if env is not None:
-            for tup in env:
-                result = ssh.run_command('export %s=%s' % (tup[0], tup[1]))
-        result = ssh.run_command(command)
-        stdout = ''.join(result)
-        return stdout, '', 0
+        if protocol == 'sftp':
+            result = self._run_external_sftp(command, working_dir=working_dir)
+        elif protocol == 'ssh':
+            ssh = self._localConnection.get('ssh')
+            if env is not None:
+                for tup in env:
+                    result = ssh.run_command('export %s=%s' % (tup[0], tup[1]))
+            output = ssh.run_command(command)
+            result = ''.join(output)
+        return result, '', 0
+
+    def _run_external_sftp(self, command, working_dir=None):
+        sftp_obj = self._localConnection.get('sftp')
+        result = sftp_obj.run_command(command, working_dir=working_dir)
+        return result
+
+    def close_connection(self):
+        self._localConnection['sftp'].close_connection()

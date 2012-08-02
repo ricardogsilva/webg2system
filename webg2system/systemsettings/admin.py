@@ -6,6 +6,13 @@ class HostRoleAdmin(admin.ModelAdmin):
 
 class HostAdmin(admin.ModelAdmin):
     list_display = ('name', 'active', 'get_roles', 'dataPath', 'codePath', 'ip')
+    actions = ['toggle_active']
+
+    def toggle_active(self, request, queryset):
+        for obj in queryset:
+            obj.active = not obj.active
+            obj.save()
+    toggle_active.short_description = 'Toggle selected host\'s active flag.'
 
 class SpecificSourceInline(admin.StackedInline):
     model = SpecificSource
