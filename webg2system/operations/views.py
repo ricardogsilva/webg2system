@@ -119,7 +119,7 @@ def get_product_user_manual(request, prodName):
 
 def get_product_zip(request, prodName, tile, timeslot):
     ts = dt.datetime.strptime(timeslot, '%Y%m%d%H%M')
-    settings = ss.Package.objects.get(codeClass__className='TileDistributor',
+    settings = ss.Package.objects.get(code_class__className='TileDistributor',
                                       product__short_name=prodName)
     area = ss.Area.objects.get(name='.*')
     pack = TileDistributor(settings, ts, area, logger=logger)
@@ -137,7 +137,7 @@ def get_product_zip(request, prodName, tile, timeslot):
 
 def get_quicklook(request, prodName, tile, timeslot):
     ts = dt.datetime.strptime(timeslot, '%Y%m%d%H%M')
-    settings = ss.Package.objects.get(codeClass__className='QuickLookGenerator',
+    settings = ss.Package.objects.get(code_class__className='QuickLookGenerator',
                                       product__short_name=prodName)
     area = ss.Area.objects.get(name='.*')
     pack = QuickLookGenerator(settings, ts, area, logger=logger)
