@@ -771,7 +771,7 @@ class G2RemoteHost(G2Host):
             are treated as regular expressions.
 
             protocol - The name of the protocol used to find the files.
-                Available values are 'ftp' (the default) and 'sftp'.
+                Available values are 'sftp' (the default) and 'ftp'.
 
         Returns:
 

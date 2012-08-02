@@ -5,7 +5,7 @@ class HostRoleAdmin(admin.ModelAdmin):
     list_display = ('name', 'description')
 
 class HostAdmin(admin.ModelAdmin):
-    list_display = ('name', 'active', 'dataPath', 'codePath', 'ip')
+    list_display = ('name', 'active', 'get_roles', 'dataPath', 'codePath', 'ip')
 
 class SpecificSourceInline(admin.StackedInline):
     model = SpecificSource

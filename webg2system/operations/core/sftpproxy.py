@@ -47,6 +47,10 @@ class SFTPProxy(object):
             except pysftp.paramiko.AuthenticationException:
                 self.connection = None
                 result = False
+            except pysftp.paramiko.SSHException as e:
+                self.connection = None
+                result = False
+                self.logger.error(e)
         return result
 
     def find(self, path_list, restrict_pattern=None):
@@ -63,8 +67,6 @@ class SFTPProxy(object):
             file_list = []
             for path in path_list:
                 search_dir, search_pattern = os.path.split(path)
-                #self.logger.debug('search_dir: %s' % search_dir)
-                #self.logger.debug('search_pattern: %s' % search_pattern)
                 patt_RE = re.compile(search_pattern)
                 try:
                     self.connection.chdir(search_dir)
@@ -85,6 +87,20 @@ class SFTPProxy(object):
             self.logger.error('Not connected to the remote SFTP host')
             file_list = []
         return file_list
+
+    def remote_find(self, other_host, path_list, restrict_pattern=None):
+        '''
+        Perform a remote find on other_host.
+
+        The connection to other_host is established by this instance\'s
+        remote_host. This means that the local_host will not connect
+        to other_host, it will use remote_host as a proxy between
+        itself and other_host.
+        '''
+
+        if self._connect():
+            ls_result = self.connection.execute('ls -al')
+            self.logger.debug('ls_result: %s' % ls_result)
 
     def fetch(self, paths, destination):
         '''

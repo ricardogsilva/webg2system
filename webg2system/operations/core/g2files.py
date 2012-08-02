@@ -70,8 +70,23 @@ class G2File(GenericItem):
             specific_archives = [hs for hs in ss.Host.objects.filter(role__name='archive')]
         hf = HostFactory()
         #self.archives = [hf.create_host(hs) for hs in specific_archives]
-        self.archives = self._get_archives(fileSettings)
         self.io_buffers = self._get_io_buffers(fileSettings)
+        self.archives = self._get_archives(fileSettings)
+
+    def _get_io_buffers(self, settings):
+        specific_buffers = settings.specific_io_buffers.all()
+        if len(specific_buffers) == 0:
+            specific_buffers = [hs for hs in \
+                ss.Host.objects.filter(role__name='io buffer', active=True)]
+        the_buffers = []
+        for buf in specific_buffers:
+            if buf.name != self.host.name:
+                the_buffers.append(buf)
+            else:
+                self.logger.debug('%s is already the file\'s host, so no ' \
+                                  'need to add it as an io buffer.' % buf.name)
+        hf = HostFactory()
+        return [hf.create_host(hs) for hs in the_buffers]
 
     def _get_archives(self, settings):
         '''
@@ -90,28 +105,16 @@ class G2File(GenericItem):
                 ss.Host.objects.filter(role__name='archive', active=True)]
         the_archives = []
         for arch in specific_archives:
-            if arch.name != self.host.name:
+            buffers = [b.name for b in self.io_buffers]
+            excluded = buffers + [self.host.name]
+            if arch.name not in excluded:
                 the_archives.append(arch)
             else:
-                self.logger.debug('%s is already the file\'s host, so no ' \
-                                  'need to add it as an archive.' % arch.name)
+                self.logger.debug('%s is already the file\'s host or io ' \
+                                  'buffer, so no need to add it as an ' \
+                                  'archive.' % arch.name)
         hf = HostFactory()
         return [hf.create_host(hs) for hs in the_archives]
-
-    def _get_io_buffers(self, settings):
-        specific_buffers = settings.specific_io_buffers.all()
-        if len(specific_buffers) == 0:
-            specific_buffers = [hs for hs in \
-                ss.Host.objects.filter(role__name='io buffer', active=True)]
-        the_buffers = []
-        for buf in specific_buffers:
-            if buf.name != self.host.name:
-                the_buffers.append(buf)
-            else:
-                self.logger.debug('%s is already the file\'s host, so no ' \
-                                  'need to add it as an io buffer.' % buf.name)
-        hf = HostFactory()
-        return [hf.create_host(hs) for hs in the_buffers]
 
     def find(self, restrictPattern=None, use_archive=False, 
              use_io_buffer=True,
@@ -186,8 +189,7 @@ class G2File(GenericItem):
         # search every host
         while (not allFound) and (not lastHost):
             theHost = hostList[hostIndex]
-            if theHost is not self.host:
-                self.logger.info('Trying %s...' % theHost)
+            self.logger.info('Trying %s...' % theHost)
             pathsFound = theHost.find(allPaths, restrictPattern)
             numFound = len(pathsFound)
             if numFound > 0:

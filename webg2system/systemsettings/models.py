@@ -29,6 +29,10 @@ class Host(models.Model):
     def __unicode__(self):
         return self.name
 
+    def get_roles(self):
+        return ', '.join([str(i) for i in self.role.all()])
+    get_roles.short_description = 'Roles'
+
 class MarkedString(models.Model):
     name = models.CharField(max_length=50, blank=True)
     string = models.CharField(max_length=255)
