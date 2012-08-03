@@ -197,15 +197,41 @@ class G2File(GenericItem):
                          restrict_pattern=None, 
                          through_io_buffer=False):
         if through_io_buffer:
-            self.logger.error('this is just a dummy find.')
-            found = []
+            found = self._find_through_io_buffers(archive_host, path_patterns,
+                                                  restrict_pattern)
         else:
             found = archive_host.find(path_patterns, restrict_pattern)
+        return found
+
+    def _find_through_io_buffers(self, other_host, path_patterns, 
+                                 restrict_pattern=None):
+        '''
+        Search other_host through the io_buffers.
+        '''
+
+        all_found = False
+        last_host = False
+        host_index = 0
+        while (not found) and (not last_host):
+            h = self.io_buffers[host_index]
+            self.logger.debug('Searching through %s (io_buffer)...' % h.name)
+            found = h.find_in_remote(other_host, path_patterns, 
+                                     restrict_pattern)
+            if len(found) > 0:
+                all_found = True
+            if host_index + 1 == len(self.io_buffers):
+                last_host = True
+            else:
+                host_index += 1
         return found
 
     def _find_in_io_buffer(self, io_buffer_host, path_patterns, 
                            restrict_pattern=None,
                            go_to_archives=False):
+        '''
+        Search the io_buffers for the files.
+        '''
+
         found = io_buffer_host.find(path_patterns, restrict_pattern)
         self.logger.debug('found: %s' % found)
         if len(found) == 0 and go_to_archives:
@@ -266,7 +292,7 @@ class G2File(GenericItem):
             while (not all_found) and (not last_host):
                 the_host = host_list[host_index]
                 self.logger.info('Trying %s...' % the_host)
-                if the_host in self.archives and use_archive:
+                if the_host in self.archives and use_archive: # this order of the if block seems incorrect...
                     self.logger.debug('using the _find_in_archive method')
                     found = self._find_in_archive(the_host, all_paths, 
                                                   restrict_pattern)
