@@ -4,11 +4,17 @@ from inspiresettings.models import SpatialDataTheme, Collaborator, TopicCategory
 
 # TODO
 #   - add a help_text attribute to all the fields that need one.
-#   - integrate with python-piston and expose a REST API for creating
-#   packages.
+
+class HostRole(models.Model):
+    name = models.CharField(max_length=100)
+    description = models.TextField(null=True, blank=True)
+
+    def __unicode__(self):
+        return self.name
 
 class Host(models.Model):
     name = models.CharField(max_length=100)
+    active = models.BooleanField(default=False)
     dataPath = models.CharField(max_length=255, help_text='Full path to'\
                                 ' the parent directory that holds the data.')
     codePath = models.CharField(max_length=255, null=True, blank=True, 
@@ -18,9 +24,14 @@ class Host(models.Model):
     username = models.CharField(max_length=50)
     password = models.CharField(max_length=50)
     #web_server = models.BooleanField(default=False)
+    role = models.ManyToManyField(HostRole, null=True, blank=True)
 
     def __unicode__(self):
         return self.name
+
+    def get_roles(self):
+        return ', '.join([str(i) for i in self.role.all()])
+    get_roles.short_description = 'Roles'
 
 class MarkedString(models.Model):
     name = models.CharField(max_length=50, blank=True)
@@ -106,12 +117,21 @@ class File(Item):
     toCopy = models.BooleanField(verbose_name='Copy')
     exceptHours = models.ManyToManyField(ExceptHour, blank=True)
     specificArchives = models.ManyToManyField(Host, null=True, blank=True,
-                                              help_text='What hosts should '\
-                                              'be considered to be archives '\
-                                              'for this file? Leave this '\
+                                              help_text='What archives should'\
+                                              ' be searched when finding this '\
+                                              'file? Leave this'\
                                               'blank if you want to search '\
                                               'all the archives.', 
-                                              verbose_name='Specific archives')
+                                              verbose_name='Specific archives',
+                                              limit_choices_to={'role__name':'archive'})
+    specific_io_buffers = models.ManyToManyField(Host, null=True, blank=True,
+                                                 help_text='What io buffers ' \
+                                                 'should be used when ' \
+                                                 'locating this file? Leave ' \
+                                                 'this blank if you want to ' \
+                                                 'search all the io buffers.', 
+                                                 limit_choices_to={'role__name':'io buffer'},
+                                                 related_name='%(app_label)s_%(class)s_related')
     #product = models.ForeignKey('Product', null=True, blank=True)
 
     def get_except_hours(self):

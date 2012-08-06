@@ -65,86 +65,266 @@ class G2File(GenericItem):
             pattern = utilities.parse_marked(searchPattObj, self)
             self.searchPatterns.append(pattern)
         #hf = HostFactory(log_level=log_level)
+        specific_archives = fileSettings.specificArchives.all()
+        if len(specific_archives) == 0:
+            specific_archives = [hs for hs in ss.Host.objects.filter(role__name='archive')]
         hf = HostFactory()
-        self.archives = [hf.create_host(hs) for hs in fileSettings.specificArchives.all()]
+        #self.archives = [hf.create_host(hs) for hs in specific_archives]
+        self.io_buffers = self._get_io_buffers(fileSettings)
+        self.archives = self._get_archives(fileSettings)
 
-    def find(self, restrictPattern=None, useArchive=False, 
-             staticFiles='latest timeslot absolute'):
+    def _get_io_buffers(self, settings):
+        specific_buffers = settings.specific_io_buffers.all()
+        if len(specific_buffers) == 0:
+            specific_buffers = [hs for hs in \
+                ss.Host.objects.filter(role__name='io buffer', active=True)]
+        hf = HostFactory()
+        return [hf.create_host(hs) for hs in specific_buffers]
+
+    def _get_archives(self, settings):
         '''
-        Find the files and return their fullPaths.
+        Return a list of G2Host instances that are the archives for this file.
 
-        Inputs:
-
-            restrictPattern - A string, to be interpreted as a regular 
-                expression, to filter among all the possible files. This is 
-                useful for finding just a single tile from all the possible 
-                ones.
-
-            useArchive - A boolean indicating if the file's specific 
-                archives are to be searched. Defaults to False.
-
-            staticFiles - A string indicating what behaviour to adopt for
-                static files. Accepted values:
-                    - latest timeslot absolute: The files are assumed to have 
-                        a timeslot on their filename. They are sorted and only
-                        the latest file is fetched. Being the latest means 
-                        that the file is as recent as the instance's timeslot,
-                        but not more recent than that. This is the default 
-                        behaviour.
-                    - latest timeslot month: Works like 'latest timeslot day'
-                        but only the files that have the same month as the 
-                        instance's timeslot are relevant for the fetching.
-                    - latest run: The files are assumed to have a run pattern
-                        on their filename. they are sorted accordingly and
-                        the latest run is returned.
-                    - first: The first file in the filelist is fetched.
-                    - all: All the files in the file are fetched.
-
-        Returns:
-
-            A dictionary with keys 'host' and 'paths'. The values are a G2Host
-            object and a list with the full paths to the files.
-
-        This method will also remove any duplicate files from the list. A
-        duplicate is a file that has the same name as another one, regardless
-        of its path or compression state.
+        The G2Host list is created from the specificArchives attribute. If
+        there are no specificArchives defined, then all the hosts that have
+        the 'archive' role and are 'active' will be used.
         '''
 
-        result = {'host' : self.host, 'paths' : []}
-        allPaths = []
-        for path in self.searchPaths:
-            allPaths += [os.path.join(path, p) for p in self.searchPatterns]
-        hostList = [self.host]
-        if useArchive:
-            hostList += self.archives
-        hostIndex = 0
-        allFound = False
-        lastHost = False
-        # search every host
-        while (not allFound) and (not lastHost):
-            theHost = hostList[hostIndex]
-            if theHost is not self.host:
-                self.logger.info('Trying the archives: %s' % theHost)
-            pathsFound = theHost.find(allPaths, restrictPattern)
-            numFound = len(pathsFound)
-            if numFound > 0:
-                allFound = True
-                if numFound < self.numFiles and restrictPattern is None:
-                    self.logger.warning('Not all files have been found. '\
-                           'Found %i files. Was expecting at least %i.' 
-                            % (numFound, self.numFiles))
-                result['host'] = theHost
-                uniquePaths = self._return_unique_file_names(pathsFound)
-                result['paths'] = self._filter_file_list(uniquePaths, 
-                                                         staticFiles)
-            if hostIndex + 1 == len(hostList):
-                lastHost = True
+        specific_archives = settings.specificArchives.all()
+        if len(specific_archives) == 0:
+            specific_archives = [hs for hs in \
+                ss.Host.objects.filter(role__name='archive', active=True)]
+        hf = HostFactory()
+        return [hf.create_host(hs) for hs in specific_archives]
+
+    #def find(self, restrict_pattern=None, use_archive=False, 
+    #         use_io_buffer=True, 
+    #         staticFiles='latest timeslot absolute'):
+    #    '''
+    #    Find the files and return their fullPaths.
+
+    #    Inputs:
+
+    #        restrict_pattern - A string, to be interpreted as a regular 
+    #            expression, to filter among all the possible files. This is 
+    #            useful for finding just a single tile from all the possible 
+    #            ones.
+
+    #        use_archive - A boolean indicating if the file's specific 
+    #            archives are to be searched. Defaults to False.
+
+    #        use_io_buffer - A boolean indicating if the file's io_buffer
+    #            hosts are to be searched. Defaults to True.
+
+    #        search_archive_through_io_buffer - A boolean indicating if the
+    #            io_buffer hosts should be used to search the archives if
+    #            the paths are not find in their own filesystems.
+
+    #        staticFiles - A string indicating what behaviour to adopt for
+    #            static files. Accepted values:
+    #                - latest timeslot absolute: The files are assumed to have 
+    #                    a timeslot on their filename. They are sorted and only
+    #                    the latest file is fetched. Being the latest means 
+    #                    that the file is as recent as the instance's timeslot,
+    #                    but not more recent than that. This is the default 
+    #                    behaviour.
+    #                - latest timeslot month: Works like 'latest timeslot day'
+    #                    but only the files that have the same month as the 
+    #                    instance's timeslot are relevant for the fetching.
+    #                - latest run: The files are assumed to have a run pattern
+    #                    on their filename. they are sorted accordingly and
+    #                    the latest run is returned.
+    #                - first: The first file in the filelist is fetched.
+    #                - all: All the files in the file are fetched.
+
+    #    Returns:
+
+    #        A dictionary with keys 'host' and 'paths'. The values are a G2Host
+    #        object and a list with the full paths to the files.
+
+    #    NOTE: The files may be searched for, in order, in the following hosts:
+    #            - the file\'s own host;
+    #            - the file\'s io_buffers. This can be disabled with the 
+    #              use_io_buffer argument;
+    #            - the file\'s archives. This can be disabled with the
+    #              use_archive argument.
+    #          By default, this method will search for the files in the file\'s
+    #          own host and then in the io_buffers, not using the archives at
+    #          all. The prefered way to execute a thorough search is to try to
+    #          find the files in the io_buffer and let the io_buffer connect to
+    #          the archives to search for the files there.
+
+    #    This method will also remove any duplicate files from the list. A
+    #    duplicate is a file that has the same name as another one, regardless
+    #    of its path or compression state.
+    #    '''
+
+    #    result = {'host' : self.host, 'paths' : []}
+    #    allPaths = []
+    #    for path in self.searchPaths:
+    #        allPaths += [os.path.join(path, p) for p in self.searchPatterns]
+    #    hostList = set([self.host])
+    #    if use_io_buffer:
+    #        hostList.update(self.io_buffers)
+    #    if use_archive:
+    #        hostList.update(self.archives)
+    #    hostIndex = 0
+    #    allFound = False
+    #    lastHost = False
+    #    # search every host
+    #    while (not allFound) and (not lastHost):
+    #        theHost = hostList[hostIndex]
+    #        self.logger.info('Trying %s...' % theHost)
+    #        pathsFound = theHost.find(allPaths, restrict_pattern)
+    #        numFound = len(pathsFound)
+    #        if numFound > 0:
+    #            allFound = True
+    #            if numFound < self.numFiles and restrict_pattern is None:
+    #                self.logger.warning('Not all files have been found. '\
+    #                       'Found %i files. Was expecting at least %i.' 
+    #                        % (numFound, self.numFiles))
+    #            result['host'] = theHost
+    #            uniquePaths = self._return_unique_file_names(pathsFound)
+    #            result['paths'] = self._filter_file_list(uniquePaths, 
+    #                                                     staticFiles)
+    #        if hostIndex + 1 == len(hostList):
+    #            lastHost = True
+    #        else:
+    #            hostIndex += 1
+    #    return result
+
+    def _find_in_archive(self, archive_host, path_patterns, 
+                         restrict_pattern=None, 
+                         through_io_buffer=False):
+        if through_io_buffer:
+            found = self._find_through_io_buffers(archive_host, path_patterns,
+                                                  restrict_pattern)
+        else:
+            found = archive_host.find(path_patterns, restrict_pattern)
+        return found
+
+    def _find_through_io_buffers(self, other_host, path_patterns, 
+                                 restrict_pattern=None):
+        '''
+        Search other_host through the io_buffers.
+        '''
+
+        all_found = False
+        last_host = False
+        host_index = 0
+        while (not all_found) and (not last_host):
+            h = self.io_buffers[host_index]
+            self.logger.debug('Searching through %s (io_buffer)...' % h.name)
+            found = h.find_in_remote(other_host, path_patterns, 
+                                     restrict_pattern)
+            if len(found) > 0:
+                all_found = True
+            if host_index + 1 == len(self.io_buffers):
+                last_host = True
             else:
-                hostIndex += 1
+                host_index += 1
+        return found
+
+    def _find_in_io_buffer(self, io_buffer_host, path_patterns, 
+                           restrict_pattern=None,
+                           go_to_archives=False):
+        '''
+        Search the io_buffers for the files.
+        '''
+
+        found = io_buffer_host.find(path_patterns, restrict_pattern)
+        if len(found) == 0 and go_to_archives:
+            self.logger.debug('going to the archives through %s ' \
+                              '(io buffer)...' % io_buffer_host.name)
+            all_found = False
+            last_host = False
+            host_index = 0
+            while (not all_found) and (not last_host):
+                arch_host = self.archives[host_index]
+                self.logger.debug('Trying %s...' % arch_host)
+                if io_buffer_host == self.host:
+                    # perform a normal find on the archives
+                    found = self._find_in_archive(arch_host, path_patterns, 
+                                                  restrict_pattern)
+                else:
+                    # perform a 'through find' using the external script
+                    found = self._find_in_archive(arch_host, path_patterns, 
+                                                  restrict_pattern, 
+                                                  through_io_buffer=True)
+                if len(found) > 0:
+                    all_found = True
+                if host_index + 1 == len(self.archives):
+                    last_host = True
+                else:
+                    host_index += 1
+        return found
+
+    def _sort_hosts(self, use_local, use_io_buffer, use_archive):
+        host_list = []
+        if use_local:
+            host_list.append(self.host)
+        if use_io_buffer:
+            for h in self.io_buffers:
+                if h not in host_list:
+                    host_list.append(h)
+        if use_archive:
+            for h in self.archives:
+                if h not in host_list:
+                    host_list.append(h)
+        return host_list
+
+    def find(self, use_local=True, use_io_buffer=True, use_archive=False,
+             static_files='latest timeslot absolute', restrict_pattern=None,
+             io_buffer_goes_to_archive=True):
+        '''
+        '''
+
+        result = {'host' : None, 'paths' : []}
+        all_paths = []
+        for path in self.searchPaths:
+            all_paths += [os.path.join(path, p) for p in self.searchPatterns]
+        all_found = False
+        last_host = False
+        host_index = 0
+        host_list = self._sort_hosts(use_local, use_io_buffer, use_archive)
+        if len(host_list) > 0:
+            while (not all_found) and (not last_host):
+                the_host = host_list[host_index]
+                self.logger.info('Trying %s...' % the_host)
+                if the_host in self.archives and use_archive: # this order of the if block seems incorrect...
+                    self.logger.debug('using the _find_in_archive method')
+                    found = self._find_in_archive(the_host, all_paths, 
+                                                  restrict_pattern)
+                elif the_host in self.io_buffers and use_io_buffer:
+                    self.logger.debug('using the _find_io_buffers method')
+                    found = self._find_in_io_buffer(
+                        the_host, 
+                        all_paths, 
+                        restrict_pattern, 
+                        go_to_archives=io_buffer_goes_to_archive
+                    )
+                elif the_host == self.host and use_local:
+                    self.logger.debug('using the _find_local method')
+                    found = self.host.find(all_paths, restrict_pattern)
+                num_found = len(found)
+                if num_found > 0:
+                    all_found = True
+                    if num_found < self.numFiles and restrict_pattern is None:
+                        self.logger.warning('Not all files have been found. '\
+                               'Found %i files. Was expecting at least %i.' 
+                                % (num_found, self.numFiles))
+                    result['host'] = the_host
+                    unique_paths = self._return_unique_file_names(found)
+                    result['paths'] = self._filter_file_list(unique_paths, 
+                                                             static_files)
+                if host_index + 1 == len(host_list):
+                    last_host = True
+                else:
+                    host_index += 1
         return result
 
-    def fetch(self, targetDir, useArchive=None, decompress=True, 
-              restrictPattern=None):
+    def fetch(self, targetDir, use_archive=False, use_io_buffer=True,
+              decompress=True, restrict_pattern=None):
         '''
         Fetch files from the source host to the destination directory.
 
@@ -175,8 +355,11 @@ class G2File(GenericItem):
                 instance's host) of the directory where the files should be
                 copied to.
 
-            useArchive - A boolean indicating if the files are to be searched
+            use_archive - A boolean indicating if the files are to be searched
                 for in the archives, in case they cannot be found in host.
+
+            use_io_buffer - A boolean indicating if the fies are to be searched
+                for in the io buffers in case they cannot be found in the host.
                 
             decompress - A boolean indicating if the newly fetched files are
                 to be decompressed. It only affects files which have actually
@@ -184,7 +367,7 @@ class G2File(GenericItem):
                 False (meaning it will not be copied), it will never be
                 decompressed.
 
-            restrictPattern - A string, to be interpreted as a regular 
+            restrict_pattern - A string, to be interpreted as a regular 
                 expression, to filter among all the possible files. This is 
                 useful for finding just a single tile from all the possible 
                 ones.
@@ -195,8 +378,9 @@ class G2File(GenericItem):
             fetched.
         '''
 
-        found = self.find(useArchive=useArchive, 
-                          restrictPattern=restrictPattern)
+        found = self.find(use_archive=use_archive, 
+                          restrict_pattern=restrict_pattern, 
+                          use_io_buffer=use_io_buffer)
         result = found['paths']
         if self.toCopy:
             if len(found['paths']) > 0:

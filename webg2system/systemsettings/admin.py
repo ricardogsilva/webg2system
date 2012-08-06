@@ -1,8 +1,18 @@
 from models import *
 from django.contrib import admin
 
+class HostRoleAdmin(admin.ModelAdmin):
+    list_display = ('name', 'description')
+
 class HostAdmin(admin.ModelAdmin):
-    list_display = ('name', 'dataPath', 'codePath', 'ip')
+    list_display = ('name', 'active', 'get_roles', 'dataPath', 'codePath', 'ip')
+    actions = ['toggle_active']
+
+    def toggle_active(self, request, queryset):
+        for obj in queryset:
+            obj.active = not obj.active
+            obj.save()
+    toggle_active.short_description = 'Toggle selected host\'s active flag.'
 
 class SpecificSourceInline(admin.StackedInline):
     model = SpecificSource
@@ -122,6 +132,7 @@ class CatalogueServerAdmin(admin.ModelAdmin):
 
 #admin.site.register(ExceptHour)
 admin.site.register(TimeslotDisplacer)
+admin.site.register(HostRole, HostRoleAdmin)
 admin.site.register(CodeClass, CodeClassAdmin)
 admin.site.register(Host, HostAdmin)
 admin.site.register(Package, PackageAdmin)

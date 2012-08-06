@@ -47,6 +47,10 @@ class SFTPProxy(object):
             except pysftp.paramiko.AuthenticationException:
                 self.connection = None
                 result = False
+            except pysftp.paramiko.SSHException as e:
+                self.connection = None
+                result = False
+                self.logger.error(e)
         return result
 
     def find(self, path_list, restrict_pattern=None):
@@ -63,8 +67,6 @@ class SFTPProxy(object):
             file_list = []
             for path in path_list:
                 search_dir, search_pattern = os.path.split(path)
-                #self.logger.debug('search_dir: %s' % search_dir)
-                #self.logger.debug('search_pattern: %s' % search_pattern)
                 patt_RE = re.compile(search_pattern)
                 try:
                     self.connection.chdir(search_dir)
@@ -85,6 +87,18 @@ class SFTPProxy(object):
             self.logger.error('Not connected to the remote SFTP host')
             file_list = []
         return file_list
+
+    def run_command(self, command, working_dir=None):
+        result = None
+        if self._connect():
+            if working_dir is not None:
+                old_dir = self.connection.execute('pwd')[0].strip()
+                result = self.connection.execute('cd %s && ./%s' % \
+                         (working_dir, command))
+                self.connection.chdir(old_dir)
+            else:
+                result = self.connection.execute(command)
+        return [line.strip() for line in result]
 
     def fetch(self, paths, destination):
         '''
@@ -177,3 +191,8 @@ class SFTPProxy(object):
         else:
             self.logger.error('Not connected to the remote SFTP host')
         return result
+
+    def close_connection(self):
+        if self.connection is not None:
+            self.connection.close()
+
