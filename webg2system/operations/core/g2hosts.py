@@ -809,15 +809,21 @@ class G2RemoteHost(G2Host):
         and will return its output.
         '''
 
-        work_dir = os.path.join(remote_host.dataPath, 'scripts')
+        work_dir = os.path.join(self.codePath, 'scripts')
         command = 'remote_finder.py'
         if restrict_pattern is not None:
             command += ' --restrict_pattern=%s' % restrict_pattern
-        command += ' %s' % remote_host.name
+        command += ' "%s"' % remote_host.name
         for path in path_list:
-            command += ' %s' % path
-        result = self.run_program(command, workingDir=work_dir, 
-                                  protocol=protocol)
+            command += ' "%s"' % path
+        stdout, stderr, ret_code = self.run_program(command, 
+                                                    working_dir=work_dir, 
+                                                    protocol=protocol)
+        if ret_code == 0:
+            result = stdout
+        else:
+            self.logger.error(stderr)
+            result = None
         return result
 
     #FIXME - Refactor the ssh part
@@ -830,7 +836,7 @@ class G2RemoteHost(G2Host):
 
             command - A string with the full command to run.
 
-            workingDir - The directory where the program should be
+            working_dir - The directory where the program should be
                 run.
 
             env - A list of two-element tuples containing the name and value

@@ -212,7 +212,7 @@ class G2File(GenericItem):
         all_found = False
         last_host = False
         host_index = 0
-        while (not found) and (not last_host):
+        while (not all_found) and (not last_host):
             h = self.io_buffers[host_index]
             self.logger.debug('Searching through %s (io_buffer)...' % h.name)
             found = h.find_in_remote(other_host, path_patterns, 
@@ -233,7 +233,6 @@ class G2File(GenericItem):
         '''
 
         found = io_buffer_host.find(path_patterns, restrict_pattern)
-        self.logger.debug('found: %s' % found)
         if len(found) == 0 and go_to_archives:
             self.logger.debug('going to the archives through %s ' \
                               '(io buffer)...' % io_buffer_host.name)
