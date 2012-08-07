@@ -323,7 +323,7 @@ class G2File(GenericItem):
                     host_index += 1
         return result
 
-    def fetch(self, targetDir, use_archive=False, use_io_buffer=True,
+    def fetch(self, targetDir, use_archive=False, use_io_buffer=False,
               decompress=True, restrict_pattern=None):
         '''
         Fetch files from the source host to the destination directory.
