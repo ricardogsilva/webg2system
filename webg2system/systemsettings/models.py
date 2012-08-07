@@ -27,8 +27,7 @@ class Host(models.Model):
     role = models.ManyToManyField(HostRole, null=True, blank=True)
     file_system_usage_threshold = models.IntegerField(default=90)
     delete_logs = models.BooleanField(default=True)
-    delete_inputs = models.BooleanField(default=True)
-    delete_outputs = models.BooleanField(default=True)
+    delete_files = models.BooleanField(default=True)
 
     def __unicode__(self):
         return self.name

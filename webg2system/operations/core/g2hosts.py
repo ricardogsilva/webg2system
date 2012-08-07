@@ -131,8 +131,7 @@ class G2Host(object):
         self.name = settings.name
         self.active = settings.active
         self.to_delete_logs = settings.delete_logs
-        self.to_delete_inputs = settings.delete_inputs
-        self.to_delete_outputs = settings.delete_outputs
+        self.to_delete_files = settings.delete_files
         self.connections = dict()
         self.dataPath = settings.dataPath
         if settings.codePath is None or settings.codePath == '':
@@ -757,25 +756,45 @@ class G2LocalHost(G2Host):
         usage = 100 - available_percent
         return usage
 
-    def delete_logs(self, older_than=120):
+    def _delete_logs(self, older_than):
+        '''
+        Delete log files older than the input number of days.
+        '''
+
         logs_dir = os.path.join(self.dataPath, 'LOGS')
         today = dt.datetime.today()
         to_delete = []
         for root, dirs, files in os.walk(logs_dir):
             for file_path in files:
-                full_path = os.path.join(root, file_path)
                 timeslot = utilities.extract_timeslot(file_path)
                 if timeslot is not None:
                     date_diff = today - timeslot
                     if date_diff.days > older_than:
+                        full_path = os.path.join(root, file_path)
                         to_delete.append(full_path)
         self.delete_files(to_delete)
 
-    def delete_inputs(self, older_than=120):
-        raise NotImplementedError
+    def _delete_old_files(self, older_than):
+        '''
+        Delete system input and output files older than the input 
+        number of days.
+        '''
 
-    def delete_outputs(self, older_than=120):
-        raise NotImplementedError
+        to_delete = []
+        data_dir = os.path.join(self.dataPath, 'OUTPUT_DATA')
+        today = dt.datetime.today()
+        for root, dirs, files in os.walk(data_dir):
+            for file_path in files:
+                timeslot = utilities.extract_timeslot(file_path)
+                if timeslot is not None:
+                    date_diff = today - timeslot
+                    if date_diff.days > older_than:
+                        #settings = utilities.get_file_settings(file_path)
+                        #if settings is not None and settings.frequency == 'dynamic':
+                        #    full_path = os.path.join(root, file_path)
+                        #    to_delete.append(full_path)
+                        to_delete.append(os.path.join(root, file_path))
+        self.delete_files(to_delete)
 
     def do_maintenance(self, older_than=120):
         '''
@@ -784,10 +803,8 @@ class G2LocalHost(G2Host):
 
         if self.to_delete_logs:
             self._delete_logs(older_than)
-        if self.to_delete_inputs:
-            self._delete_inputs(older_than)
-        if self.to_delete_outputs:
-            self._delete_outputs(older_than)
+        if self.to_delete_files:
+            self._delete_old_files(older_than)
 
 
 
