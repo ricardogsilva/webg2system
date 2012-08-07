@@ -217,7 +217,7 @@ class GenericPackage(GenericItem):
                 self.logger.info('Fetching %s...' % g2f.name)
                 localPathList = g2f.fetch(relTargetDir, useArchive, 
                                           decompress=decompress, 
-                                          restrictPattern=restrictPattern)
+                                          restrict_pattern=restrictPattern)
                 result[g2f] = localPathList
         return result
 
