@@ -81,7 +81,7 @@ class FileAdmin(admin.ModelAdmin):
 
 class PackageAdmin(admin.ModelAdmin):
     inlines = [PackagePathInline, PackageInputInline, PackageOutputInline, PackageExtraInfoInline]
-    list_display = ('name', 'get_inputs', 'get_outputs')
+    list_display = ('name', 'get_inputs', 'get_outputs', 'code_class', 'product')
     search_fields = ['name']
 
 class ExternalCodeAdmin(admin.ModelAdmin):

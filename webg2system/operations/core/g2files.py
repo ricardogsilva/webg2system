@@ -273,7 +273,7 @@ class G2File(GenericItem):
                     host_list.append(h)
         return host_list
 
-    def find(self, use_local=True, use_io_buffer=True, use_archive=False,
+    def find(self, use_local=True, use_io_buffer=False, use_archive=False,
              static_files='latest timeslot absolute', restrict_pattern=None,
              io_buffer_goes_to_archive=True):
         '''

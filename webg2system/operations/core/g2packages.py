@@ -167,8 +167,8 @@ class GenericPackage(GenericItem):
                                  'hour. Skipping...' % (g2f.name, g2f.hour))
             else:
                 self.logger.debug('Looking for %s...' % g2f.name)
-                result[g2f] = g2f.find(useArchive=useArchive, 
-                                       restrictPattern=restrictPattern)
+                result[g2f] = g2f.find(use_archive=useArchive, 
+                                       restrict_pattern=restrictPattern)
         return result
 
     def _fetch_files(self, g2files, relTargetDir, useArchive, 
@@ -473,7 +473,6 @@ class ProcessingPackage(GenericPackage):
             except AttributeError:
                 pass
         return result
-
 
 
 class FetchData(ProcessingPackage):
@@ -1026,13 +1025,19 @@ class SWIProcessor(ProcessingPackage):
                                            host=host, logger=logger)
         self.rawSettings = settings
         self.name = settings.name
+        self.version = settings.external_code.version
         relOutDir = utilities.parse_marked(
                 settings.packagepath_set.get(name='outputDir'), 
                 self)
         self.outputDir = os.path.join(self.host.dataPath, relOutDir)
+        #relCodeDir = utilities.parse_marked(
+        #        settings.packagepath_set.get(name='codeDir'), 
+        #        self)
+        #self.codeDir = os.path.join(self.host.codePath, relCodeDir)
         relCodeDir = utilities.parse_marked(
-                settings.packagepath_set.get(name='codeDir'), 
-                self)
+            settings.external_code.externalcodeextrainfo_set.get(name='path'),
+            settings.external_code
+        )
         self.codeDir = os.path.join(self.host.codePath, relCodeDir)
         relWorkDir = utilities.parse_marked(
                 settings.packagepath_set.get(name='workingDir'), 
@@ -2393,7 +2398,7 @@ class GenericAggregationPackage(GenericItem):
                     #self.logger.debug('Creating package: %s ' % generalPackSettings.name)
                     #self.logger.debug('timeslot: %s' % spTimeslot)
                     #self.logger.debug('area: %s' % spArea) 
-                    className = eval(generalPackSettings.codeClass.className)
+                    className = eval(generalPackSettings.code_class.className)
                     newObject = className(generalPackSettings, spTimeslot, spArea,
                                           hostSettings, logger=self.logger)
                     #self.logger.debug('----------') 

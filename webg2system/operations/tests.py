@@ -1,7 +1,11 @@
+import datetime as dt
+
 from django.test import TestCase
 
 import systemsettings.models as ss
+import operations.models as om
 import operations.core.g2hosts as g2h
+import operations.core.g2packages as g2h
 
 
 class OperationsViewsTestCase(TestCase):
@@ -52,3 +56,11 @@ class OperationsCoreG2RemoteHostsTestCase(TestCase):
             self.assertTrue(0 < usage < 100)
             h.close_connection()
 
+class SWIPostProcessorTestCase(TestCase):
+
+    def setUp(self):
+        timeslot = dt.datetime(2012, 7, 7),
+        settings = ss.Package.objects.get(name='postprocess_swi'),
+        area = ss.Area.objects.get(area='.*')
+        host = g2h.HostFactory().create_host()
+        self.swi_pack = g2p.SWIProcessor(settings, timeslot, area, host)
