@@ -2520,8 +2520,8 @@ class TileDistributor(GenericAggregationPackage):
         tileG2fs = qlPack._filter_g2f_list(qlPack.inputs, 'fileType', 'hdf5')
         theProduct = None
         for g2f in tileG2fs:
-            fetched = g2f.fetch(self.workingDir, useArchive=True, 
-                                decompress=False, restrictPattern=tile)
+            fetched = g2f.fetch(self.workingDir, use_archive=True, 
+                                decompress=False, restrict_pattern=tile)
             if len(fetched) > 0:
                 theProduct = self.host.compress(fetched)[0]
         # get the quicklook
