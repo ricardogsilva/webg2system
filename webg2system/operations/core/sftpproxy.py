@@ -98,7 +98,7 @@ class SFTPProxy(object):
                 self.connection.chdir(old_dir)
             else:
                 result = self.connection.execute(command)
-        return [line.strip() for line in result]
+        return result
 
     def fetch(self, paths, destination):
         '''

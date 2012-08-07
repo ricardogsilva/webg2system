@@ -233,5 +233,3 @@ def put_tile_into_pattern(tile_name, g2f):
             result = newPatt
             break
     return result
-
-

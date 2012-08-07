@@ -25,6 +25,10 @@ class Host(models.Model):
     password = models.CharField(max_length=50)
     #web_server = models.BooleanField(default=False)
     role = models.ManyToManyField(HostRole, null=True, blank=True)
+    file_system_usage_threshold = models.IntegerField(default=90)
+    delete_logs = models.BooleanField(default=True)
+    delete_inputs = models.BooleanField(default=True)
+    delete_outputs = models.BooleanField(default=True)
 
     def __unicode__(self):
         return self.name

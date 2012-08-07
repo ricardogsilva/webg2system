@@ -21,6 +21,7 @@ from xml.etree.ElementTree import ElementTree as et
 import ftplib
 import socket
 from pexpect import spawn
+import datetime as dt
 #import glob
 #import fnmatch
 
@@ -35,6 +36,7 @@ import systemsettings.models as ss
 from sshproxy import SSHProxy
 from ftpproxy import FTPProxy
 from sftpproxy import SFTPProxy
+import utilities
 
 # TODO
 # - Review all the methods that have a FIXME tag
@@ -127,6 +129,10 @@ class G2Host(object):
 
         self.logger = logger
         self.name = settings.name
+        self.active = settings.active
+        self.to_delete_logs = settings.delete_logs
+        self.to_delete_inputs = settings.delete_inputs
+        self.to_delete_outputs = settings.delete_outputs
         self.connections = dict()
         self.dataPath = settings.dataPath
         if settings.codePath is None or settings.codePath == '':
@@ -137,6 +143,7 @@ class G2Host(object):
         self.user = settings.username
         self.password = settings.password
         self.roles = [r.name for r in settings.role.all()]
+        self.file_system_threshold = settings.file_system_usage_threshold
 
     def __repr__(self):
         return self.name
@@ -190,6 +197,21 @@ class G2Host(object):
         raise NotImplementedError
 
     def rename_file(self, oldPath, newPath):
+        raise NotImplementedError
+
+    def monitor_file_system_usage(self):
+        raise NotImplementedError
+
+    def delete_logs(self, older_than=10):
+        raise NotImplementedError
+
+    def delete_inputs(self, older_than=10):
+        raise NotImplementedError
+
+    def delete_outputs(self, older_than=10):
+        raise NotImplementedError
+
+    def do_maintenance(self, older_than=120):
         raise NotImplementedError
 
 
@@ -717,6 +739,58 @@ class G2LocalHost(G2Host):
     def rename_file(self, oldPath, newPath):
         return os.rename(oldPath, newPath)
 
+    def monitor_file_system_usage(self):
+        '''
+        Check the usage of the filesystem.
+
+        Returns an integer specifying the percentage of the filesystem that
+        is being used. The filesystem that is monitored is the one where
+        this instance's dataPath directory resides.
+        '''
+
+        command = 'df -h %s' % self.dataPath
+        stdout, stderr, retcode = self.run_program(command)
+        try:
+            available_percent = int(stdout.split('\n')[1].split()[4].replace('%', ''))
+        except ValueError:
+            raise
+        usage = 100 - available_percent
+        return usage
+
+    def delete_logs(self, older_than=120):
+        logs_dir = os.path.join(self.dataPath, 'LOGS')
+        today = dt.datetime.today()
+        to_delete = []
+        for root, dirs, files in os.walk(logs_dir):
+            for file_path in files:
+                full_path = os.path.join(root, file_path)
+                timeslot = utilities.extract_timeslot(file_path)
+                if timeslot is not None:
+                    date_diff = today - timeslot
+                    if date_diff.days > older_than:
+                        to_delete.append(full_path)
+        self.delete_files(to_delete)
+
+    def delete_inputs(self, older_than=120):
+        raise NotImplementedError
+
+    def delete_outputs(self, older_than=120):
+        raise NotImplementedError
+
+    def do_maintenance(self, older_than=120):
+        '''
+        Perform the maintenance operations on files older than x days.
+        '''
+
+        if self.to_delete_logs:
+            self._delete_logs(older_than)
+        if self.to_delete_inputs:
+            self._delete_inputs(older_than)
+        if self.to_delete_outputs:
+            self._delete_outputs(older_than)
+
+
+
 
 class G2RemoteHost(G2Host):
     '''
@@ -820,7 +894,7 @@ class G2RemoteHost(G2Host):
                                                     working_dir=work_dir, 
                                                     protocol=protocol)
         if ret_code == 0:
-            result = stdout
+            result = stdout.split('\n')[:-1]
         else:
             self.logger.error(stderr)
             result = None
@@ -850,6 +924,7 @@ class G2RemoteHost(G2Host):
         '''
         if protocol == 'sftp':
             result = self._run_external_sftp(command, working_dir=working_dir)
+            result = '\n'.join(result)
         elif protocol == 'ssh':
             ssh = self._localConnection.get('ssh')
             if env is not None:
@@ -866,3 +941,18 @@ class G2RemoteHost(G2Host):
 
     def close_connection(self):
         self._localConnection['sftp'].close_connection()
+
+    def monitor_file_system_usage(self):
+        '''
+        Check the usage of the filesystem.
+
+        Returns an integer specifying the percentage of the filesystem that
+        is being used. The filesystem that is monitored is the one where
+        this instance's dataPath directory resides.
+        '''
+
+        command = 'df -h %s' % self.dataPath
+        stdout, stderr, retcode = self.run_program(command)
+        available_percent = int(stdout.split('\n')[2].split()[4].replace('%', ''))
+        usage = 100 - available_percent
+        return usage
