@@ -22,6 +22,7 @@ import ftplib
 import socket
 from pexpect import spawn
 import datetime as dt
+import zipfile
 #import glob
 #import fnmatch
 
@@ -806,7 +807,19 @@ class G2LocalHost(G2Host):
         if self.to_delete_files:
             self._delete_old_files(older_than)
 
+    def build_zip(self, zip_name, paths, output_dir):
+        '''
+        Build a zip archive with the specified paths.
+        '''
 
+        if not zip_name.endswith('.zip'):
+            zip_name += '.zip'
+        full_path = os.path.join(output_dir, zip_name)
+        zf = zipfile.ZipFile(full_path, mode='w')
+        for path in paths:
+            zf.write(path, arcname=os.path.basename(path))
+        zf.close()
+        return full_path
 
 
 class G2RemoteHost(G2Host):

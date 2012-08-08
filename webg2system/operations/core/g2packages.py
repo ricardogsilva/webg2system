@@ -2541,7 +2541,7 @@ class TileDistributor(GenericAggregationPackage):
         zipName = os.path.basename(os.path.splitext(theProduct)[0]) + '.zip'
         theZip = os.path.join(self.zipOutDir, zipName)
         zf = zipfile.ZipFile(theZip, mode='w')
-        for filePath in (theProduct, theQuickLook, theXml, theStylesheet):
+        for filePath in (theProduct, theQuickLook, the.xslXml, theStylesheet):
             zf.write(filePath, arcname=os.path.basename(filePath))
         zf.close()
         return theZip
@@ -2578,3 +2578,83 @@ class TileDistributor(GenericAggregationPackage):
         super(TileDistributor, self).clean_up()
         self._delete_directories([self.workingDir])
         self.host.clean_dirs(self.zipOutDir)
+
+class SWIDistributor(ProcessingPackage):
+
+    def __init__(self, settings, timeslot, area, host=None, 
+                 logger=None, createIO=True):
+        '''
+        Inputs:
+
+            settings - A systemsettings.models.Package object
+
+            timeslot - A datetime.datetime object
+
+            area - A systemsettings.models.Area object
+        '''
+
+        self.rawSettings = settings
+        self.name = settings.name
+        self.product = settings.product
+        self.version = settings.external_code.version
+        super(SWIDistributor, self).__init__(settings, timeslot, area,
+                                             host=host, logger=logger)
+        relWorkDir = utilities.parse_marked(
+                settings.packagepath_set.get(name='workingDir'), self)
+        self.workingDir = os.path.join(self.host.dataPath, relWorkDir)
+        relMetaTemplateDir = utilities.parse_marked(
+                settings.packagepath_set.get(name='xmlTemplateDir'), self)
+        self.xmlTemplateDir = os.path.join(self.host.codePath, 
+                                           relMetaTemplateDir)
+        relZipDir = utilities.parse_marked(
+                settings.packagepath_set.get(name='zipOutDir'), self)
+        self.zipOutDir = os.path.join(self.host.dataPath, relZipDir)
+        if createIO:
+            self.inputs = self._create_files(
+                'input', 
+                settings.packageInput_systemsettings_packageinput_related.all()
+            )
+            self.outputs = self._create_files(
+                'output', 
+                settings.packageOutput_systemsettings_packageoutput_related.all()
+            )
+
+    def get_zip(self):
+        # look for the zip file in the localhost
+        # then look for it in the archives
+        # if not found, call the _build_zip method
+        zip_name = self._get_zip_name()
+
+    def _find_zip(self):
+        pass
+
+    def _build_zip(self):
+        # look for the inputs in the localhost
+        # thenk look for them in the archives
+        # then build a zip with them
+        paths = []
+        zip_name = self._get_zip_name()
+        for g2f in self.inputs:
+            fetched = g2f.fetch(self.workingDir, use_archive=True, 
+                                decompress=False)
+            if len(fetched) > 0:
+                if g2f.name == 'swi':
+                    #zip_name = fetched[0].replace('.h5', '')
+                    fetched = self.host.compress(fetched)
+                paths += fetched
+        templates = self.host.list_dir(self.xmlTemplateDir, relativeTo='code')
+        xsl = [t for t in templates if t.endswith('.xsl')][0]
+        paths.append(xsl)
+        the_zip = self.host.build_zip(zip_name, paths, self.zipOutDir)
+        return the_zip
+
+    def _get_zip_name(self):
+        swi_inp = self._filter_g2f_list(self.inputs, 'name', 'swi')[0]
+        zip_name = swi_inp.searchPatterns[0].replace('.h5.*', '.zip')
+        return zip_name
+
+    def clean_up(self):
+        self._delete_directories([self.workingDir])
+        self.host.clean_dirs(self.zipOutDir)
+        return 0
+

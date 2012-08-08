@@ -824,7 +824,7 @@ class MetadataGenerator(object):
         vito_sdi_url = 'http://web.vgt.vito.be/download_g2.php?'
         url = '%s/operations/products/%s/%s/%s/product' % \
                 (baseURL, product.short_name, tileName, ts)
-        vito_url = '%sfile=&amp;path=%s&amp;serviceid=%s' % \
+        vito_url = '%sfile=&path=%s&serviceid=%s' % \
                    (vito_sdi_url, url, product.sdi_service_id)
         self.update_element('linkage', vito_url)
 
