@@ -8,7 +8,7 @@ remote servers at once.
 import sys
 sys.path.append('webg2system')
 
-from fabric.api import env, local, cd, run, settings
+from fabric.api import env, local, cd, run, settings, sudo
 
 from django.core.management import setup_environ
 import settings as s
@@ -20,14 +20,18 @@ import systemsettings.models as sm
 
 # define hosts here
 HOSTS = {
-    '180.180.30.99' : {
-        'user' : 'geo5',
-        'code_dir' : '/home/geo5/silvar/webg2system'
+    '180.180.30.97' : {
+        'user' : 'geo3',
+        'code_dir' : '/home/geo3/webg2system'
     },
-    '193.137.20.109' :{
-        'user' : 'geoland2',
-        'code_dir' : '/home/geoland2/webg2system'
-    },
+    #'180.180.30.99' : {
+    #    'user' : 'geo5',
+    #    'code_dir' : '/home/geo5/silvar/webg2system'
+    #},
+    #'193.137.20.109' :{
+    #    'user' : 'geoland2',
+    #    'code_dir' : '/home/geoland2/webg2system'
+    #},
 }
 
 def _prepare_env_hosts():
@@ -65,6 +69,11 @@ def deploy():
     defined hosts.
     '''
 
+    # else:
+    # - pull latest changes
+    # after everything:
+    # - touch the wsgi file
+
     global HOSTS
     code_dir = HOSTS[env.host]['code_dir']
     with settings(warn_only=True):
@@ -74,6 +83,13 @@ def deploy():
     with cd(code_dir):
         run('git pull origin master')
         run('touch webg2system/wsgi.py')
+
+def first_deployment():
+    # - install git if it is not installed
+    # - clone the repo
+    # - install external dependencies using apt-get and pip
+    sudo('apt-get install git')
+
 
 #FIXME - Finish this method
 def get_private_code():
