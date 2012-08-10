@@ -1025,6 +1025,7 @@ class SWIProcessor(ProcessingPackage):
                                            host=host, logger=logger)
         self.rawSettings = settings
         self.name = settings.name
+        self.product = settings.product
         self.version = settings.external_code.version
         relOutDir = utilities.parse_marked(
                 settings.packagepath_set.get(name='outputDir'), 
@@ -1228,6 +1229,35 @@ class SWIProcessor(ProcessingPackage):
         if compressOutputs:
             self.compress_outputs()
         return 0
+
+    def modify_xml(self):
+        '''
+        Insert the correct XML fields in regard to dissemination.
+
+        This method will modify the self-generated XML file from the external
+        SWI_g2 code package. It will insert the correct information regarding:
+
+        - UUID of the parent series
+        - Contact details of the dissemination facility
+        - URLs for the product, the quicklook and other documents
+        '''
+
+        g2fs = self._filter_g2f_list(self.outputs, 'fileType', 'xml')
+        fetched = self._fetch_files(g2fs, self.workingDir, useArchive=True)
+        self.logger.debug('fetched: %s' % fetched)
+        xml_outputs = fetched.get(g2fs[0])
+        if len(xml_outputs) > 0:
+            xml_path = xml_outputs[0]
+            md_modifier = metadatas.SWIMetadataModifier(xml_path,
+                                                        self.product)
+            md_modifier.modify_metadata_contact()
+            md_modifier.modify_principalIvestigator_contact()
+            #md_modifier.modify_urls()
+            xml_name = os.path.split(xml_path)[-1]
+            if not self.host.is_dir(self.outputDir):
+                self.host.make_dir(self.outputDir)
+            md_modifier.save_xml(os.path.join(self.outputDir, xml_name))
+            #md_modifier.replace_archive()
 
 
 class DataFusion(Processor):

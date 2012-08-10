@@ -28,6 +28,151 @@ import systemsettings.models as ss
 # Order the elements according to the element_order attribute
 # Check the remaining xml errors
 
+class SWIMetadataModifier(object):
+
+    def __init__(self, xml_file, swi_settings, logger=None):
+        if logger is None:
+            self.logger = logging.getLogger(
+                    '.'.join((__name__, self.__class__.__name__)))
+        else:
+            self.logger = logger
+        self.product = swi_settings
+        self.tree = etree.parse(xml_file)
+        self.ns = self.tree.getroot().nsmap.copy()
+        # in order to use this dictionary for XPATH queries the default 
+        # entry has to be deleted
+        del self.ns[None] 
+
+    def modify_metadata_contact(self):
+        contact = self.product.distributor
+        role = 'pointOfContact'
+        position = None
+        xpath = self.tree.xpath('gmd:contact/gmd:CI_ResponsibleParty', 
+                                namespaces=self.ns)[0]
+        self._modify_ci_responsible_party(xpath, contact, role, position)
+
+    def modify_principalIvestigator_contact(self):
+        contact = self.product.principal_investigator
+        role = 'principalInvestigator'
+        position = 'Researcher'
+        xpath = self.tree.xpath('gmd:identificationInfo/gmd:' \
+                                'MD_DataIdentification/gmd:' \
+                                'pointOfContact/gmd:CI_ResponsibleParty', 
+                                namespaces=self.ns)[0]
+        self._modify_ci_responsible_party(xpath, contact, role, position)
+
+    def modify_originator_contact(self):
+        contact = self.product.originator
+        role = 'originator'
+        position = 'Geoland2 Help Desk'
+        xpath = self.tree.xpath('gmd:identificationInfo/gmd:' \
+                                'MD_DataIdentification/gmd:' \
+                                'pointOfContact/gmd:CI_ResponsibleParty', 
+                                namespaces=self.ns)[1]
+        self._modify_ci_responsible_party(xpath, contact, role, position)
+
+    def _modify_ci_responsible_party(self, xml_element, contact, role,
+                                     position=None):
+        # fields to modify:
+        # - organisationName
+        org_name_el = xml_element.xpath('gmd:organisationName/gco:CharacterString', 
+                                        namespaces=self.ns)[0]
+        org_name_el.text = contact.organization.name
+        # - positionName (may be absent)
+        if position is not None:
+            position_name_el = xml_element.xpath('gmd:positionName/gco:CharacterString', 
+                                                 namespaces=self.ns)[0]
+            position_name_el.text = position
+        # - contactInfo
+        ci_contact_el = xml_element.xpath('gmd:contactInfo/gmd:CI_Contact', 
+                                          namespaces=self.ns)[0]
+        self._modify_ci_contact(ci_contact_el, contact)
+        # - role
+        role_el = xml_element.xpath('gmd:role/gmd:CI_RoleCode', 
+                                    namespaces=self.ns)[0]
+        role_el.attrib['codeListValue'] = role
+        role_el.text = role
+
+    def _modify_ci_contact(self, xml_element, contact):
+        # fields to modify:
+        # - address
+        ci_address_el = xml_element.xpath('gmd:address/gmd:CI_Address', 
+                                          namespaces=self.ns)[0]
+        self._modify_ci_address(ci_address_el, contact)
+        # - onlineResource
+        ci_onlineResource_el = xml_element.xpath('gmd:onlineResource/gmd:CI_OnlineResource', 
+                                                 namespaces=self.ns)[0]
+        self._modify_ci_online_resource(
+            xml_element=ci_onlineResource_el,
+            url=contact.organization.url,
+            protocol='HTTP',
+            name='%s website' % contact.organization.short_name,
+            description='Organization website',
+            function='information'
+        )
+        # - hoursOfService
+        hours_el = xml_element.xpath('gmd:hoursOfService/gco:CharacterString', 
+                                     namespaces=self.ns)[0]
+        hours_el.text = 'Office hours, 5 days per week'
+        # - contactInstructions
+        instructions_el = xml_element.xpath('gmd:contactInstructions/gco:CharacterString', 
+                                            namespaces=self.ns)[0]
+        instructions_el.text = 'Preferably by e-mail'
+
+    def _modify_ci_address(self, xml_element, contact):
+        # fields to modify:
+        # - deliveryPoint
+        delivery_point_el = xml_element.xpath('gmd:deliveryPoint/gco:CharacterString', 
+                                              namespaces=self.ns)[0]
+        delivery_point_el.text = contact.organization.streetAddress
+        # - city
+        city_el = xml_element.xpath('gmd:city/gco:CharacterString', 
+                                    namespaces=self.ns)[0]
+        city_el.text = contact.organization.city
+        # - postalCode
+        postal_el = xml_element.xpath('gmd:postalCode/gco:CharacterString', 
+                                      namespaces=self.ns)[0]
+        postal_el.text = contact.organization.postalCode
+        # - Country
+        country_code  = contact.organization.country
+        country_el = xml_element.xpath('gmd:country/gmd:Country', 
+                                       namespaces=self.ns)[0]
+        country_el.attrib['codeListValue'] = country_code
+        country_el.text = pycountry.countries.get(alpha2=country_code).name
+        # - electronicMailAddress
+        email_el = xml_element.xpath('gmd:electronicMailAddress/gco:CharacterString', 
+                                      namespaces=self.ns)[0]
+        email_el.text = contact.email
+
+    def _modify_ci_online_resource(self, xml_element, url, protocol, name, 
+                                   description, function):
+        # fields to modify:
+        # - linkage
+        linkage_el = xml_element.xpath('gmd:linkage/gmd:URL', namespaces=self.ns)[0]
+        linkage_el.text = url
+        # - protocol
+        protocol_el = xml_element.xpath('gmd:protocol/gco:CharacterString', 
+                                        namespaces=self.ns)[0]
+        protocol_el.text = protocol
+        # - name
+        name_el = xml_element.xpath('gmd:name/gco:CharacterString', 
+                                    namespaces=self.ns)[0]
+        name_el.text = name
+        # - description
+        desc_el = xml_element.xpath('gmd:description/gco:CharacterString', 
+                                    namespaces=self.ns)[0]
+        desc_el.text = description
+        # - function
+        function_el = xml_element.xpath('gmd:function/gmd:CI_OnLineFunctionCode', 
+                                       namespaces=self.ns)[0]
+        function_el.attrib['codeListValue'] = function
+        function_el.text = function
+
+    def save_xml(self, path):
+        self.logger.debug('save path: %s' % path)
+        self.tree.write(path)
+
+
 class MetadataGenerator(object):
 
     element_order = {
@@ -265,16 +410,6 @@ class MetadataGenerator(object):
         Save the xml metadata to a file.
         '''
 
-        # a hack to prevent the encoding of & into &amp;
-        #temp_path = path + '.temp'
-        #self.tree.write(temp_path)
-        #new_contents = []
-        #with open(temp_path) as f:
-        #    for line in f:
-        #        new_contents.append(line.replace('&amp;', '&'))
-        #with open(path, 'w') as f:
-        #    f.writelines(new_contents)
-        #os.remove(temp_path)
         self.tree.write(path)
 
     def update_element(self, elementName, value):
@@ -394,7 +529,6 @@ class MetadataGenerator(object):
                         'ML_gmxCodelists.xml#CI_DateTypeCode'
                 codeElAttribs['codeListValue'] = vocSettings.date_type
                 dateTypeCodeEl.text = vocSettings.date_type
-
 
     def _apply_INSPIRE_keyword(self, productSettings):
         '''
