@@ -403,7 +403,7 @@ class G2File(GenericItem):
 
         if destHost is None:
             destHost = self.host
-        found = self.find(useArchive=False)['paths']
+        found = self.find(use_archive=False)['paths']
         if len(found) > 0:
             if destDir is None:
                 relDir = os.path.join(destHost.dataPath, 
