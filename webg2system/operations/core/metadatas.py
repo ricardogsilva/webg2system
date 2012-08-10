@@ -265,6 +265,16 @@ class MetadataGenerator(object):
         Save the xml metadata to a file.
         '''
 
+        # a hack to prevent the encoding of & into &amp;
+        #temp_path = path + '.temp'
+        #self.tree.write(temp_path)
+        #new_contents = []
+        #with open(temp_path) as f:
+        #    for line in f:
+        #        new_contents.append(line.replace('&amp;', '&'))
+        #with open(path, 'w') as f:
+        #    f.writelines(new_contents)
+        #os.remove(temp_path)
         self.tree.write(path)
 
     def update_element(self, elementName, value):
@@ -1194,7 +1204,8 @@ class MetadataGenerator(object):
             'xmlns:csw="http://www.opengis.net/cat/csw/2.0.2">'
         for filePath in fileList:
             theXML = etree.parse(filePath)
-            theRequest += '<csw:Insert>' + etree.tostring(theXML) + '</csw:Insert>'
+            xml_as_string = etree.tostring(theXML)
+            theRequest += '<csw:Insert>' + xml_as_string + '</csw:Insert>'
         theRequest += '</csw:Transaction>'
         try:
             result = False
