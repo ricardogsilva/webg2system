@@ -17,10 +17,18 @@ urlpatterns = patterns('',
 urlpatterns += patterns('operations.views',
         url(r'^create/$', 'execute_package'),
         url(r'^products/(?P<prodName>\w+)/docs/pum/$', 'get_product_user_manual'),
+        
         url(r'^products/(?P<prodName>\w+)/(?P<tile>\w+)/' \
-                '(?P<timeslot>\d{12})/product/$', 'get_product_zip'),
+            '(?P<timeslot>\d{12})/product/$', 'get_product_zip'),
+        url(r'^products/SWI/(?P<timeslot>\d{12})/product/$', 
+            'get_swi_product_zip'),
+
         url(r'^products/(?P<prodName>\w+)/(?P<tile>\w+)/' \
                 '(?P<timeslot>\d{12})/quicklook/$', 'get_quicklook'),
+
+        url(r'^products/SWI/(?P<timeslot>\d{12})/quicklook/$', 'get_swi_quicklook'),
+
+
         url(r'^products/(?P<prodName>\w+)/seriesquicklook/$', 
             'get_series_quicklook'),
 )

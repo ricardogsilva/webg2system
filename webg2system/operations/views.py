@@ -17,7 +17,7 @@ from systemsettings.models import Package, Area, Host, File
 from forms import CreatePackageForm
 
 import systemsettings.models as ss
-from core.g2packages import QuickLookGenerator, TileDistributor
+from core.g2packages import QuickLookGenerator, TileDistributor, SWIDistributor, SWIProcessor
 import core.g2hosts as g2hosts
 
 logger = logging.getLogger(__name__)
@@ -117,11 +117,11 @@ def get_product_user_manual(request, prodName):
         raise Http404
     return result
 
-def get_product_zip(request, prodName, tile, timeslot):
+def get_product_zip(request, prod_name, tile, timeslot):
     ts = dt.datetime.strptime(timeslot, '%Y%m%d%H%M')
-    settings = ss.Package.objects.get(code_class__className='TileDistributor',
-                                      product__short_name=prodName)
     area = ss.Area.objects.get(name='.*')
+    settings = ss.Package.objects.get(code_class__className='TileDistributor',
+                                      product__short_name=prod_name)
     pack = TileDistributor(settings, ts, area, logger=logger)
     theZip = pack.run_main(tile=tile)
     pack.clean_up()
@@ -130,6 +130,23 @@ def get_product_zip(request, prodName, tile, timeslot):
                                 content_type='application/zip')
         response['Content-Disposition'] = 'attachment; filename=%s' \
                                           % os.path.basename(theZip)
+        result = response
+    else:
+        raise Http404
+    return result
+
+def get_swi_product_zip(request, timeslot):
+    ts = dt.datetime.strptime(timeslot, '%Y%m%d%H%M')
+    area = ss.Area.objects.get(name='.*')
+    settings = ss.Package.objects.get(code_class__className='SWIDistributor')
+    pack = SWIDistributor(settings, ts, area, logger=logger)
+    the_zip = pack.run_main()
+    pack.clean_up()
+    if the_zip is not None:
+        response = HttpResponse(FileWrapper(open(the_zip)), 
+                                content_type='application/zip')
+        response['Content-Disposition'] = 'attachment; filename=%s' \
+                                          % os.path.basename(the_zip)
         result = response
     else:
         raise Http404
@@ -148,6 +165,22 @@ def get_quicklook(request, prodName, tile, timeslot):
             theQuickLook = quickLooks[0]
             imgData = open(theQuickLook).read()
             response = HttpResponse(imgData, mimetype='image/png')
+        else:
+            raise Http404
+    else:
+        raise Http404
+    return response
+
+def get_swi_quicklook(request, timeslot):
+    ts = dt.datetime.strptime(timeslot, '%Y%m%d%H%M')
+    settings = ss.Package.objects.get(code_class__className='SWIProcessor')
+    area = ss.Area.objects.get(name='.*')
+    pack = SWIProcessor(settings, ts, area, logger=logger)
+    if pack is not None:
+        quick_look = pack.get_quicklook()
+        if quick_look is not None:
+            img_data = open(quick_look).read()
+            response = HttpResponse(img_data, mimetype='image/png')
         else:
             raise Http404
     else:

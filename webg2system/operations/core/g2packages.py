@@ -1259,6 +1259,15 @@ class SWIProcessor(ProcessingPackage):
             md_modifier.save_xml(os.path.join(self.outputDir, xml_name))
             #md_modifier.replace_archive()
 
+    def get_quicklook(self):
+        g2f = self._filter_g2f_list(self.outputs, 'fileType', 'png')[0]
+        fetched = g2f.fetch(self.outputDir, use_archive=True)
+        if len(fetched) > 0:
+            result = fetched[0]
+        else:
+            result = None
+        return result
+
 
 class DataFusion(Processor):
     '''
@@ -2650,26 +2659,41 @@ class SWIDistributor(ProcessingPackage):
             )
 
     def get_zip(self):
+        '''
+        Return the path to the zip file for dissemination.
+        '''
+
         # look for the zip file in the localhost
         # then look for it in the archives
         # if not found, call the _build_zip method
-        zip_name = self._get_zip_name()
-
-    def _find_zip(self):
-        pass
+        zip_file = [g2f for g2f in self.outputs if g2f.fileType == 'zip'][0]
+        fetched = zip_file.fetch(self.zipOutDir, use_archive=True, 
+                                 decompress=False)
+        if len(fetched) > 0:
+            #fetch or use the local one
+            self.logger.debug('Re-using previously present zip file.')
+            the_zip = fetched[0]
+        else:
+            #build a new zip
+            self.logger.debug('Building a new zip file...')
+            the_zip = self._build_zip()
+        return the_zip
 
     def _build_zip(self):
         # look for the inputs in the localhost
         # thenk look for them in the archives
         # then build a zip with them
+        self.host.make_dir(self.zipOutDir)
+        self.host.make_dir(self.workingDir)
         paths = []
-        zip_name = self._get_zip_name()
+        zip_file = [g2f for g2f in self.outputs if g2f.fileType == 'zip'][0]
+        file_name, zip_ext, rest = zip_file.searchPatterns[0].partition('zip')
+        zip_name = ''.join((file_name, zip_ext))
         for g2f in self.inputs:
             fetched = g2f.fetch(self.workingDir, use_archive=True, 
                                 decompress=False)
             if len(fetched) > 0:
                 if g2f.name == 'swi':
-                    #zip_name = fetched[0].replace('.h5', '')
                     fetched = self.host.compress(fetched)
                 paths += fetched
         templates = self.host.list_dir(self.xmlTemplateDir, relativeTo='code')
@@ -2678,13 +2702,10 @@ class SWIDistributor(ProcessingPackage):
         the_zip = self.host.build_zip(zip_name, paths, self.zipOutDir)
         return the_zip
 
-    def _get_zip_name(self):
-        swi_inp = self._filter_g2f_list(self.inputs, 'name', 'swi')[0]
-        zip_name = swi_inp.searchPatterns[0].replace('.h5.*', '.zip')
-        return zip_name
-
     def clean_up(self):
         self._delete_directories([self.workingDir])
         self.host.clean_dirs(self.zipOutDir)
         return 0
 
+    def run_main(self):
+        return self.get_zip()
