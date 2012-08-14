@@ -821,6 +821,13 @@ class G2LocalHost(G2Host):
         zf.close()
         return full_path
 
+    def find_running_packages(self):
+        '''
+        Return the G2Package classes that have been running on this host.
+        '''
+
+        raise NotImplementedError
+
 
 class G2RemoteHost(G2Host):
     '''
