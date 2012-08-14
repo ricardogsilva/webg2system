@@ -5,6 +5,7 @@
 A fabric fabfile in order to automate system installation/upgrade on several
 remote servers at once.
 """
+
 import sys
 sys.path.append('webg2system')
 
@@ -16,8 +17,7 @@ setup_environ(s)
 
 import systemsettings.models as sm
 
-
-
+#FIXME - get the hosts directly from the django settings
 # define hosts here
 HOSTS = {
     '180.180.30.97' : {
