@@ -69,27 +69,39 @@ def deploy():
     defined hosts.
     '''
 
-    # else:
-    # - pull latest changes
-    # after everything:
-    # - touch the wsgi file
-
     global HOSTS
     code_dir = HOSTS[env.host]['code_dir']
     with settings(warn_only=True):
         if run('test -d %s' % code_dir).failed:
-            run('git clone git@github.com:ricardogsilva/webg2system.git %s' % \
-                code_dir)
+            first_deployment()
+        else:
+            with cd(code_dir):
+                run('git pull origin master')
     with cd(code_dir):
-        run('git pull origin master')
         run('touch webg2system/wsgi.py')
 
 def first_deployment():
-    # - install git if it is not installed
-    # - clone the repo
-    # - install external dependencies using apt-get and pip
-    sudo('apt-get install git')
+    install_apt_dependencies()
+    clone_repo()
+    install_pip_dependencies()
 
+def install_apt_dependencies():
+    sudo('apt-get install git python-pip python-pexpect python-pyparsing ' \
+         'python-lxml python-tables python-imaging gdal-bin python-gdal ' \
+         'python-mapscript libapache2-mod-wsgi cgi-mapserver mapserver-bin ' \
+         'ttf-freefont')
+
+def clone_repo():
+    global HOSTS
+    code_dir = HOSTS[env.host]['code_dir']
+    run('git clone git@github.com:ricardogsilva/webg2system.git %s' % \
+        code_dir)
+
+def install_pip_dependencies():
+    global HOSTS
+    code_dir = HOSTS[env.host]['code_dir']
+    with cd(code_dir):
+        sudo('pip install -r requirements.txt')
 
 #FIXME - Finish this method
 def get_private_code():
