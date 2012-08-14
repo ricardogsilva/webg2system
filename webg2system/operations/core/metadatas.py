@@ -28,20 +28,80 @@ import systemsettings.models as ss
 # Order the elements according to the element_order attribute
 # Check the remaining xml errors
 
-class SWIMetadataModifier(object):
+class MetadataHandler(object):
 
-    def __init__(self, xml_file, swi_settings, logger=None):
+    def __init__(self, logger=None):
         if logger is None:
             self.logger = logging.getLogger(
                     '.'.join((__name__, self.__class__.__name__)))
         else:
             self.logger = logger
+
+    def _execute_csw_insert_request(self, fileList, url, headers, opener):
+        theRequest = '<?xml version="1.0" encoding="UTF-8"?>'\
+            '<csw:Transaction service="CSW" version="2.0.2" '\
+            'xmlns:csw="http://www.opengis.net/cat/csw/2.0.2">'
+        for filePath in fileList:
+            theXML = etree.parse(filePath)
+            xml_as_string = etree.tostring(theXML)
+            theRequest += '<csw:Insert>' + xml_as_string + '</csw:Insert>'
+        theRequest += '</csw:Transaction>'
+        try:
+            result = False
+            insertReq = urllib2.Request(url, theRequest, headers)
+            response = opener.open(insertReq)
+            # CSW response
+            xml_response = response.read()
+            self.logger.info('xml_response: %s' % xml_response)
+            tree = etree.fromstring(xml_response)
+            if 'TransactionResponse' in tree.tag:
+                result = True
+            elif 'ExceptionReport' in tree.tag:
+                self.logger.error('Couldn\'t send the data to the catalogue '\
+                                  'server. This is the server\'s response:')
+                self.logger.debug(xml_response)
+            else:
+                self.logger.debug('unspecified condition')
+        except urllib2.HTTPError, error:
+            self.logger.error(error.read())
+        return result
+
+
+class SWIMetadataModifier(MetadataHandler):
+
+    def __init__(self, swi_settings, logger=None):
+        super(SWIMetadataModifier, self).__init__(logger)
         self.product = swi_settings
+        #self.tree = etree.parse(xml_file)
+        #self.ns = self.tree.getroot().nsmap.copy()
+        ## in order to use this dictionary for XPATH queries the default 
+        ## entry has to be deleted
+        #del self.ns[None] 
+
+    def parse_file(self, xml_file):
         self.tree = etree.parse(xml_file)
         self.ns = self.tree.getroot().nsmap.copy()
         # in order to use this dictionary for XPATH queries the default 
         # entry has to be deleted
         del self.ns[None] 
+
+    def modify_uuids(self):
+        uuid = str(uuid1())
+        self.modify_file_identifier(uuid)
+        self.modify_id_info_modifier(uuid)
+
+    def modify_file_identifier(self, uuid):
+        file_id_el = self.tree.xpath('gmd:fileIdentifier/gco:CharacterString',
+                                namespaces=self.ns)[0]
+        file_id_el.text = uuid
+
+    def modify_id_info_modifier(self, uuid):
+        el = self.tree.xpath('gmd:identificationInfo/' \
+                             'gmd:MD_DataIdentification/gmd:citation/' \
+                             'gmd:CI_Citation/gmd:identifier/' \
+                             'gmd:MD_Identifier/gmd:code', 
+                             namespaces=self.ns)[0]
+        el.text = uuid
 
     def modify_metadata_contact(self):
         contact = self.product.distributor
@@ -70,6 +130,67 @@ class SWIMetadataModifier(object):
                                 'pointOfContact/gmd:CI_ResponsibleParty', 
                                 namespaces=self.ns)[1]
         self._modify_ci_responsible_party(xpath, contact, role, position)
+
+    def save_xml(self, path):
+        self.logger.debug('save path: %s' % path)
+        self.tree.write(path)
+
+    def insert_csw(self, csw_url, login_url, logout_url, username,
+                    password, file_path):
+        '''
+        Insert metadata records in the catalogue server.
+
+        This code is adapted from
+        http://trac.osgeo.org/geonetwork/wiki/HowToDoCSWTransactionOperations#Python
+
+        Inputs:
+            
+            csw_url - URL for the CSW entry point.
+
+            login_url - URL for the CSW log in page.
+
+            logout_url - URL for the CSW log out page.
+
+            username - username for the catalogue server's insert operation.
+
+            password - password for the user
+
+            filePaths - The path to the xml file to send to the catalogue 
+                        server.
+        '''
+
+        headers_auth = {
+            "Content-type": "application/x-www-form-urlencoded", 
+            "Accept": "text/plain"
+        }
+        headers_xml = {
+            "Content-type": "application/xml", 
+            "Accept": "text/plain"
+        }
+        data = urllib.urlencode({"username": username, "password": password})
+        logoutReq = urllib2.Request(logout_url) # first, always log out
+        response = urllib2.urlopen(logoutReq)
+        #self.logger.debug(response.read())
+        # send authentication request
+        loginReq = urllib2.Request(login_url, data, headers_auth)
+        response = urllib2.urlopen(loginReq)
+        # a basic memory-only cookie jar instance
+        cookies = cookielib.CookieJar()
+        cookies.extract_cookies(response,loginReq)
+        cookie_handler= urllib2.HTTPCookieProcessor(cookies)
+        # a redirect handler
+        redirect_handler= urllib2.HTTPRedirectHandler()
+        # save cookie and redirect handler for future HTTP Posts
+        opener = urllib2.build_opener(redirect_handler,cookie_handler)
+        result = self._execute_csw_insert_request([file_path], 
+                                                  csw_url, 
+                                                  headers_xml, 
+                                                  opener)
+        self.logger.debug('result: %s' % result)
+        logoutReq = urllib2.Request(logout_url) # Last, always log out
+        response = opener.open(logoutReq)
+        #self.logger.debug(response.read())
+        return result
 
     def _modify_ci_responsible_party(self, xml_element, contact, role,
                                      position=None):
@@ -167,10 +288,6 @@ class SWIMetadataModifier(object):
                                        namespaces=self.ns)[0]
         function_el.attrib['codeListValue'] = function
         function_el.text = function
-
-    def save_xml(self, path):
-        self.logger.debug('save path: %s' % path)
-        self.tree.write(path)
 
 
 class MetadataGenerator(object):

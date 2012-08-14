@@ -1230,6 +1230,69 @@ class SWIProcessor(ProcessingPackage):
             self.compress_outputs()
         return 0
 
+    def get_quicklook(self):
+        g2f = self._filter_g2f_list(self.outputs, 'fileType', 'png')[0]
+        fetched = g2f.fetch(self.outputDir, use_archive=True)
+        if len(fetched) > 0:
+            result = fetched[0]
+        else:
+            result = None
+        return result
+
+
+class SWIMetadataHandler(ProcessingPackage):
+
+    def __init__(self, settings, timeslot, area, host=None, 
+                 logger=None, createIO=True):
+        '''
+        Inputs:
+
+            settings - A systemsettings.models.Package object
+
+            timeslot - A datetime.datetime object
+
+            area - A systemsettings.models.Area object
+
+            host - A systemsettings.models.Host object
+
+            createIO - A boolean indicating if the inputs and outputs
+                are to be created. Defaults to True.
+        '''
+
+        super(SWIMetadataHandler, self).__init__(settings, timeslot, area, 
+                                                 host=host, logger=logger)
+        self.rawSettings = settings
+        self.name = settings.name
+        self.product = settings.product
+        self.version = settings.external_code.version
+        relOutDir = utilities.parse_marked(
+                settings.packagepath_set.get(name='outputDir'), 
+                self)
+        self.outputDir = os.path.join(self.host.dataPath, relOutDir)
+        relCodeDir = utilities.parse_marked(
+            settings.external_code.externalcodeextrainfo_set.get(name='path'),
+            settings.external_code
+        )
+        self.codeDir = os.path.join(self.host.codePath, relCodeDir)
+        relWorkDir = utilities.parse_marked(
+                settings.packagepath_set.get(name='workingDir'), 
+                self)
+        self.workingDir = os.path.join(self.host.dataPath, relWorkDir)
+        if createIO:
+            self.inputs = self._create_files(
+                'input', 
+                settings.packageInput_systemsettings_packageinput_related.all()
+            )
+            self.outputs = self._create_files(
+                'output', 
+                settings.packageOutput_systemsettings_packageoutput_related.all()
+            )
+            self.md_modifier = metadatas.SWIMetadataModifier(self.product)
+
+    def run_main(self, callback=None):
+        self.modify_xml()
+        self.archive_outputs(compress=False)
+
     def modify_xml(self):
         '''
         Insert the correct XML fields in regard to dissemination.
@@ -1242,31 +1305,54 @@ class SWIProcessor(ProcessingPackage):
         - URLs for the product, the quicklook and other documents
         '''
 
-        g2fs = self._filter_g2f_list(self.outputs, 'fileType', 'xml')
+        self.host.make_dir(self.workingDir)
+        if not self.host.is_dir(self.outputDir):
+            self.host.make_dir(self.outputDir)
+        g2fs = self._filter_g2f_list(self.inputs, 'fileType', 'xml')
         fetched = self._fetch_files(g2fs, self.workingDir, useArchive=True)
         self.logger.debug('fetched: %s' % fetched)
         xml_outputs = fetched.get(g2fs[0])
         if len(xml_outputs) > 0:
             xml_path = xml_outputs[0]
-            md_modifier = metadatas.SWIMetadataModifier(xml_path,
-                                                        self.product)
-            md_modifier.modify_metadata_contact()
-            md_modifier.modify_principalIvestigator_contact()
-            #md_modifier.modify_urls()
+            self.md_modifier.parse_file(xml_path)
+            self.md_modifier.modify_uuids()
+            self.md_modifier.modify_metadata_contact()
+            self.md_modifier.modify_principalIvestigator_contact()
+            #self.md_modifier.modify_urls()
             xml_name = os.path.split(xml_path)[-1]
-            if not self.host.is_dir(self.outputDir):
-                self.host.make_dir(self.outputDir)
-            md_modifier.save_xml(os.path.join(self.outputDir, xml_name))
-            #md_modifier.replace_archive()
-
-    def get_quicklook(self):
-        g2f = self._filter_g2f_list(self.outputs, 'fileType', 'png')[0]
-        fetched = g2f.fetch(self.outputDir, use_archive=True)
-        if len(fetched) > 0:
-            result = fetched[0]
+            out_path = os.path.join(self.outputDir, xml_name)
+            self.md_modifier.save_xml(out_path)
+            result = out_path
         else:
             result = None
         return result
+
+    def send_to_csw(self, xml_file):
+        '''
+        Insert metadata records in the catalogue server.
+
+        Inputs:
+
+            xml_file - The path to the XML file.
+
+        Returns:
+        
+            A boolean with the insert operation's result.
+        '''
+
+        cswSetts = ss.CatalogueServer.objects.get()
+        csw_url = '/'.join((cswSetts.base_URL, cswSetts.csw_URI))
+        login_url = '/'.join((cswSetts.base_URL, cswSetts.login_URI))
+        logout_url = '/'.join((cswSetts.base_URL, cswSetts.logout_URI))
+        result = self.md_modifier.insert_csw(csw_url, login_url, logout_url,
+                                             cswSetts.username, 
+                                             cswSetts.password,
+                                             xml_file)
+        return result
+
+    def clean_up(self):
+        self._delete_directories([self.workingDir])
+        self.host.clean_dirs(self.outputDir)
 
 
 class DataFusion(Processor):
