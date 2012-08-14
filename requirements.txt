@@ -1,9 +1,11 @@
 #gdal is managed in its own script for now
+#ipython==0.12
+#lxml==2.3.4
+#wsgiref==0.1.2
 Django==1.4
 South==0.7.4
 distribute==0.6.24
-ipython==0.12
-lxml==2.3.4
 numpy==1.6.1
 pycountry==0.14.1
-wsgiref==0.1.2
+pysftp==0.2.2
+ConcurrentLogHandler==0.8.4
