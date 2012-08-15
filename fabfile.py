@@ -17,48 +17,31 @@ setup_environ(s)
 
 import systemsettings.models as sm
 
-#FIXME - get the hosts directly from the django settings
-# define hosts here
-HOSTS = {
-    '180.180.30.97' : {
-        'user' : 'geo3',
-        'code_dir' : '/home/geo3/webg2system'
-    },
-    #'180.180.30.99' : {
-    #    'user' : 'geo5',
-    #    'code_dir' : '/home/geo5/silvar/webg2system'
-    #},
-    #'193.137.20.109' :{
-    #    'user' : 'geoland2',
-    #    'code_dir' : '/home/geoland2/webg2system'
-    #},
-}
-
-def _prepare_env_hosts():
+def _get_active_hosts():
     '''
-    Return a list suitable for fabric's env.hosts variable.
+    Scan the systemsettings django app and get a list of the defined hosts.
 
-    The returned list is constructed from the global HOSTS
-    variable.
+    The returned list will not include hosts with an 'archive' role, even
+    if they are defined as active. Presumably there will be no need to
+    install or update anything on the archives.
     '''
 
-    global HOSTS
-    host_list = []
-    for host, settings in HOSTS.iteritems():
-        host_string = '%s@%s:%s' % (settings['user'], 
-                                    host, 
-                                    settings.get('port', 22))
-        host_list.append(host_string)
-    return host_list
+    hosts = sm.Host.objects.filter(active=True).exclude(role__name='archive')
+    hosts_list = ['%s@%s:22' % (h.username, h.ip) for h in hosts]
+    return hosts_list
 
-env.hosts = _prepare_env_hosts()
+def _get_code_dir():
+    host_settings = sm.Host.objects.get(ip=env.host)
+    return host_settings.codePath
+
+env.hosts = _get_active_hosts()
 
 def prepare_deploy():
     commit()
     push()
 
 def commit():
-    local('git add --patch && git commit')
+    local('git add --interactive && git commit')
 
 def push():
     local('git push origin master')
@@ -69,8 +52,7 @@ def deploy():
     defined hosts.
     '''
 
-    global HOSTS
-    code_dir = HOSTS[env.host]['code_dir']
+    code_dir = _get_code_dir()
     with settings(warn_only=True):
         if run('test -d %s' % code_dir).failed:
             first_deployment()
@@ -92,14 +74,12 @@ def install_apt_dependencies():
          'ttf-freefont')
 
 def clone_repo():
-    global HOSTS
-    code_dir = HOSTS[env.host]['code_dir']
+    code_dir = _get_code_dir()
     run('git clone git@github.com:ricardogsilva/webg2system.git %s' % \
         code_dir)
 
 def install_pip_dependencies():
-    global HOSTS
-    code_dir = HOSTS[env.host]['code_dir']
+    code_dir = _get_code_dir()
     with cd(code_dir):
         sudo('pip install -r requirements.txt')
 
