@@ -6,6 +6,7 @@ A fabric fabfile in order to automate system installation/upgrade on several
 remote servers at once.
 """
 
+import os
 import sys
 sys.path.append('webg2system')
 
@@ -83,41 +84,22 @@ def install_pip_dependencies():
     with cd(code_dir):
         sudo('pip install -r requirements.txt')
 
-#FIXME - Finish this method
+#FIXME - only checkout and compile code that the hosts want to run
 def get_private_code():
     '''
     Checkout the latest changes to the main product algorithms.
     '''
 
-    repository_url = 'http://gridpt13.meteo.pt/ciac/G2System/trunk'
-    ext_code = {
-        'GRIB2HDF5_g2' : 'PRE_PROCESS/GRIB2HDF5_g2/GRIB2HDF5_g2_v%s',
-        'LRIT2HDF5_g2' : 'PRE_PROCESS/LRIT2HDF5_g2/LRIT2HDF5_g2_v%s',
-        'CMa_g2' : 'PRODUCTS/CMa_g2/CMa_g2_v%s',
-        'DSLF_g2' : 'PRODUCTS/DSLF_g2/DSLF_g2_v%s',
-        'DSSF_g2' : 'PRODUCTS/DSSF_g2/DSSF_g2_v%s',
-        'GSA_g2' : 'PRODUCTS/GSA_g2/GSA_g2_v%s',
-        'GSA_PP_g2' : 'PRODUCTS/GSA_PP_g2/GSA_PP_g2_v%s',
-        'LST_g2' : 'PRODUCTS/LST_g2/LST_g2_v%s',
-        'REF_g2' : 'PRODUCTS/REF_g2/REF_g2_v%s',
-        'SAT_DATA_STAT_g2' : 'PRODUCTS/SAT_DATA_STAT_g2/SAT_DATA_STAT_g2_v%s',
-        'SA_g2' : 'PRODUCTS/SA_g2/SA_g2_v%s',
-        'SWI_g2' : 'PRODUCTS/SWI_g2/SWI_g2_v%s',
-    }
-    defined_packages = set()
-    for pack in sm.Package.objects.all():
-        code_name = None
-        version = None
-        for ei in pack.packageextrainfo_set.all():
-            if ei.name == 'codeName':
-                code_name = ei.string
-            elif ei.name == 'version':
-                version = ei.string
-        defined_packages.add((code_name, version))
-    for tup in defined_packages:
-        code_name, version = tup
-        extra_url = ext_code.get(code_name)
-        if extra_url is not None:
-            url = '/'.join((repository_url, extra_url % version))
-            print('url: %s' % url)
-    host_obj = sm.Host.objects.get(ip=env['host'])
+    for ec in sm.ExternalCode.objects.all():
+        repository_url = ec.get_repository()
+        host = sm.Host.objects.get(ip=env.host)
+        install_path = os.path.join(host.codePath, ec.get_relative_install_path())
+        vcs = ec.version_control_sw
+        if vcs == 'svn':
+            _svn_do_checkout(repository_url, install_path)
+        else:
+            pass
+
+def _svn_do_checkout(url, destination_dir):
+    print('url: %s' % url)
+    print('destination_dir: %s' % destination_dir)

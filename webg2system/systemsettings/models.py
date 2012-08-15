@@ -1,5 +1,4 @@
 from django.db import models
-
 from inspiresettings.models import SpatialDataTheme, Collaborator, TopicCategory, Keyword, TopicCategory
 
 # TODO
@@ -104,8 +103,19 @@ class ExternalCode(models.Model):
 
     def get_repository(self):
         marked_string = self.externalcodeextrainfo_set.get(name='repository')
-        return marked_string.string
+        return self._parse_marked_string(marked_string)
     get_repository.short_description = 'Repository'
+
+    def get_relative_install_path(self):
+        marked_string = self.externalcodeextrainfo_set.get(name='path')
+        return self._parse_marked_string(marked_string)
+
+    def _parse_marked_string(self, marked_string):
+        result = marked_string.string
+        for m in marked_string.marks.split(','):
+            m = m.strip()
+            result = result.replace('#', eval('self.%s' % m), 1)
+        return result
 
 class ExternalCodeExtraInfo(MarkedString):
     the_package = models.ForeignKey(ExternalCode)
