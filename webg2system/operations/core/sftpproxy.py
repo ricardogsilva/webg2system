@@ -93,7 +93,8 @@ class SFTPProxy(object):
         if self._connect():
             if working_dir is not None:
                 old_dir = self.connection.execute('pwd')[0].strip()
-                result = self.connection.execute('cd %s && ./%s' % \
+                #result = self.connection.execute('cd %s && ./%s' % \
+                result = self.connection.execute('cd %s && %s' % \
                          (working_dir, command))
                 self.connection.chdir(old_dir)
             else:

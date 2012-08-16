@@ -148,7 +148,6 @@ class G2Host(object):
     def __repr__(self):
         return self.name
 
-
     def _match_file_patterns(self, **kwargs):
         '''
         Return a list of patterns for files that match the input attribute.
@@ -509,6 +508,16 @@ class G2LocalHost(G2Host):
             self.logger.debug('About to perform a remote send...')
             result = self._send_to_remote(fullPaths, destDir, destHost)
         return result
+
+    def do_maintenance(self, older_than=120):
+        '''
+        Perform the maintenance operations on files older than x days.
+        '''
+
+        if self.to_delete_logs:
+            self._delete_logs(older_than)
+        if self.to_delete_files:
+            self._delete_old_files(older_than)
 
     # FIXME
     # - return the actual returncode, and not a hardcoded zero
@@ -1076,3 +1085,20 @@ class G2RemoteHost(G2Host):
         available_percent = int(stdout.split('\n')[2].split()[4].replace('%', ''))
         usage = 100 - available_percent
         return usage
+
+    def _delete_logs(self, older_than):
+        raise NotImplementedError
+
+    def _delete_old_files(self, older_than):
+        data_dir = os.path.join(self.dataPath, 'OUTPUT_DATA')
+        today = dt.datetime.today()
+        deletable_regexps = self._get_deletable_regexps()
+        regexp = ''
+        for exp in deletable_regexps:
+            # TODO convert exp from python syntax to posix-extended syntax
+            regexp += '.*%s.*|' % exp
+        regexp = regexp[:-1] # prune the last '|'
+        find_cmd = 'find . -regextype posix-extended -regex "%s"' % regexp
+        self.logger.debug('find_cmd: %s' % find_cmd)
+        #find_output = self.run_program(find_cmd, working_dir=data_dir)[0]
+        #print('result: %s' % find_output)
