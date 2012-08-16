@@ -128,6 +128,7 @@ class File(Item):
     toCompress = models.BooleanField(verbose_name='Compress')
     toDisseminate = models.BooleanField(verbose_name='Disseminate')
     toCopy = models.BooleanField(verbose_name='Copy')
+    toDelete = models.BooleanField(verbose_name='Delete', default=True)
     exceptHours = models.ManyToManyField(ExceptHour, blank=True)
     specificArchives = models.ManyToManyField(Host, null=True, blank=True,
                                               help_text='What archives should'\
