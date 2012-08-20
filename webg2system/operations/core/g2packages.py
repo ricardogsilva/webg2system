@@ -1872,7 +1872,7 @@ class OWSPreparator(ProcessingPackage):
         return globalProd
 
     def run_main(self, callback=None, generate=True, update=None, 
-                 archive=True):
+                 archive=True, delete_local=False):
         '''
         Inputs:
 
@@ -1891,6 +1891,9 @@ class OWSPreparator(ProcessingPackage):
                 This is useful in this package, because the machine that
                 creates the global tiff files is not necessarily the same
                 that serves the WMS service.
+
+            delete_local - Controls whether the outputs should be deleted
+                from the local host. Defaults to False.
         '''
 
         result = False
@@ -1917,6 +1920,8 @@ class OWSPreparator(ProcessingPackage):
                 self.update_latest_mapfile(geotiff)
             if archive:
                 self.archive_outputs()
+            if delete_local:
+                self.delete_outputs()
         else:
             self.logger.warning('Couldn\'t find the geotiff files.')
         return result
