@@ -233,3 +233,16 @@ def put_tile_into_pattern(tile_name, g2f):
             result = newPatt
             break
     return result
+
+def convert_regexp_syntax(regexp, to='posix-extended'):
+    '''
+    Convert a string between python and posix-extended regex syntax.
+    '''
+
+    if to == 'posix-extended':
+        result = regexp.replace('\d', '[0-9]')
+        result = result.replace('?P<tile_name>', '')
+        result = result.replace('?!', '')
+    elif to == 'python':
+        raise NotImplementedError
+    return result

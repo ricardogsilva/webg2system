@@ -843,8 +843,7 @@ class G2LocalHost(G2Host):
             available_percent = int(stdout.split('\n')[1].split()[4].replace('%', ''))
         except ValueError:
             raise
-        usage = 100 - available_percent
-        return usage
+        return available_percent
 
     def _delete_logs(self, older_than):
         '''
@@ -1031,7 +1030,7 @@ class G2RemoteHost(G2Host):
 
     #FIXME - Refactor the ssh part
     def run_program(self, command, working_dir=None, env=None, 
-                    protocol='sftp'):
+                    protocol='sftp', local_bin=True):
         '''
         Run an external program.
 
@@ -1047,12 +1046,16 @@ class G2RemoteHost(G2Host):
                 the command. This is useful for setting the SMS_PROG variable 
                 before pinging the sms server, for example.
 
+            local_bin - A boolean specifying if the program to be run is on
+                the local working_dir, or if it is already in the PATH.
+
         Returns:
 
             A tuple with the commands' stdout, stderr and return code.
         '''
         if protocol == 'sftp':
-            result = self._run_external_sftp(command, working_dir=working_dir)
+            result = self._run_external_sftp(command, local_bin,
+                                             working_dir=working_dir)
             result = '\n'.join(result)
         elif protocol == 'ssh':
             ssh = self._localConnection.get('ssh')
@@ -1063,9 +1066,10 @@ class G2RemoteHost(G2Host):
             result = ''.join(output)
         return result, '', 0
 
-    def _run_external_sftp(self, command, working_dir=None):
+    def _run_external_sftp(self, command, local_bin, working_dir=None):
         sftp_obj = self._localConnection.get('sftp')
-        result = sftp_obj.run_command(command, working_dir=working_dir)
+        result = sftp_obj.run_command(command, local_bin, 
+                                      working_dir=working_dir)
         return result
 
     def close_connection(self):
@@ -1083,8 +1087,7 @@ class G2RemoteHost(G2Host):
         command = 'df -h %s' % self.dataPath
         stdout, stderr, retcode = self.run_program(command)
         available_percent = int(stdout.split('\n')[2].split()[4].replace('%', ''))
-        usage = 100 - available_percent
-        return usage
+        return available_percent
 
     def _delete_logs(self, older_than):
         raise NotImplementedError
@@ -1096,9 +1099,11 @@ class G2RemoteHost(G2Host):
         regexp = ''
         for exp in deletable_regexps:
             # TODO convert exp from python syntax to posix-extended syntax
-            regexp += '.*%s.*|' % exp
+            converted_exp = utilities.convert_regexp_syntax(exp)
+            regexp += '.*%s.*|' % converted_exp
         regexp = regexp[:-1] # prune the last '|'
         find_cmd = 'find . -regextype posix-extended -regex "%s"' % regexp
         self.logger.debug('find_cmd: %s' % find_cmd)
-        #find_output = self.run_program(find_cmd, working_dir=data_dir)[0]
-        #print('result: %s' % find_output)
+        find_output = self.run_program(find_cmd, working_dir=data_dir, 
+                                       local_bin=False)[0]
+        print('result: %s' % find_output)

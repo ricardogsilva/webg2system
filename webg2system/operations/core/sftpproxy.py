@@ -88,14 +88,17 @@ class SFTPProxy(object):
             file_list = []
         return file_list
 
-    def run_command(self, command, working_dir=None):
+    def run_command(self, command, local_bin, working_dir=None):
         result = None
         if self._connect():
             if working_dir is not None:
                 old_dir = self.connection.execute('pwd')[0].strip()
-                #result = self.connection.execute('cd %s && ./%s' % \
-                result = self.connection.execute('cd %s && %s' % \
-                         (working_dir, command))
+                if local_bin:
+                    result = self.connection.execute('cd %s && ./%s' % \
+                                                     (working_dir, command))
+                else:
+                    result = self.connection.execute('cd %s && %s' % \
+                                                     (working_dir, command))
                 self.connection.chdir(old_dir)
             else:
                 result = self.connection.execute(command)
