@@ -144,23 +144,31 @@ def extract_timeslot(filePath):
     '''
 
     timeslot = None
-    dirPath, fileName = os.path.split(filePath)
-    timeslotREs = {
-            '%Y%m%d%H%M' : re.compile(r'\d{12}'),
-            'year_doy' : re.compile(r'(?P<year>\d{4})_(?P<doy>\d{3})'),
-            }
-    for dtExpr, regexp in timeslotREs.iteritems():
-        match = regexp.search(fileName)
-        if match is not None:
-            try:
-                timeslot = dt.datetime.strptime(match.group(), dtExpr)
-            except ValueError:
-                if dtExpr == 'year_doy':
-                    d = match.groupdict()
-                    yTS = dt.datetime(year=int(d['year']), month=1, day=1)
-                    timeslot = yTS + dt.timedelta(days=int(d['doy']) - 1)
-                else:
-                    raise
+    dirPath, file_name = os.path.split(filePath)
+    file_name = file_name.replace('.', '\.') # escape possible file extension
+    timeslot_regexps = [
+        ('%Y%m%d%H%M', re.compile(r'\d{12}')),
+        ('%Y%m%d%H', re.compile(r'\d{10}')),
+        ('%Y%m%d', re.compile(r'\d{8}')),
+        ('year_doy', re.compile(r'(?P<year>\d{4})_(?P<doy>\d{3})')),
+    ]
+
+    match = None
+    index = 0
+    while match is None and index < len(timeslot_regexps) :
+        dt_expr, regexp = timeslot_regexps[index]
+        match = regexp.search(file_name)
+        index +=1
+    if match is not None:
+        try:
+            timeslot = dt.datetime.strptime(match.group(), dt_expr)
+        except ValueError:
+            if dt_expr == 'year_doy':
+                d = match.groupdict()
+                yTS = dt.datetime(year=int(d['year']), month=1, day=1)
+                timeslot = yTS + dt.timedelta(days=int(d['doy']) - 1)
+            else:
+                raise
     return timeslot
 
 def get_file_settings(filePath):
@@ -243,6 +251,7 @@ def convert_regexp_syntax(regexp, to='posix-extended'):
         result = regexp.replace('\d', '[0-9]')
         result = result.replace('?P<tile_name>', '')
         result = result.replace('?!', '')
+        result = result.replace('(\.ovr)', '') # ugly hack
     elif to == 'python':
         raise NotImplementedError
     return result

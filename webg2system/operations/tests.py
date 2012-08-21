@@ -6,6 +6,7 @@ import systemsettings.models as ss
 import operations.models as om
 import operations.core.g2hosts as g2h
 import operations.core.g2packages as g2h
+import operations.core.utilities as utilities
 
 
 class OperationsViewsTestCase(TestCase):
@@ -64,3 +65,16 @@ class SWIPostProcessorTestCase(TestCase):
         area = ss.Area.objects.get(area='.*')
         host = g2h.HostFactory().create_host()
         self.swi_pack = g2p.SWIProcessor(settings, timeslot, area, host)
+
+class UtilitiesTestCase(TestCase):
+
+    def test_extract_timeslot(self):
+        tests = [
+            'DSSF_quicklook_201201010000.map',
+            'DSSF_quicklook_2012010100.map',
+            'DSSF_quicklook_20120101.map',
+            'DSSF_quicklook_2012_035.map',
+        ]
+        for t in tests:
+            ts = utilities.extract_timeslot(t)
+            self.assertIsNotNone(ts)
