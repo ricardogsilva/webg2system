@@ -227,6 +227,26 @@ class G2Host(object):
             index += 1
         return matched
 
+    def _get_deletable_paths(self, path_list, older_than, 
+                             deletable_regexps=None):
+        '''
+        Return a list with the file paths that can be deleted.
+        '''
+
+        if deletable_regexps is None:
+            deletable_regexps = self._get_deletable_regexps()
+        today = dt.datetime.today()
+        deletable_regexps = self._get_deletable_regexps()
+        to_delete = []
+        for file_path in path_list:
+            timeslot = utilities.extract_timeslot(file_path)
+            if timeslot is not None:
+                date_diff = today - timeslot
+                if date_diff.days > older_than:
+                    if self._is_deletable(file_path, deletable_regexps):
+                        to_delete.append(file_path)
+        return to_delete
+
     # method stubs to be implemented by subclasses
     def find(self, pathList):
         raise NotImplementedError
@@ -250,6 +270,9 @@ class G2Host(object):
         raise NotImplementedError
 
     def delete_files(self):
+        raise NotImplementedError
+
+    def delete_old_files(self):
         raise NotImplementedError
 
     def get_cwd(self):
@@ -291,7 +314,14 @@ class G2Host(object):
         raise NotImplementedError
 
     def do_maintenance(self, older_than=120):
-        raise NotImplementedError
+        '''
+        Perform the maintenance operations on files older than x days.
+        '''
+
+        if self.to_delete_logs:
+            self.delete_logs(older_than)
+        if self.to_delete_files:
+            self.delete_old_files(older_than)
 
 
 class G2LocalHost(G2Host):
@@ -508,16 +538,6 @@ class G2LocalHost(G2Host):
             self.logger.debug('About to perform a remote send...')
             result = self._send_to_remote(fullPaths, destDir, destHost)
         return result
-
-    def do_maintenance(self, older_than=120):
-        '''
-        Perform the maintenance operations on files older than x days.
-        '''
-
-        if self.to_delete_logs:
-            self._delete_logs(older_than)
-        if self.to_delete_files:
-            self._delete_old_files(older_than)
 
     # FIXME
     # - return the actual returncode, and not a hardcoded zero
@@ -840,12 +860,12 @@ class G2LocalHost(G2Host):
         command = 'df -h %s' % self.dataPath
         stdout, stderr, retcode = self.run_program(command)
         try:
-            available_percent = int(stdout.split('\n')[1].split()[4].replace('%', ''))
+            used_percent = int(stdout.split('\n')[1].split()[4].replace('%', ''))
         except ValueError:
             raise
-        return available_percent
+        return used_percent
 
-    def _delete_logs(self, older_than):
+    def delete_logs(self, older_than):
         '''
         Delete log files older than the input number of days.
         '''
@@ -863,7 +883,7 @@ class G2LocalHost(G2Host):
                         to_delete.append(full_path)
         self.delete_files(to_delete)
 
-    def _delete_old_files(self, older_than):
+    def delete_old_files(self, older_than):
         '''
         Delete system input and output files older than the input 
         number of days.
@@ -887,16 +907,6 @@ class G2LocalHost(G2Host):
                             to_delete.append(os.path.join(root, file_path))
         #self.delete_files(to_delete)
         return to_delete
-
-    def do_maintenance(self, older_than=120):
-        '''
-        Perform the maintenance operations on files older than x days.
-        '''
-
-        if self.to_delete_logs:
-            self._delete_logs(older_than)
-        if self.to_delete_files:
-            self._delete_old_files(older_than)
 
     def build_zip(self, zip_name, paths, output_dir):
         '''
@@ -1086,24 +1096,61 @@ class G2RemoteHost(G2Host):
 
         command = 'df -h %s' % self.dataPath
         stdout, stderr, retcode = self.run_program(command)
-        available_percent = int(stdout.split('\n')[2].split()[4].replace('%', ''))
-        return available_percent
+        used_percent = int(stdout.split('\n')[2].split()[4].replace('%', ''))
+        return used_percent
 
-    def _delete_logs(self, older_than):
-        raise NotImplementedError
+    def delete_logs(self, older_than):
+        '''
+        Delete log files older than the input number of days.
+        '''
 
-    def _delete_old_files(self, older_than):
+        logs_dir = os.path.join(self.dataPath, 'LOGS')
+        find_cmd = 'find %s -type f -regextype posix-extended -regex ".*"' % logs_dir
+        find_output = self.run_program(find_cmd, local_bin=False)[0]
+        found = find_output.replace('\n\n', '\n').split('\n')[:-1]
+        self.delete_files(found)
+        return found
+
+    def delete_old_files(self, older_than):
         data_dir = os.path.join(self.dataPath, 'OUTPUT_DATA')
-        today = dt.datetime.today()
         deletable_regexps = self._get_deletable_regexps()
         regexp = ''
         for exp in deletable_regexps:
-            # TODO convert exp from python syntax to posix-extended syntax
             converted_exp = utilities.convert_regexp_syntax(exp)
             regexp += '.*%s.*|' % converted_exp
         regexp = regexp[:-1] # prune the last '|'
-        find_cmd = 'find . -regextype posix-extended -regex "%s"' % regexp
-        self.logger.debug('find_cmd: %s' % find_cmd)
-        find_output = self.run_program(find_cmd, working_dir=data_dir, 
-                                       local_bin=False)[0]
-        print('result: %s' % find_output)
+        find_cmd = 'find %s -regextype posix-extended -regex "%s"' % \
+                   (data_dir, regexp)
+        find_output = self.run_program(find_cmd, local_bin=False)[0]
+        found = find_output.replace('\n\n', '\n').split('\n')[:-1]
+        to_delete = self._get_deletable_paths(found, older_than, 
+                                              deletable_regexps)
+        self.delete_files(to_delete)
+        return to_delete
+
+    def delete_files(self, relativePathList):
+        '''
+        Delete the files from the filesystem.
+
+        If the directories where the files were present become empty
+        after deletion, they will also get deleted.
+        '''
+
+        delete_cmd = 'rm'
+        dirs_to_clean = set()
+        for relPath in relativePathList:
+            fullPath = os.path.join(self.dataPath, relPath)
+            delete_cmd += ' %s' % fullPath
+            dirs_to_clean.add(os.path.dirname(fullPath))
+        del_files_output = self.run_program(delete_cmd, local_bin=False)[0]
+        #self.logger.debug('dirs_to_clean: %s' % dirs_to_clean)
+        for d in list(dirs_to_clean):
+            del_dirs_output = self.clean_dirs(d)
+
+    def clean_dirs(self, directory):
+        '''Remove the directory if it is empty. Also remove empty parents.'''
+
+        fullPath = os.path.join(self.dataPath, directory)
+        cmd = 'rmdir --ignore-fail-on-non-empty --parents %s' % fullPath
+        output = self.run_program(cmd, local_bin=False)[0]
+        return output
