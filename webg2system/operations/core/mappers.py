@@ -138,7 +138,8 @@ class NGPMapper(Mapper): #crappy name
             fileName = os.path.basename(path) + '.tif'
             outputPath = os.path.join(outputDir, fileName)
             outDriver = gdal.GetDriverByName('GTiff')
-            inDs = gdal.Open('HDF5:"%s"://%s' % (path, dataset.name))
+            #inDs = gdal.Open('HDF5:"%s"://%s' % (path, dataset.name))
+            inDs = gdal.Open(str("HDF5:%s://%s" % (path, dataset.name)))
             la = inDs.GetRasterBand(1).ReadAsArray()
             # dealing with the missing value and scaling factor
             la[abs(la - missingValue) > tolerance] = la[abs(la - missingValue) > tolerance] / scalingFactor
