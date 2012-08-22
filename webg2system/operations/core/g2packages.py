@@ -2038,10 +2038,10 @@ class QuickLookGenerator(ProcessingPackage):
         '''
 
         g2f = self._filter_g2f_list(self.inputs, 'fileType', 'geotiff')[0]
-        #fetched = self._fetch_files([g2f], self.workingDir, useArchive=True, 
-        #                            decompress=True)
-        fetched = self._fetch_files([g2f], g2f.searchPaths[0], useArchive=True, 
+        fetched = self._fetch_files([g2f], self.workingDir, useArchive=True, 
                                     decompress=True)
+        #fetched = self._fetch_files([g2f], g2f.searchPaths[0], useArchive=True, 
+        #                            decompress=True)
         pathList = fetched[g2f]
         geotiff = None
         if len(pathList) > 0:
@@ -2198,8 +2198,6 @@ class QuickLookGenerator(ProcessingPackage):
 
     def run_main(self, callback=None, tile=None, move_to_webserver=True, 
                  archive=False, delete_local=True):
-        geotiff = self.find_geotiff()
-        mapfile = self.update_mapfile(geotiff)
         if tile is None:
             result = self._get_all_tiles(use_archive=True)
         else:
