@@ -21,6 +21,8 @@ import mapscript
 
 # TODO
 # - Add a archive_ouputs() method to the package classes, that should use a _send_files
+# - Add a delete_outputs() method to all the package classes and implement a hook for it
+#   in the clean_up() method
 
 class Outra(object):
     '''
@@ -2463,9 +2465,11 @@ class MetadataGenerator(ProcessingPackage):
             self.create_series_metadata(xmlFiles)
         return result
 
-    def clean_up(self):
+    def clean_up(self, delete_outputs=True):
         self._delete_directories([self.workingDir])
         self.host.clean_dirs(self.xmlOutDir)
+        if delete_outputs:
+            self.delete_outputs()
         return 0
 
 
