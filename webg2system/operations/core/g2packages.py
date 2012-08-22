@@ -390,19 +390,14 @@ class ProcessingPackage(GenericPackage):
                                         'so continuing.' % g2f.name)
         return allAvailable
 
-    def delete_outputs(self, callback=None, deleteStatics=False):
+    def delete_outputs(self, callback=None):
         '''
         Delete the package's output files.
-
-        Inputs:
-
-            deleteStatics - A boolean indicating if the static outputs should
-                be deleted (if there are any).
         '''
 
         foundOutputs = self.find_outputs(useArchive=False)
         for g2f, foundDict in foundOutputs.iteritems():
-            if not (g2f.frequency == 'static' and deleteStatics):
+            if g2f.toDelete and foundDict['host'] is not None:
                 foundDict['host'].delete_files(foundDict['paths'])
 
     def _delete_inputs(self):

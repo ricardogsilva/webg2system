@@ -47,6 +47,7 @@ class G2File(GenericItem):
         self.toCompress = fileSettings.toCompress
         self.toArchive = fileSettings.toArchive
         self.toDisseminate = fileSettings.toDisseminate
+        self.toDelete = fileSettings.toDelete
         for extraInfo in fileSettings.fileextrainfo_set.all():
             exec('self.%s = utilities.parse_marked(extraInfo, self)' % extraInfo.name)
         self.numFiles = fileSettings.numFiles
