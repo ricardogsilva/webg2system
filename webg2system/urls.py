@@ -15,7 +15,10 @@ admin.autodiscover()
 urlpatterns = patterns('',
     url(r'^admin/', include(admin.site.urls)),
     url(r'^operations/', include('operations.urls')),
-
     # tastypie api
     #url(r'^api/', include(v1API.urls)),
+)
+
+urlpatterns += patterns('django.views.generic.simple',
+        (r'^$', 'direct_to_template', {'template': 'index.html'}),
 )
