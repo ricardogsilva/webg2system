@@ -896,7 +896,7 @@ class MetadataGenerator(object):
         today = dt.date.today().strftime('%Y-%m-%d')
         fileName = os.path.splitext(os.path.basename(filePath))[0]
         fileTimeslot = utilities.extract_timeslot(filePath)
-        fs = utilities.get_file_settings(filePath)
+        #fs = utilities.get_file_settings(filePath)
         minx, miny, maxx, maxy = mapper.get_bounds(filePath, 
                                                    self.product.pixelSize)
         rowSize, colSize = mapper.get_lines_cols(filePath)
@@ -1464,7 +1464,7 @@ class MetadataGenerator(object):
             response = opener.open(insertReq)
             # CSW response
             xml_response = response.read()
-            self.logger.info('xml_response: %s' % xml_response)
+            #self.logger.info('xml_response: %s' % xml_response)
             tree = etree.fromstring(xml_response)
             if 'TransactionResponse' in tree.tag:
                 result = True
