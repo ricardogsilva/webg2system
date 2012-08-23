@@ -1449,18 +1449,11 @@ class MetadataGenerator(object):
             the_result = False
         return the_result
 
-    def _execute_csw_insert_request(self, fileList, url, headers, opener):
-        theRequest = '<?xml version="1.0" encoding="UTF-8"?>'\
-            '<csw:Transaction service="CSW" version="2.0.2" '\
-            'xmlns:csw="http://www.opengis.net/cat/csw/2.0.2">'
-        for filePath in fileList:
-            theXML = etree.parse(filePath)
-            xml_as_string = etree.tostring(theXML)
-            theRequest += '<csw:Insert>' + xml_as_string + '</csw:Insert>'
-        theRequest += '</csw:Transaction>'
+    def _execute_csw_insert_request(self, file_list, url, headers, opener):
+        the_request = self._build_csw_insert_request(file_list)
         try:
             result = False
-            insertReq = urllib2.Request(url, theRequest, headers)
+            insertReq = urllib2.Request(url, the_request, headers)
             response = opener.open(insertReq)
             # CSW response
             xml_response = response.read()
@@ -1477,6 +1470,49 @@ class MetadataGenerator(object):
         except urllib2.HTTPError, error:
             self.logger.error(error.read())
         return result
+
+    #def _execute_csw_insert_request(self, file_list, url, headers, opener):
+    #    request = self._build_csw_insert_request(file_list)
+    #    response_tree = self._execute_csw_transaction(request, url, headers, 
+    #                                                  opener)
+    #    result = False
+    #    if 'TransactionResponse' in response_tree.tag:
+    #        result = True
+    #    elif 'ExceptionReport' in response_tree.tag:
+    #        #exception_text = response_tree.xpath('')
+    #        self.logger.error('Couldn\'t send the data to the catalogue '\
+    #                          'server. This is the server\'s response:')
+    #        self.logger.debug(xml_response)
+    #    else:
+    #        self.logger.debug('unspecified condition')
+
+
+    def _build_csw_insert_request(self, file_list):
+        the_request = '<?xml version="1.0" encoding="UTF-8"?>'\
+            '<csw:Transaction service="CSW" version="2.0.2" '\
+            'xmlns:csw="http://www.opengis.net/cat/csw/2.0.2">'
+        for path in file_list:
+            theXML = etree.parse(path)
+            xml_as_string = etree.tostring(theXML)
+            the_request += '<csw:Insert>' + xml_as_string + '</csw:Insert>'
+        the_request += '</csw:Transaction>'
+        return the_request
+
+    def _execute_csw_transaction(self, request, url, headers, opener):
+        try:
+            insert_req = urllib2.Request(url, request, headers)
+            response = opener.open(insert_req)
+            xml_response = response.read()
+            tree = etree.fromstring(xml_response)
+            return tree
+        except urllib2.HTTPError, error:
+            self.logger.error(error.read())
+            raise
+
+
+
+
+
 
     def _re_order(self, parent_element, order_dict):
         re_order = []
