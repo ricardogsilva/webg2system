@@ -9,6 +9,7 @@ processing system.
 import os
 import re
 import logging
+import time
 from lxml import etree
 import urllib
 import urllib2
@@ -1368,6 +1369,30 @@ class MetadataGenerator(object):
         beginEl.text = theTimeslot
         endEl = parentEl.xpath('gml:endPosition', namespaces=self.ns)[0]
         endEl.text = theTimeslot
+
+    def csw_login(self, login_url, username, password):
+        headers_auth = {
+            "Content-type": "application/x-www-form-urlencoded", 
+            "Accept": "text/plain"
+        }
+        data = urllib.urlencode({"username": username, "password": password})
+        # send authentication request
+        loginReq = urllib2.Request(login_url, data, headers_auth)
+        response = urllib2.urlopen(loginReq)
+        # a basic memory-only cookie jar instance
+        cookies = cookielib.CookieJar()
+        cookies.extract_cookies(response,loginReq)
+        cookie_handler= urllib2.HTTPCookieProcessor(cookies)
+        # a redirect handler
+        redirect_handler= urllib2.HTTPRedirectHandler()
+        # save cookie and redirect handler for future HTTP Posts
+        opener = urllib2.build_opener(redirect_handler,cookie_handler)
+        return opener
+
+    def csw_logout(self, logout_url):
+        logoutReq = urllib2.Request(logout_url)
+        response = urllib2.urlopen(logoutReq)
+        #self.logger.debug(response.read())
         
     def insert_csw(self, csw_url, login_url, logout_url, username,
                     password, filePaths=None):
@@ -1394,29 +1419,12 @@ class MetadataGenerator(object):
                 will be used.
         '''
 
-        headers_auth = {
-            "Content-type": "application/x-www-form-urlencoded", 
-            "Accept": "text/plain"
-        }
+        self.csw_logout(logout_url)
+        opener = self.csw_login(login_url, username, password)
         headers_xml = {
             "Content-type": "application/xml", 
             "Accept": "text/plain"
         }
-        data = urllib.urlencode({"username": username, "password": password})
-        logoutReq = urllib2.Request(logout_url) # first, always log out
-        response = urllib2.urlopen(logoutReq)
-        #self.logger.debug(response.read())
-        # send authentication request
-        loginReq = urllib2.Request(login_url, data, headers_auth)
-        response = urllib2.urlopen(loginReq)
-        # a basic memory-only cookie jar instance
-        cookies = cookielib.CookieJar()
-        cookies.extract_cookies(response,loginReq)
-        cookie_handler= urllib2.HTTPCookieProcessor(cookies)
-        # a redirect handler
-        redirect_handler= urllib2.HTTPRedirectHandler()
-        # save cookie and redirect handler for future HTTP Posts
-        opener = urllib2.build_opener(redirect_handler,cookie_handler)
         results = []
         if filePaths is not None:
             # Process up to 10 files in each transaction in order to
@@ -1440,52 +1448,73 @@ class MetadataGenerator(object):
                                                       headers_xml, opener)
             results.append(result)
         self.logger.debug('results: %s' % results)
-        logoutReq = urllib2.Request(logout_url) # Last, always log out
-        response = opener.open(logoutReq)
-        #self.logger.debug(response.read())
+        self.csw_logout(logout_url)
         if len(results) > 0:
             the_result = not False in results
         else:
             the_result = False
         return the_result
 
-    def _execute_csw_insert_request(self, file_list, url, headers, opener):
-        the_request = self._build_csw_insert_request(file_list)
-        try:
+    def _execute_csw_insert_request(self, file_list, url, headers, opener,
+                                    max_tries=5, sleep_for=5):
+        request = self._build_csw_insert_request(file_list)
+        response_tree = self._execute_csw_transaction(request, url, headers, 
+                                                      opener)
+        result = None
+        try_num = 0
+        while result is None and try_num < max_tries:
+            result = self._parse_transaction_result(response_tree)
+            if result is None:
+                self.logger.debug('The transaction did not execute ' \
+                                  'successfully. Will retry after %i ' \
+                                  'seconds.')
+                time.sleep(sleep_for)
+            try_num += 1
+        if result is None:
             result = False
-            insertReq = urllib2.Request(url, the_request, headers)
-            response = opener.open(insertReq)
-            # CSW response
-            xml_response = response.read()
-            #self.logger.info('xml_response: %s' % xml_response)
-            tree = etree.fromstring(xml_response)
-            if 'TransactionResponse' in tree.tag:
-                result = True
-            elif 'ExceptionReport' in tree.tag:
-                self.logger.error('Couldn\'t send the data to the catalogue '\
-                                  'server. This is the server\'s response:')
-                self.logger.debug(xml_response)
-            else:
-                self.logger.debug('unspecified condition')
-        except urllib2.HTTPError, error:
-            self.logger.error(error.read())
         return result
 
-    #def _execute_csw_insert_request(self, file_list, url, headers, opener):
-    #    request = self._build_csw_insert_request(file_list)
-    #    response_tree = self._execute_csw_transaction(request, url, headers, 
-    #                                                  opener)
-    #    result = False
-    #    if 'TransactionResponse' in response_tree.tag:
-    #        result = True
-    #    elif 'ExceptionReport' in response_tree.tag:
-    #        #exception_text = response_tree.xpath('')
-    #        self.logger.error('Couldn\'t send the data to the catalogue '\
-    #                          'server. This is the server\'s response:')
-    #        self.logger.debug(xml_response)
-    #    else:
-    #        self.logger.debug('unspecified condition')
+    def _parse_transaction_result(self, response):
+        '''
+        Parse the output of the CSW insert transaction.
 
+        Inputs:
+
+            response - An etree.Element object with the response
+                from the CSW server
+
+        Returns:
+
+            True - If the request went OK
+            False - If the request did not execute
+            None - If the request should be retried
+        '''
+
+        result = False
+        try:
+            report_title = response.tag.replace('{%s}' % response.nsmap['csw'], 
+                                                '')
+        except KeyError:
+            report_title = response.tag.replace('{%s}' % response.nsmap['ows'], 
+                                                '')
+        if report_title == 'TransactionResponse':
+            result = True
+        elif report_title == 'ExceptionReport':
+            exception = response.xpath('ows:Exception/ows:ExceptionText',
+                                   namespaces=response.nsmap)[0].text
+            for line in exception.split('\n'):
+                if 'retried' in line:
+                    result = None
+                elif 'duplicate' in line:
+                    self.logger.debug('Duplicate record found. this is the ' \
+                                      'server\'s response:')
+                    self.logger.debug(etree.tostring(response, 
+                                      pretty_print=True))
+        else:
+            self.logger.debug('Unspecified condition. This is the response:')
+            self.logger.debug(etree.tostring(response, pretty_print=True))
+            raise
+        return result
 
     def _build_csw_insert_request(self, file_list):
         the_request = '<?xml version="1.0" encoding="UTF-8"?>'\
@@ -1508,11 +1537,6 @@ class MetadataGenerator(object):
         except urllib2.HTTPError, error:
             self.logger.error(error.read())
             raise
-
-
-
-
-
 
     def _re_order(self, parent_element, order_dict):
         re_order = []

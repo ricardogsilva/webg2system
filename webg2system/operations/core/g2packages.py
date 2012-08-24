@@ -2315,7 +2315,7 @@ class MetadataGenerator(ProcessingPackage):
         return results
 
     def _process_single_tile_path(self, tile_path, force=True):
-        self.logger.debug('tile_path: %s' % tile_path)
+        #self.logger.debug('tile_path: %s' % tile_path)
         if force:
             metadata_path = self.generate_xml_metadata(tile_path)
         else:
