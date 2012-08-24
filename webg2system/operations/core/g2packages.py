@@ -2395,8 +2395,8 @@ class MetadataGenerator(ProcessingPackage):
                 if reObj is not None:
                     theFilePath = filePath
             current += 1
-        if theFilePath is None:
-            self.logger.error('The requested tile was not found.')
+        #if theFilePath is None:
+        #    self.logger.error('The requested tile was not found.')
         return theFilePath
 
     def generate_xml_metadata(self, tilePath):
