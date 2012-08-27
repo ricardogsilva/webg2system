@@ -69,10 +69,10 @@ def first_deployment():
     install_pip_dependencies()
 
 def install_apt_dependencies():
-    sudo('apt-get install git python-pip python-pexpect python-pyparsing ' \
-         'python-lxml python-tables python-imaging gdal-bin python-gdal ' \
-         'python-mapscript libapache2-mod-wsgi cgi-mapserver mapserver-bin ' \
-         'ttf-freefont')
+    sudo('apt-get install git python-pip python-virtualenv python-pexpect ' \
+         'python-pyparsing python-lxml python-tables python-imaging ' \
+         'gdal-bin python-gdal python-mapscript libapache2-mod-wsgi ' \
+         'cgi-mapserver mapserver-bin ttf-freefont')
 
 def clone_repo():
     code_dir = _get_code_dir()
