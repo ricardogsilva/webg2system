@@ -33,7 +33,9 @@ def _get_active_hosts():
 
 def _get_code_dir():
     host_settings = sm.Host.objects.get(ip=env.host)
-    return host_settings.codePath
+    code_path = host_settings.codePath
+    main_code_dir = os.path.dirname(code_path)
+    return main_code_dir
 
 env.hosts = _get_active_hosts()
 
@@ -54,12 +56,16 @@ def deploy():
     '''
 
     code_dir = _get_code_dir()
+    first = False
     with settings(warn_only=True):
         if run('test -d %s' % code_dir).failed:
-            first_deployment()
-        else:
-            with cd(code_dir):
-                run('git pull origin master')
+            first = True
+    if first:
+        first_deployment()
+    else:
+        with cd(code_dir):
+            run('git checkout -- webg2system/sqlite.db')
+            run('git pull origin master')
     with cd(code_dir):
         run('touch webg2system/wsgi.py')
 
