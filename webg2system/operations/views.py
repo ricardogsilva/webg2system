@@ -102,7 +102,7 @@ def execute_package(request):
                  )
     return result
 
-def get_product_user_manual(request, prodName):
+def get_product_user_manual(request, prod_name):
     hostFactory = g2hosts.HostFactory()
     theHost = hostFactory.create_host()
     theProduct = ss.Product.objects.get(short_name=prodName)
@@ -152,7 +152,7 @@ def get_swi_product_zip(request, timeslot):
         raise Http404
     return result
 
-def get_quicklook(request, prodName, tile, timeslot):
+def get_quicklook(request, prod_name, tile, timeslot):
     ts = dt.datetime.strptime(timeslot, '%Y%m%d%H%M')
     settings = ss.Package.objects.get(code_class__className='QuickLookGenerator',
                                       product__short_name=prodName)
@@ -187,5 +187,5 @@ def get_swi_quicklook(request, timeslot):
         raise Http404
     return response
 
-def get_series_quicklook(request, prodName):
+def get_series_quicklook(request, prod_name):
     pass
