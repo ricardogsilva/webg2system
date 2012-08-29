@@ -2668,7 +2668,7 @@ class TileDistributor(GenericAggregationPackage):
         zipName = os.path.basename(os.path.splitext(theProduct)[0]) + '.zip'
         theZip = os.path.join(self.zipOutDir, zipName)
         zf = zipfile.ZipFile(theZip, mode='w')
-        for filePath in (theProduct, theQuickLook, the.xslXml, theStylesheet):
+        for filePath in (theProduct, theQuickLook, theXml, theStylesheet):
             zf.write(filePath, arcname=os.path.basename(filePath))
         zf.close()
         return theZip
