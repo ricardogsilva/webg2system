@@ -11,6 +11,8 @@ from cloghandler import ConcurrentRotatingFileHandler
 
 from core import g2packages, g2hosts
 
+loggers = dict()
+
 class RunningPackage(models.Model):
     STATUS_CHOICES = (('running', 'running'),('stopped', 'stopped'))
     timeslot = models.DateTimeField()
@@ -81,32 +83,37 @@ class RunningPackage(models.Model):
         return pack
 
     def _get_logger(self, log_level):
-        logger = logging.getLogger(__name__)
-        hf = g2hosts.HostFactory(log_level)
-        host = hf.create_host()
-        formatter = logging.Formatter('%(levelname)s %(asctime)s %(module)s ' \
-                                      '%(process)s %(message)s')
-        log_dir = host.make_dir(self.timeslot.strftime('LOGS/%Y/%m/%d/%H'), relativeTo='data')
-        log_file = os.path.join(log_dir, '%s_%s.log' % \
-                   (self.settings, 
-                    self.timeslot.strftime('%Y%m%d%H%M')))
-        handler = ConcurrentRotatingFileHandler(log_file, 'a', 512*1024, 3)
-        handler.setFormatter(formatter)
-        console_handler = logging.StreamHandler()
-        console_handler.setFormatter(formatter)
-        existing_handlers = logger.handlers
-        for hdlr in existing_handlers:
-            logger.removeHandler(hdlr)
-        logger.addHandler(handler)
-        logger.addHandler(console_handler)
-        logger.setLevel(log_level)
-        # reassing the host's logger to ensure it gets the created handler
-        # this is because the HostFactory class has a caching mechanism
-        # and it will not create new hosts
-        host.logger = logger
-        for host_name, conn_dict in host.connections.iteritems():
-            for proxy_obj in conn_dict.values():
-                proxy_obj.host = host
+        global loggers
+        if loggers.get(__name__) is not None:
+            logger = loggers.get(__name__)
+        else:
+            logger = logging.getLogger(__name__)
+            hf = g2hosts.HostFactory(log_level)
+            host = hf.create_host()
+            formatter = logging.Formatter('%(levelname)s %(asctime)s %(module)s ' \
+                                          '%(process)s %(message)s')
+            log_dir = host.make_dir(self.timeslot.strftime('LOGS/%Y/%m/%d/%H'), relativeTo='data')
+            log_file = os.path.join(log_dir, '%s_%s.log' % \
+                       (self.settings, 
+                        self.timeslot.strftime('%Y%m%d%H%M')))
+            handler = ConcurrentRotatingFileHandler(log_file, 'a', 512*1024, 3)
+            handler.setFormatter(formatter)
+            console_handler = logging.StreamHandler()
+            console_handler.setFormatter(formatter)
+            existing_handlers = logger.handlers
+            for hdlr in existing_handlers:
+                logger.removeHandler(hdlr)
+            logger.addHandler(handler)
+            logger.addHandler(console_handler)
+            logger.setLevel(log_level)
+            # reassing the host's logger to ensure it gets the created handler
+            # this is because the HostFactory class has a caching mechanism
+            # and it will not create new hosts
+            host.logger = logger
+            for host_name, conn_dict in host.connections.iteritems():
+                for proxy_obj in conn_dict.values():
+                    proxy_obj.host = host
+            loggers[__name__] = logger
         return logger
 
     def run(self, callback=None, log_level=logging.DEBUG, *args, **kwargs):
