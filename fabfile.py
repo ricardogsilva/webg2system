@@ -63,16 +63,20 @@ def deploy():
     if first:
         first_deployment()
     else:
-        with cd(code_dir):
-            run('git checkout -- webg2system/sqlite.db')
-            run('git pull origin master')
+        normal_deployment()
+
+def normal_deployment():
+    code_dir = _get_code_dir()
     with cd(code_dir):
+        run('git checkout -- webg2system/sqlite.db')
+        run('git pull origin master')
         run('touch webg2system/wsgi.py')
 
 def first_deployment():
     install_apt_dependencies()
     clone_repo()
     install_pip_dependencies()
+    #get_private_code()
 
 def install_apt_dependencies():
     sudo('apt-get install git python-pip python-virtualenv python-pexpect ' \
@@ -102,10 +106,23 @@ def get_private_code():
         install_path = os.path.join(host.codePath, ec.get_relative_install_path())
         vcs = ec.version_control_sw
         if vcs == 'svn':
-            _svn_do_checkout(repository_url, install_path)
+            _svn_get_code(repository_url, install_path)
         else:
             pass
+        _compile_external_code(install_path)
 
-def _svn_do_checkout(url, destination_dir):
-    print('url: %s' % url)
-    print('destination_dir: %s' % destination_dir)
+def _svn_get_code(url, destination_dir):
+    first = False
+    with settings(warn_only=True):
+        if run('test -d %s' % destination_dir).failed:
+            first = True
+    if first:
+        run('mkdir -p %s' % destination_dir)
+        with cd(destination_dir):
+            run('svn checkout %s .' % url)
+    else:
+        with cd(destination_dir):
+            run('svn update')
+
+def _compile_external_code(destination_dir):
+    pass
