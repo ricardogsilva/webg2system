@@ -17,3 +17,4 @@ STATIC_ROOT = '/home/geo5/webg2system/sitestatic'
 # Example: "http://media.lawrence.com/static/"
 STATIC_URL = '/static/'
 
+DEBUG=False

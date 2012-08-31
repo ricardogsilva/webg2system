@@ -291,7 +291,7 @@ class G2File(GenericItem):
         if len(host_list) > 0:
             while (not all_found) and (not last_host):
                 the_host = host_list[host_index]
-                self.logger.info('Trying %s...' % the_host)
+                self.logger.debug('Trying %s...' % the_host)
                 if the_host in self.archives and use_archive: # this order of the if block seems incorrect...
                     self.logger.debug('using the _find_in_archive method')
                     found = self._find_in_archive(the_host, all_paths, 

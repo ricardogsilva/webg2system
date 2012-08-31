@@ -20,27 +20,65 @@ INSTALLING ON A NEW MACHINE:
       After the editing, remove the threading.pyc file (it gets regenerated on first 
       usage).
 
+- Remote installation
 
-- INSTALL DEPENDENCIES:
+1 - set up a local development environment on your machine
 
-pip
-django (through pip)
-south (through pip)
-pycountry (through pip)
-pysftp (through pip)
-ConcurrentLogHandler (through pip)
-python-pexpect
-python-pyparsing
-python-lxml
-python-tables
-python-imaging
-gdal-bin
-python-gdal
-python-mapscript
-libapache2-mod-wsgi
-cgi-mapserver
-mapserver-bin
-ttf-freefont
+	The code is hosted on github: https://github.com/ricardogsilva/webg2system
+
+	1 - Sign up for a github account and ask the webg2system to become a 
+		contributor. Don't forget to add your SSH keys to your github profile.
+
+	2 - Install and configure the git code versioning software:
+
+		$ sudo apt-get install git
+		$ git config --global user.name "your name"
+		$ git config --global user.email "your_email_address"
+
+	3 - Clone the webg2system repository
+
+		$ mkdir -p ~/dev
+		$ cd ~/dev
+		$ git clone https://github.com/ricardogsilva/webg2system.git 
+
+	4 - Install the python-fabric package
+
+		$ sudo apt-get install fabric
+
+2 - start the development django server and edit the host settings,
+	adding and activating the desired host machines
+
+	1 - Start the server:
+
+		$ cd ~/dev/webg2system/webg2system
+		$ python manage.py runserver
+
+	2 - Adjust the host settings (if needed):
+
+		Using a web browser, navigate to localhost:8000/admin and navigate to the 
+		'hosts' section of the systemsettings app. The system will be 
+		installed/updated on every host that has an 'active' status and a role
+		different from 'archive'.
+		You can also turn all the hosts off and turn on only the new one, that
+		you wish to install.
+
+2 - run the appropriate fabfile commands in order to install the system
+	code in each of the configured hosts.
+
+		$ cd ~/dev/webg2system
+		$ fab prepare_deploy
+		$ fab deploy
+
+	The "prepare_deploy" command will push your local changes to the remote
+	repository.
+
+	The "deploy" command will take care of installing the code on the defined
+	hosts. Installation means:
+
+		- installing external dependencies;
+		- cloning the remote repository
+		-
+
 
 - Operations database
 
@@ -140,12 +178,48 @@ http://stackoverflow.com/questions/7029228/is-using-multiple-databases-and-south
 
 - PERFORMANCE OF THE GEONETWORK DATABASE
 
+    - Check the ammount of RAM memory available on the machine that runs the
+      geonetwork database:
+
+        $ free -mt
+    
+    - Set the kernel's shmmax value to be abou 1/4th of the total RAM 
+	  (or more). For example, for a machine with 4GB RAM, setting shmmax
+      of 1GB:
+
+        $ sudo sysctl -w shmmax=1074000000
+
     - Edit the /etc/postgresql/9.1/main/postgresql.conf file and set:
 
         max_pred_locks_per_transaction = 200
 
+    - If you need to restart the postgresql database server, be sure to
+      rebuild geonetwork's lucene index after that, as the index can become
+	  corrupted which will cause new entries to not show. In order to do this,
+	  login as the administrator user on the local geonetwork site and select
+	  the option to rebuild the lucene index in the administration section.
 
 
-for monitoring apache2 logs:
+LOGGING configuration:
 
-tail -f /var/log/apache2/error.log
+- Django
+- Geonetwork
+
+	Geonetwork logs go to:
+
+		/var/log/tomcat6/geonetwork.log
+
+	The logging can be configured by editing the file:
+
+		/var/lib/tomcat6/webapps/geonetwork/WEB-INF/log4j.cfg
+
+	Make sure to change the log4j.logger.jeeves setting
+	from DEBUG to WARN, in order to produce smaller log files.
+
+- Apache
+
+Apache logs go to 
+
+	/var/log/apache2/error.log
+
+- Tomcat
