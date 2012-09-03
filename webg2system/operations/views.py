@@ -105,7 +105,7 @@ def execute_package(request):
 def get_product_user_manual(request, prod_name):
     hostFactory = g2hosts.HostFactory()
     theHost = hostFactory.create_host()
-    theProduct = ss.Product.objects.get(short_name=prodName)
+    theProduct = ss.Product.objects.get(short_name=prod_name)
     pumPath = os.path.join(theHost.dataPath, theProduct.user_manual)
     if theHost.is_file(pumPath):
         content = open(pumPath, 'rb').read()
@@ -155,7 +155,7 @@ def get_swi_product_zip(request, timeslot):
 def get_quicklook(request, prod_name, tile, timeslot):
     ts = dt.datetime.strptime(timeslot, '%Y%m%d%H%M')
     settings = ss.Package.objects.get(code_class__className='QuickLookGenerator',
-                                      product__short_name=prodName)
+                                      product__short_name=prod_name)
     area = ss.Area.objects.get(name='.*')
     pack = QuickLookGenerator(settings, ts, area, logger=logger)
     if pack is not None:
