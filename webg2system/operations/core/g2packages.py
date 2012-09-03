@@ -2592,13 +2592,57 @@ class Archivor(GenericAggregationPackage):
         self.archive_output_files()
 
 
-class Cleaner(object):
+class Cleaner(GenericPackage):
     '''
     This class will remove old files from the local filesystem.
     '''
 
-    pass
+    def __init__(self, settings, timeslot, area, host=None, logger=None):
+        super(Cleaner, self).__init__(timeslot, area.name, host=host, 
+                                      logger=logger)
+        self.name = settings.name
+        self.use_active_hosts = False
+        try:
+            use_active = settings.packageextrainfo_set.get(name='use_active_hosts')
+            self.use_active_hosts = True
+        except ss.MarkedString.DoesNotExist:
+            pass
+        self.routine_threshold = int(
+            settings.packageextrainfo_set.get(name='routine_older_than').string
+        )
+        self.emergency_threshold = int(
+            settings.packageextrainfo_set.get(name='emergency_older_than').string
+        )
 
+        # FIXME - Test this package out
+        def run_main(self, emergency=False, hosts=None, routine_threshold=None,
+                     emergency_threshold=None):
+            hosts = self._get_hosts(hosts)
+            if routine_threshold is None:
+                routine_threshold = self.routine_threshold
+            if emergency_threshold is None:
+                emergency_threshold = self.emergency_threshold
+            if emergency:
+                threshold = emergency_threshold
+            else:
+                threshold = routine_threshold
+            results = []
+            for h in hosts:
+                cleaned = h.do_maintenance(threshold, emergency=emergency)
+                results.append(cleaned)
+
+
+        def _get_hosts(self, host_settings=None):
+            hosts = []
+            host_factory = HostFactory()
+            if host_settings is None:
+                if self.use_active_hosts:
+                    host_settings = ss.Host.objects.filter(active=True).exclude(role__name='archive')
+            else:
+                pass
+            for host_setting in host_settings:
+                hosts.append(host_factory.create_host(host_setting))
+            return hosts
 
 class TileDistributor(GenericAggregationPackage):
     '''
@@ -2705,6 +2749,7 @@ class TileDistributor(GenericAggregationPackage):
         super(TileDistributor, self).clean_up()
         self._delete_directories([self.workingDir])
         self.host.clean_dirs(self.zipOutDir)
+
 
 class SWIDistributor(ProcessingPackage):
 

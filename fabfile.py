@@ -39,6 +39,9 @@ def _get_code_dir():
 
 env.hosts = _get_active_hosts()
 
+def setup_dev_machine():
+    pass
+
 def prepare_deploy():
     commit()
     push()
@@ -83,7 +86,7 @@ def install_apt_dependencies():
     sudo('apt-get install git python-pip python-virtualenv python-pexpect ' \
          'python-pyparsing python-lxml python-tables python-imaging ' \
          'gdal-bin python-gdal python-mapscript libapache2-mod-wsgi ' \
-         'cgi-mapserver mapserver-bin ttf-freefont subversion')
+         'cgi-mapserver mapserver-bin ttf-freefont subversion gfortran')
 
 def clone_repo():
     code_dir = _get_code_dir()

@@ -273,7 +273,7 @@ class G2Host(object):
                         to_delete.append(file_path)
         return to_delete
 
-    def do_maintenance(self, older_than=120):
+    def do_maintenance(self, older_than=120, emergency=False):
         '''
         Perform the maintenance operations on files older than x days.
         '''
@@ -281,7 +281,7 @@ class G2Host(object):
         if self.to_delete_logs:
             self.delete_logs(older_than)
         if self.to_delete_files:
-            self.delete_old_files(older_than)
+            self.delete_old_files(older_than, emergency)
 
     # method stubs to be implemented by subclasses
     def find(self, pathList):
