@@ -102,19 +102,30 @@ class ExternalCode(models.Model):
         return self.name
 
     def get_repository(self):
-        marked_string = self.externalcodeextrainfo_set.get(name='repository')
-        return self._parse_marked_string(marked_string)
+        return self.repository_credentials()[0]
     get_repository.short_description = 'Repository'
 
-    def get_relative_install_path(self):
-        marked_string = self.externalcodeextrainfo_set.get(name='path')
+    def repository_credentials(self):
+        '''
+        Returns a list with url, username and password for the repository.
+        '''
+
+        credentials = []
+        for attr in ('repository', 'repository_username', 'repository_password'):
+            ms = self.externalcodeextrainfo_set.get(name=attr)
+            credentials.append(self._parse_marked_string(ms))
+        return credentials
+
+    def get_relative_install_path(self, var_name='path'):
+        marked_string = self.externalcodeextrainfo_set.get(name=var_name)
         return self._parse_marked_string(marked_string)
 
     def _parse_marked_string(self, marked_string):
         result = marked_string.string
         for m in marked_string.marks.split(','):
-            m = m.strip()
-            result = result.replace('#', eval('self.%s' % m), 1)
+            if m != '':
+                m = m.strip()
+                result = result.replace('#', eval('self.%s' % m), 1)
         return result
 
 class ExternalCodeExtraInfo(MarkedString):

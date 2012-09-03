@@ -26,8 +26,9 @@ INSTALLING ON A NEW MACHINE:
 
 	The code is hosted on github: https://github.com/ricardogsilva/webg2system
 
-	1 - Sign up for a github account and ask the webg2system to become a 
-		contributor. Don't forget to add your SSH keys to your github profile.
+	1 - Sign up for a github account and ask the webg2system admin to become a 
+	    contributor. Also, don't forget to add your SSH keys to your github 
+            profile.
 
 	2 - Install and configure the git code versioning software:
 
