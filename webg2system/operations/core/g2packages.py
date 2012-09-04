@@ -2614,35 +2614,39 @@ class Cleaner(GenericPackage):
             settings.packageextrainfo_set.get(name='emergency_older_than').string
         )
 
-        # FIXME - Test this package out
-        def run_main(self, emergency=False, hosts=None, routine_threshold=None,
-                     emergency_threshold=None):
-            hosts = self._get_hosts(hosts)
-            if routine_threshold is None:
-                routine_threshold = self.routine_threshold
-            if emergency_threshold is None:
-                emergency_threshold = self.emergency_threshold
-            if emergency:
-                threshold = emergency_threshold
-            else:
-                threshold = routine_threshold
-            results = []
-            for h in hosts:
-                cleaned = h.do_maintenance(threshold, emergency=emergency)
-                results.append(cleaned)
+    # FIXME - Test this package out
+    def run_main(self, emergency=False, hosts=None, routine_threshold=None,
+                 emergency_threshold=None):
+        hosts = self._get_hosts(hosts)
+        if routine_threshold is None:
+            routine_threshold = self.routine_threshold
+        if emergency_threshold is None:
+            emergency_threshold = self.emergency_threshold
+        if emergency:
+            threshold = emergency_threshold
+        else:
+            threshold = routine_threshold
+        results = []
+        for h in hosts:
+            cleaned = h.do_maintenance(threshold, emergency=emergency)
+            results.append(cleaned)
+        if False not in results:
+            result = True
+        else:
+            result = False
+        return result
 
-
-        def _get_hosts(self, host_settings=None):
-            hosts = []
-            host_factory = HostFactory()
-            if host_settings is None:
-                if self.use_active_hosts:
-                    host_settings = ss.Host.objects.filter(active=True).exclude(role__name='archive')
-            else:
-                pass
-            for host_setting in host_settings:
-                hosts.append(host_factory.create_host(host_setting))
-            return hosts
+    def _get_hosts(self, host_settings=None):
+        hosts = []
+        host_factory = HostFactory()
+        if host_settings is None:
+            if self.use_active_hosts:
+                host_settings = ss.Host.objects.filter(active=True).exclude(role__name='archive')
+        else:
+            pass
+        for host_setting in host_settings:
+            hosts.append(host_factory.create_host(host_setting))
+        return hosts
 
 class TileDistributor(GenericAggregationPackage):
     '''
