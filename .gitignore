@@ -5,6 +5,8 @@
 extra_code/PRE_PROCESS/*
 extra_code/PRODUCTS/*
 extra_code/POST_PROCESS/*
+extra_code/compiled_libs/*
+extra_code/extra_libs/*
 python/*
 *.zip
 *.tar.gz
