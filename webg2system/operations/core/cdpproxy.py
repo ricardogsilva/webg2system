@@ -5,9 +5,73 @@
 A module to serve as a proxy between CDP and Python.
 """
 
+import getpass
+import g2hosts
+
 import re
 from pexpect import spawn
 import xml.etree.ElementTree as etree
+
+class NewCDPProxy(object):
+    '''
+    Connect to CDP and run commands.
+    '''
+
+    host = None
+    _connection = None
+    _cdp_prompt = 'CDP>'
+
+    def __init__(self, cdp_host='localhost', rpc_num=314156, 
+                 user=None, password=None):
+        hf = g2hosts.HostFactory()
+        self.host = hf.create_host()
+        self.rpc_num = rpc_num
+        self.cdp_host = cdp_host
+        if user is None:
+            self.user = getpass.getuser()
+        if password is None:
+            self.password = 'dummy'
+        self.connected = self._connect()
+
+    def _connect(self):
+        result = False
+        if self._connection is not None and not self._connection.closed:
+            #print('Already connected')
+            result = True
+        else:
+            print('About to connect')
+            self.connection = spawn('cdp')
+            self.connection.expect(self._cdp_prompt)
+            cmd = 'set SMS_PROG %i; login %s %s %s' % (self.rpc_num, 
+                                                       self.cdp_host, 
+                                                       self.user, 
+                                                       self.password)
+            output = self._get_result(cmd)
+            if 'logged into' in output[1]:
+                #connection successful
+                result = True
+            else:
+                errorMsg = "Couldn't login to the SMS server."
+                errorMsg += " CDP's response was:\n%s" % output
+                print(errorMsg)
+        return result
+
+    def _get_result(self, command):
+        self.connection.sendline(command)
+        self.connection.expect(self._cdp_prompt)
+        result = self.connection.before.split('\r\n')
+        return result
+
+    def list_suites(self):
+        out = self._get_result('suites')
+        defined_suites = out[2].split()
+        return defined_suites
+
+    def node_info(self, node_path):
+        node_path = '/'.join(('//%s' % self.cdp_host, node_path))
+        out = self._get_result('info -v %s' % node_path)
+        return out
+
 
 class CDPProxy(object):
     '''
