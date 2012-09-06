@@ -72,6 +72,11 @@ def convert_marks(markList, obj):
             markValue = re.sub(r'[+-]', '', obj.source.subSatellitePoint)
         elif mark == 'product':
             markValue = obj.product.short_name
+        elif mark == '':
+            self.logger.warning('An empty mark has been defined. There is ' \
+                                'probably something badly in the settings ' \
+                                'for %s.' % obj)
+            pass
         else:
             try:
                 markValue = eval('obj.%s' % mark)

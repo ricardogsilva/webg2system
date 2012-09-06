@@ -964,6 +964,7 @@ class Processor(ProcessingPackage):
         return retCode
 
 
+#TODO - This class is not done yet. This is just the minimum
 class GSAProcessor(ProcessingPackage):
     
     def __init__(self, settings, timeslot, area, host=None, 
@@ -972,22 +973,24 @@ class GSAProcessor(ProcessingPackage):
                                            host=host, logger=logger)
         self.rawSettings = settings
         self.name = settings.name
+        self.version = settings.external_code.version
         relOutDir = utilities.parse_marked(
                 settings.packagepath_set.get(name='outputDir'), 
                 self)
         self.outputDir = os.path.join(self.host.dataPath, relOutDir)
         relCodeDir = utilities.parse_marked(
-                settings.packagepath_set.get(name='codeDir'), 
-                self)
+            settings.external_code.externalcodeextrainfo_set.get(name='path'),
+            settings.external_code
+        )
         self.codeDir = os.path.join(self.host.codePath, relCodeDir)
         relWorkDir = utilities.parse_marked(
                 settings.packagepath_set.get(name='workingDir'), 
                 self)
         self.workingDir = os.path.join(self.host.dataPath, relWorkDir)
-        relInternalDir = utilities.parse_marked(
-                settings.packagepath_set.get(name='internalDir'), 
-                self)
-        self.internalDir = os.path.join(self.host.dataPath, relInternalDir)
+        #relInternalDir = utilities.parse_marked(
+        #        settings.packagepath_set.get(name='internalDir'), 
+        #        self)
+        #self.internalDir = os.path.join(self.host.dataPath, relInternalDir)
         if createIO:
             self.inputs = self._create_files(
                 'input', 
