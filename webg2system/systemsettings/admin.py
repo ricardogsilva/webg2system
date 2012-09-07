@@ -101,8 +101,9 @@ class ProductAdmin(admin.ModelAdmin):
             ('Dataset Series information', {
                 'fields' : ['series_title', 'series_status'],
             }),
-            ('Dataset information', {
+            ('Product information', {
                 'fields' : ['name', 'short_name', 'user_manual', 
+                            'geotiff_dtype',
                             'originator_collaborator', 
                             'principal_investigator', 'distributor',
                             'inspireKeyword', 'keywords', 'topicCategories',

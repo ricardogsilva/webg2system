@@ -66,7 +66,7 @@ class Item(models.Model):
     name = models.CharField(max_length=100)
     
     def __unicode__(self):
-        return self.name
+        return '%s' % self.name
 
 class Package(Item):
     external_code = models.ForeignKey('ExternalCode', null=True, blank=True)
@@ -76,7 +76,7 @@ class Package(Item):
     product = models.ForeignKey('Product', null=True, blank=True)
 
     def get_inputs(self):
-        return ', '.join([str(i) for i in self.inputs.all()])
+        return ', '.join([i.name for i in self.inputs.all()])
     get_inputs.short_description = 'Inputs'
 
     #FIXME
@@ -276,8 +276,13 @@ class CodeClass(models.Model):
 
 class Product(models.Model):
     OVERVIEW_TYPE_CHOICES = (('png', 'png'),)
+    GEOTIFF_DTYPE_CHOICES = (('int', 'int'), ('float', 'float'),)
     name = models.CharField(max_length=100)
     short_name = models.CharField(max_length=20)
+    geotiff_dtype = models.CharField(max_length=20, help_text='Data type ' \
+                                     'to use when converting the HDF5 ' \
+                                     'product to geotiff.', default='int',
+                                     choices=GEOTIFF_DTYPE_CHOICES)
     user_manual = models.CharField(
         max_length=255, help_text='Relative path to the user manual. ' \
         'The path is relative to the host\'s \'datapath\' attribute.'

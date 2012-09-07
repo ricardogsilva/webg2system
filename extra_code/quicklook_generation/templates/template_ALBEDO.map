@@ -1,0 +1,129 @@
+# Mapfile tutorial
+
+MAP
+    SHAPEPATH 'to be replaced'
+    NAME 'Quicklooks'
+    PROJECTION
+        'init=epsg:4326'
+    END
+    WEB
+        METADATA
+            'wms_title' 'Quicklooks'
+            #'wms_onlineresource' 'http://localhost/cgi-bin/mapserv?map=/home/geo2/dev/mapfiles/mapa_big.map&'
+            'wms_onlineresource' 'to be replaced'
+            'wms_srs' 'EPSG:4326'
+            'wms_enable_request' '*'
+        END
+    END
+    IMAGETYPE PNG
+    EXTENT -180 -90 180 90
+    SIZE 800 600
+    IMAGECOLOR 0 0 0
+    
+    LAYER
+        NAME 'ALBEDO'
+        STATUS OFF
+        TEMPLATE 'templates/blank.html'
+        DUMP TRUE
+        PROJECTION
+            'init=epsg:4326'
+        END
+        METADATA
+            'wms_title' 'to be replaced'
+            'wms_srs' 'EPSG:4326'
+            'wms_include_items' 'all'
+            'gml_include_items' 'all'
+        END
+        DATA 'to be replaced'
+
+        TYPE RASTER
+        
+        #PROCESSING 'SCALE=-1,1200'
+        #PROCESSING 'SCALE_BUCKETS=200'
+        CLASSITEM '[pixel]'
+	CLASS
+            EXPRESSION([pixel] == -1)
+            NAME "Missing value"
+            STYLE
+                COLOR 255 255 255
+            END 
+        END 
+        CLASS
+            EXPRESSION([pixel] > 0 AND [pixel] <= 0.1)
+            NAME "< 0.1"
+            STYLE
+                COLOR 0 0 0
+            END 
+        END 
+        CLASS
+            EXPRESSION([pixel] > 0.1 AND [pixel] <= 0.2)
+            NAME "0.1 - 0.2"
+            STYLE
+                COLOR 0 137 0
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] > 0.2 AND [pixel] <= 0.3)
+            NAME "0.2 - 0.3"
+            STYLE
+                COLOR 0 160 0
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] > 0.3 AND [pixel] <= 0.4)
+            NAME "0.3 - 0.4"
+            STYLE
+                COLOR 0 182 0
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] > 0.4 AND [pixel] <= 0.5)
+            NAME "0.4 - 0.5"
+            STYLE
+                COLOR 66 186 39
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] > 0.5 AND [pixel] <= 0.6)
+            NAME "0.5 - 0.6"
+            STYLE
+                COLOR 148 187 88
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] > 0.6 AND [pixel] <= 0.7)
+            NAME "0.6 - 0.7"
+            STYLE
+                COLOR 230 187 137
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] > 0.7 AND [pixel] <= 0.8)
+            NAME "0.7 - 0.8"
+            STYLE
+                COLOR 255 202 166
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] > 0.8 AND [pixel] <= 0.9)
+            NAME "0.8 - 0.9"
+            STYLE
+                COLOR 255 233 186
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] > 0.9 AND [pixel] <= 1)
+            NAME "0.9 - 1"
+            STYLE
+                COLOR 255 245 207
+            END
+        END
+        CLASS
+            EXPRESSION([pixel] > 1)
+            NAME "> 1"
+            STYLE
+                COLOR 255 255 255
+            END
+        END
+    END
+END

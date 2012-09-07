@@ -28,10 +28,13 @@ import utilities
 class Mapper(object):
 
     # gdal settings
-    #dataType = (gdal.GDT_Float32, 'Float32')
-    dataType = gdal.GDT_Int16
     blockXSize = 200
     blockYSize = 200
+
+    gdal_np_dtypes = {
+        gdal.GDT_Int16 : np.int16,
+        gdal.GDT_Float32 : np.float32,
+    }
 
     def __init__(self, g2File, productSettings, logger=None):
         '''
@@ -51,6 +54,10 @@ class Mapper(object):
         self.product = productSettings
         self.host = g2File.host
         self.timeslot = g2File.timeslot
+        if self.product.geotiff_dtype == 'float':
+            self.dataType = gdal.GDT_Float32
+        elif self.product.geotiff_dtype == 'int':
+            self.dataType = gdal.GDT_Int16
 
     def create_global_tiff(self, fileList, outDir, outName):
         raise NotImplementedError
@@ -81,8 +88,10 @@ class NGPMapper(Mapper): #crappy name
             ds = self.product.dataset_set.filter(isMainDataset=True)[0]
         else:
             ds = self.product.dataset_set.get(name=dataset)
-        missingValue = int(ds.missingValue)
-        scalingFactor = int(ds.scalingFactor)
+        #missingValue = int(ds.missingValue)
+        #scalingFactor = int(ds.scalingFactor)
+        missingValue = float(ds.missingValue)
+        scalingFactor = float(ds.scalingFactor)
         tilePaths = self.create_geotiffs(fileList, outDir, ds, missingValue, 
                                          scalingFactor)
         self.logger.debug('Merging individual tiles into a global tiff...')
@@ -140,7 +149,9 @@ class NGPMapper(Mapper): #crappy name
             outDriver = gdal.GetDriverByName('GTiff')
             #inDs = gdal.Open('HDF5:"%s"://%s' % (path, dataset.name))
             inDs = gdal.Open(str("HDF5:%s://%s" % (path, dataset.name)))
-            la = inDs.GetRasterBand(1).ReadAsArray()
+            #la = inDs.GetRasterBand(1).ReadAsArray()
+            numpy_type = self.gdal_np_dtypes.get(self.dataType)
+            la = inDs.GetRasterBand(1).ReadAsArray().astype(numpy_type)
             # dealing with the missing value and scaling factor
             la[abs(la - missingValue) > tolerance] = la[abs(la - missingValue) > tolerance] / scalingFactor
             la[abs(la - missingValue) <= tolerance] = missingValue
