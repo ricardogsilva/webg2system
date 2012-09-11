@@ -2,9 +2,11 @@ import os
 import sys
 import datetime as dt
 import logging
+import logging.handlers
 import traceback
 
 from django.db import models
+import django.contrib.auth.models as am
 from systemsettings.models import Package, Area
 
 from cloghandler import ConcurrentRotatingFileHandler
@@ -100,11 +102,24 @@ class RunningPackage(models.Model):
             handler.setFormatter(formatter)
             console_handler = logging.StreamHandler()
             console_handler.setFormatter(formatter)
+
+            mail_host = ('perseus.ipma.pt', 587)
+            from_addr = 'ricardo.silva@ipma.pt'
+            subject = '%s - g2system error' % (host.name)
+            mail_destinations = [u.email for u in am.User.objects.filter(is_staff=True)]
+            mail_handler = logging.handlers.SMTPHandler(mail_host, from_addr, 
+                                                        mail_destinations, 
+                                                        subject,
+                                                        credentials=('ricardo.silva@ipma.pt','geo2123'),
+                                                        secure=())
+            mail_handler.setLevel(logging.ERROR)
+            mail_handler.setFormatter(formatter)
             existing_handlers = logger.handlers
             for hdlr in existing_handlers:
                 logger.removeHandler(hdlr)
             logger.addHandler(handler)
             logger.addHandler(console_handler)
+            logger.addHandler(mail_handler)
             logger.setLevel(log_level)
             # reassing the host's logger to ensure it gets the created handler
             # this is because the HostFactory class has a caching mechanism

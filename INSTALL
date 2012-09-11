@@ -1,5 +1,8 @@
 INSTALLING ON A NEW MACHINE:
 
+You can use the fabfile present in this repository to remotely deploy the
+code to a production machine.
+
 - PYTHON THREADING BUG
 
     - Due to a bug in Python2.7 threading module that was only discovered
