@@ -1,6 +1,11 @@
 # Django settings for webg2system project.
 import os
 import django
+import djcelery
+djcelery.setup_loader()
+
+# celery options
+BROKER_URL = 'amqp://guest:guest@localhost:5672/'
 
 # calculated paths for django and the site
 # used as starting points for various other paths
@@ -146,6 +151,7 @@ INSTALLED_APPS = (
     'operations',
     'inspiresettings',
     'smssettings',
+    'djcelery',
 )
 
 # A sample logging configuration. The only tangible logging

@@ -16,12 +16,30 @@ from models import RunningPackage
 from systemsettings.models import Package, Area, Host, File
 from forms import CreatePackageForm
 
+import tasks
+
 import systemsettings.models as ss
+import djcelery.models as dm
 from core.g2packages import QuickLookGenerator, TileDistributor, SWIDistributor, SWIProcessor
 import core.g2hosts as g2hosts
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
+def monitor_state(request, uuid):
+    try:
+        task = dm.TaskState.objects.get(task_id=uuid)
+        result = render_to_response(
+            'operations/state_monitor.html',
+            {
+                'uuid' : uuid, 
+                'state' : task.state, 
+                'result' : task.result},
+            context_instance=RequestContext(request)
+        )
+    except dm.TaskState.DoesNotExist:
+        result = None
+    return result
 
 @csrf_exempt
 def execute_package(request):
@@ -29,7 +47,8 @@ def execute_package(request):
         f = CreatePackageForm(request.POST)
         if f.is_valid():
             try:
-                log_level = eval('logging.%s' % f.cleaned_data['log_level'].upper())
+                log_level = eval('logging.%s' % \
+                                 f.cleaned_data['log_level'].upper())
             except AttributeError:
                 log_level = logging.DEBUG
             timeslot = f.cleaned_data['timeslot']
@@ -41,40 +60,22 @@ def execute_package(request):
                 if user.is_active:
                     p = f.cleaned_data['package']
                     a = f.cleaned_data['area']
-                    login(request, user)
-                    try:
-                        rp = RunningPackage.objects.get(
-                                 settings=p, 
-                                 area=a, 
-                                 timeslot=timeslot
-                             )
-                    except RunningPackage.DoesNotExist:
-                        logger.info('The package does not exist. It will be ' \
-                                    'created.')
-                        rp = RunningPackage(settings=p, area=a, 
-                                            timeslot=timeslot)
-                    if rp is not None:
-                        runOutputList = []
-                        callback = runOutputList.append
-                        rp.force = force
-                        runArgs = f.cleaned_data['extra']
-                        if runArgs != '':
-                            runkwargs = json.loads(runArgs)
-                        else:
-                            runkwargs = dict()
-                        runResult = rp.run(callback=callback, 
-                                           log_level=log_level, 
-                                           **runkwargs)
-                        result = render_to_response(
-                                    'operations/run_output.html',
-                                    {
-                                        'result' : runResult, 
-                                        'output' : runOutputList
-                                    },
-                                    context_instance=RequestContext(request)
-                                 )
+                    run_args = f.cleaned_data['extra']
+                    if run_args != '':
+                        run_kwargs = json.loads(run_args)
                     else:
-                        pass
+                        run_kwargs = dict()
+                    login(request, user)
+                    async_result = tasks.run_package.delay(p, a, timeslot, 
+                                                           force, log_level, 
+                                                           **run_kwargs)
+                    result = render_to_response(
+                                'operations/run_output.html',
+                                {
+                                    'result' : async_result.id, 
+                                },
+                                context_instance=RequestContext(request)
+                             )
                     logout(request)
                 else:
                     # user is not valid

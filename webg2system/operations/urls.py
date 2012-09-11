@@ -16,6 +16,7 @@ urlpatterns = patterns('',
 )
 urlpatterns += patterns('operations.views',
         url(r'^create/$', 'execute_package'),
+        url(r'^monitor/(?P<uuid>\w{8}-\w{4}-\w{4}-\w{4}-\w{12})/$', 'monitor_state'),
         url(r'^products/(?P<prod_name>\w+)/docs/pum/$', 'get_product_user_manual'),
         
         url(r'^products/(?P<prod_name>\w+)/(?P<tile>\w+)/' \
