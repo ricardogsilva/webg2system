@@ -25,6 +25,16 @@ sys.path.append("&PYTHONLIBDIR&")
 
 
 def initialize():
+    '''
+    Initialize the running environment with some SMS variables.
+
+    The SMS variables are inserted by the SMS pre-processor at
+    runtime, by replacing the strings that are marked with leading
+    and trailing '&' characters. After the SMS variables are put into
+    the running environment, the external 'smsinit' program is called,
+    in order to let the SMS server that a new task has been started.
+    '''
+
     # SMS variables that are going to be substituted by the preprocessor
     os.environ["SMS_PROG"] = "&SMS_PROG&"
     os.environ["SMSNODE"] = "&SMSNODE&"
@@ -63,8 +73,8 @@ def create_logger(mailList, logLevel="&LOG_LEVEL&"):
     logConsoleHandler.setLevel(eval("logging.%s" % (logLevel.upper())))
     hostname = socket.gethostname()
     sender = "%s@retrieval.system" % (hostname)
-    host = "eris.meteo.pt"
-    logMailHandler = logging.handlers.SMTPHandler(host, sender,
+    mail_host = "eris.meteo.pt"
+    logMailHandler = logging.handlers.SMTPHandler(mail_host, sender,
             mailList, "SMS: &SMSNODE&/&SUITE&/&FAMILY&/&TASK& error")
     logMailHandler.setLevel(logging.ERROR)
     # formatters 
