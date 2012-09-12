@@ -103,15 +103,15 @@ def execute_package(request):
     return result
 
 def get_product_user_manual(request, prod_name):
-    hostFactory = g2hosts.HostFactory()
-    theHost = hostFactory.create_host()
-    theProduct = ss.Product.objects.get(short_name=prod_name)
-    pumPath = os.path.join(theHost.dataPath, theProduct.user_manual)
-    if theHost.is_file(pumPath):
-        content = open(pumPath, 'rb').read()
+    host_factory = g2hosts.HostFactory()
+    host = host_factory.create_host()
+    product = ss.Product.objects.get(short_name=prod_name)
+    pum_path = os.path.join(host.dataPath, product.user_manual)
+    if host.is_file(pum_path):
+        content = open(pum_path, 'rb').read()
         response = HttpResponse(content, mimetype='application/pdf')
         response['Content-Disposition'] = 'attachment: filename=%s' % \
-                                          os.path.basename(pumPath)
+                                          os.path.basename(pum_path)
         result = response
     else:
         raise Http404
