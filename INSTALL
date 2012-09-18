@@ -203,6 +203,20 @@ http://stackoverflow.com/questions/7029228/is-using-multiple-databases-and-south
 	  login as the administrator user on the local geonetwork site and select
 	  the option to rebuild the lucene index in the administration section.
 
+- PERFORMANCE OF THE GEONETWORK JAVA BACKEND
+
+    - Increase the ammount of memory available to the Java virtual machine. Edit 
+      the file:
+
+              $ sudo vim /usr/share/tomcat6/bin/catalina.sh
+
+       and add the following at the top of the file:
+
+              JAVA_OPTS="$JAVA_OPTS -Xms16m -Xmx1024m"
+       
+       (you may need to tweak these numbers depending on the specs of the 
+       machine.)
+
 
 LOGGING configuration:
 
