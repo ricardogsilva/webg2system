@@ -9,7 +9,7 @@ import getpass
 import g2hosts
 
 import re
-from pexpect import spawn
+from pexpect import spawn, ExceptionPexpect
 import xml.etree.ElementTree as etree
 
 class NewCDPProxy(object):
@@ -31,29 +31,43 @@ class NewCDPProxy(object):
             self.user = getpass.getuser()
         if password is None:
             self.password = 'dummy'
+        #self.connected = self._connect()
         self.connected = self._connect()
 
     def _connect(self):
         result = False
-        if self._connection is not None and not self._connection.closed:
-            #print('Already connected')
+        if self._connect_to_cdp():
+            result = self._login_to_sms(self.rpc_num, self.cdp_host, self.user,
+                                        self.password)
+        return result
+
+    def _connect_to_cdp(self):
+        result = False
+        if self._connection is not None:
+            # already connected
             result = True
         else:
-            print('About to connect')
-            self.connection = spawn('cdp')
-            self.connection.expect(self._cdp_prompt)
-            cmd = 'set SMS_PROG %i; login %s %s %s' % (self.rpc_num, 
-                                                       self.cdp_host, 
-                                                       self.user, 
-                                                       self.password)
-            output = self._get_result(cmd)
-            if 'logged into' in output[1]:
-                #connection successful
+            try:
+                print('About to connect to CDP')
+                self.connection = spawn('cdp')
+                self.connection.expect(self._cdp_prompt)
                 result = True
-            else:
-                errorMsg = "Couldn't login to the SMS server."
-                errorMsg += " CDP's response was:\n%s" % output
-                print(errorMsg)
+            except ExceptionPexpect as err:
+                print(err)
+        return result
+
+    def _login_to_sms(self, rpc_num, cdp_host, user, password):
+        result = False
+        cmd = 'set SMS_PROG %i; login %s %s %s' % (rpc_num, cdp_host,
+                                                   user, password)
+        output = self._get_result(cmd)
+        if 'logged into' in output[1]:
+            #connection successful
+            result = True
+        else:
+            errorMsg = "Couldn't login to the SMS server."
+            errorMsg += " CDP's response was:\n%s" % output
+            print(errorMsg)
         return result
 
     def _get_result(self, command):
@@ -70,7 +84,29 @@ class NewCDPProxy(object):
     def node_info(self, node_path):
         node_path = '/'.join(('//%s' % self.cdp_host, node_path))
         out = self._get_result('info -v %s' % node_path)
-        return out
+        node_variables = self._parse_node_variables(out)
+        return node_variables
+
+    def _parse_node_variables(self, raw_output):
+        result = dict()
+        count = 0
+        variable_definitions = False
+        while count < len(raw_output):
+            line = raw_output[count].strip()
+            if line == '':
+                pass
+            elif line.startswith('Variables'):
+                variable_definitions = True
+                pass
+            else:
+                if variable_definitions:
+                    line = line.replace('[]', '').replace('[/]', '')
+                    var_name, var_value = line.split('=', 1)
+                    var_name = var_name.strip()
+                    var_value = var_value.strip()
+                    exec('result["%s"] = "%s"' % (var_name, var_value.replace('"', '')))
+            count += 1
+        return result
 
 
 class CDPProxy(object):
