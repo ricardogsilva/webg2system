@@ -191,7 +191,7 @@ http://stackoverflow.com/questions/7029228/is-using-multiple-databases-and-south
 	  (or more). For example, for a machine with 4GB RAM, setting shmmax
       of 1GB:
 
-        $ sudo sysctl -w shmmax=1074000000
+        $ sudo sysctl -w kernel.shmmax=1074000000
 
     - Edit the /etc/postgresql/9.1/main/postgresql.conf file and set:
 
@@ -241,3 +241,42 @@ Apache logs go to
 	/var/log/apache2/error.log
 
 - Tomcat
+
+
+RESTARTING THE CATALOGUE MACHINE:
+
+1 - reboot the machine:
+
+    $ sudo reboot
+
+2 - change the shmmax kernel variable:
+
+    $ sudo sysctl -w kernel.shmmax=1074000000
+
+3 - start the PostgreSQL database cluster:
+
+    $ sudo service postgresql start
+
+4 - reload the tomcat java server:
+
+    $ sudo service tomcat6 stop && sudo service tomcat6 start
+
+5 - reload the apache web server:
+
+    $ sudo service apache2 reload
+
+6 - rebuild geonetwork's lucene index:
+
+    6.1 - access the geonetwork GUI:
+
+        http://geoland2.meteo.pt/geonetwork
+
+    6.2 - login with administrative privileges
+
+    6.3 - access the 'administration' section
+
+    6.4 - press the 'rebuild Lucene index' button. Wait about 5 minutes.
+
+    6.5 - press the 'optimize Lucene index' button. Wait about 5 minutes.
+        
+
