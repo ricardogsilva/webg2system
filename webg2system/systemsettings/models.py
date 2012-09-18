@@ -85,6 +85,14 @@ class Package(Item):
         return ', '.join(outs)
     get_outputs.short_description = 'Outputs'
 
+    def get_parent_packages_settings(self):
+        parents = set()
+        for inp in self.inputs.all():
+            originator_package = inp.packageoutput_set.all()[0].package
+            if originator_package != self:
+                parents.add(originator_package)
+        return parents
+
 class ExternalCode(models.Model):
     name = models.CharField(max_length=100)
     version = models.CharField(max_length=50, blank=True, null=True)
