@@ -12,6 +12,34 @@ import re
 from pexpect import spawn, ExceptionPexpect
 import xml.etree.ElementTree as etree
 
+class CDPGetError(Exception):
+    pass
+
+
+class Suite(object):
+
+    def __init__(self, name):
+        self.name = name
+        self.variables = dict()
+        self.families = []
+
+    def __repr__(self):
+        return self.name
+
+
+class Family(object):
+
+    def __init__(self, name, parent=None):
+        self.name = name
+        self.parent = parent
+        self.variables = dict()
+        self.families = []
+        self.tasks = []
+
+    def __repr__(self):
+        return self.name
+
+
 class NewCDPProxy(object):
     '''
     Connect to CDP and run commands.
@@ -82,6 +110,8 @@ class NewCDPProxy(object):
         return defined_suites
 
     def node_info(self, node_path):
+        if node_path.startswith('/'):
+            node_path = node_path[1:]
         node_path = '/'.join(('//%s' % self.cdp_host, node_path))
         out = self._get_result('info -v %s' % node_path)
         node_variables = self._parse_node_variables(out)
@@ -100,12 +130,95 @@ class NewCDPProxy(object):
                 pass
             else:
                 if variable_definitions:
-                    line = line.replace('[]', '').replace('[/]', '')
+                    line = re.sub(r'^\((?P<rest>.*)\s*\)\s*\[.*\]$', r'\g<rest>', line)
+                    line = re.sub(r'^(?P<rest>.*)\s*\[.*\]$', r'\g<rest>', line)
                     var_name, var_value = line.split('=', 1)
-                    var_name = var_name.strip()
-                    var_value = var_value.strip()
-                    exec('result["%s"] = "%s"' % (var_name, var_value.replace('"', '')))
+                    result[var_name.strip()] = var_value.strip()
             count += 1
+        return result
+
+    def find_nodes(self, node_regexp, suite=None, families=[]):
+        '''
+        Find nodes whose name matches the input regular expression.
+
+        Inputs:
+
+            node_regexp - a regular expression defining the name of the
+                          node to find.
+
+            suite - the suite where the node is to be searched. If None
+                    (the default) the node will be searched in all the
+                    currently defined suites.
+
+            families - a list of families where the node is to be searched.
+
+        Returns:
+
+        A list with all the nodes whose name matches the input regular
+        expression.
+        '''
+
+        out = self._get_result('find -v %s' % node_regexp)
+        result = out[1:]
+        if suite is not None:
+            result = [n for n in result if '/%s' % suite in n]
+        if len(families) > 0:
+            for f in families:
+                result = [n for n in result if '%s' % f in n]
+        return result
+
+    def get_definition(self, suite):
+        result = []
+        try:
+            self._update_definition()
+            out = self._get_result('show')
+            in_suite = False
+            count = 0
+            while count < len(out):
+                line = out[count]
+                if 'suite %s' % suite in line:
+                    in_suite = True
+                elif 'endsuite' in line:
+                    result.append(line)
+                    in_suite = False
+                if in_suite:
+                    result.append(line)
+                count += 1
+        except CDPGetError as err:
+            print(err)
+        return result
+
+    def _update_definition(self):
+        out = self._get_result('get')
+        result = False
+        if 'Got it' in out[1]:
+            result = True
+        else:
+            raise CDPGetError
+        return result
+
+    #FIXME - finish this method
+    def parse_definition(self, definition):
+        current = None
+        result = None
+        for line in definition:
+            words = line.split()
+            first_word = words[0]
+            if first_word == 'suite':
+                current = Suite(words[1])
+                result = current
+            elif first_word == 'defstatus':
+                current.defstatus = words[1]
+            elif first_word == 'edit':
+                current.variables[words[1]] = words[2]
+            elif first_word == 'family':
+                fam = Family(words[1], parent=current)
+                current.families.append(fam)
+                current = fam
+            elif first_word == 'endfamily':
+                current = current.parent
+            else:
+                pass
         return result
 
 
