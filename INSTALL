@@ -212,7 +212,7 @@ http://stackoverflow.com/questions/7029228/is-using-multiple-databases-and-south
 
        and add the following at the top of the file:
 
-              JAVA_OPTS="$JAVA_OPTS -Xms16m -Xmx1024m"
+              JAVA_OPTS="$JAVA_OPTS -Xms128m -Xmx1024m -XX:PermSize=128m -XX:MaxPermSize=512m"
        
        (you may need to tweak these numbers depending on the specs of the 
        machine.)
