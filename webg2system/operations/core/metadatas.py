@@ -90,6 +90,14 @@ class SWIMetadataModifier(MetadataHandler):
         uuid = str(uuid1())
         self.modify_file_identifier(uuid)
         self.modify_id_info_modifier(uuid)
+        self.modify_parent_identifier()
+
+    def modify_parent_identifier(self):
+        parent_uuid = self.product.iParentIdentifier
+        parent_id_el = self.tree.xpath('gmd:parentIdentifier/gco:' \
+                                       'CharacterString', 
+                                       namespaces=self.ns)[0]
+        parent_id_el.text = parent_uuid
 
     def modify_file_identifier(self, uuid):
         file_id_el = self.tree.xpath('gmd:fileIdentifier/gco:CharacterString',
@@ -131,6 +139,43 @@ class SWIMetadataModifier(MetadataHandler):
                                 'pointOfContact/gmd:CI_ResponsibleParty', 
                                 namespaces=self.ns)[1]
         self._modify_ci_responsible_party(xpath, contact, role, position)
+
+
+    def modify_quicklook_url(self, timeslot):
+
+        baseURL = ss.WebServer.objects.get().public_URL
+        ts = timeslot.strftime('%Y%m%d%H%M')
+        url = '%s/operations/products/%s/%s/quicklook/' % \
+                (baseURL, self.product.short_name, ts)
+        file_name_el = self.tree.xpath('gmd:identificationInfo/*/'\
+                                     'gmd:graphicOverview/*/'\
+                                     'gmd:fileName/gco:CharacterString',
+                                     namespaces=self.ns)[0]
+        file_name_el.text = url
+        #file_desc_el = self.tree.xpath('gmd:identificationInfo/*/'\
+        #                             'gmd:graphicOverview/*/'\
+        #                             'gmd:fileDescription/gco:CharacterString',
+        #                             namespaces=self.ns)[0]
+        #file_desc_el.text = self.product.graphic_overview_description
+        #file_type_el = self.tree.xpath('gmd:identificationInfo/*/'\
+        #                             'gmd:graphicOverview/*/'\
+        #                             'gmd:fileType/gco:CharacterString',
+        #                             namespaces=self.ns)[0]
+        #file_type_el.text = self.product.graphic_overview_type
+
+    def modify_download_url(self, timeslot):
+        baseURL = ss.WebServer.objects.get().public_URL
+        ts = timeslot.strftime('%Y%m%d%H%M')
+        vito_sdi_url = 'http://web.vgt.vito.be/download_g2.php?'
+        url = '%s/operations/products/%s/%s/product/' % \
+                (baseURL, self.product.short_name, ts)
+        vito_url = '%sfile=&path=%s&serviceid=%s' % \
+                   (vito_sdi_url, url, self.product.sdi_service_id)
+        linkage_el = self.tree.xpath('gmd:distributionInfo/*/gmd:' \
+                                     'transferOptions[1]/*/gmd:onLine/*/' \
+                                     'gmd:linkage/gmd:URL', 
+                                     namespaces=self.ns)[0]
+        linkage_el.text = vito_url
 
     def save_xml(self, path):
         self.logger.debug('save path: %s' % path)
