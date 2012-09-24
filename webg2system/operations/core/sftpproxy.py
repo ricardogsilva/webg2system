@@ -83,6 +83,7 @@ class SFTPProxy(object):
                                                  raw_path))
                 except IOError as err:
                     self.logger.error(err)
+
         else:
             self.logger.error('Not connected to the remote SFTP host')
             file_list = []
