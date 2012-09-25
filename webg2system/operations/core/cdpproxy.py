@@ -12,32 +12,74 @@ import re
 from pexpect import spawn, ExceptionPexpect
 import xml.etree.ElementTree as etree
 
+import pygraphviz as pgv
+from uuid import uuid1
+
 class CDPGetError(Exception):
     pass
 
 
-class Suite(object):
+class SMSNode(object):
+    IDS = [0]
 
     def __init__(self, name):
         self.name = name
+        self.id = self.IDS[-1] + 1
+        self.IDS.append(self.id)
+
+    def __repr__(self):
+        return '%s_%s' % (self.id, self.name)
+
+
+class Suite(SMSNode):
+
+    def __init__(self, name):
+        super(Suite, self).__init__(name)
         self.variables = dict()
         self.families = []
 
-    def __repr__(self):
-        return self.name
 
-
-class Family(object):
+class Family(SMSNode):
 
     def __init__(self, name, parent=None):
-        self.name = name
+        super(Family, self).__init__(name)
         self.parent = parent
         self.variables = dict()
         self.families = []
         self.tasks = []
 
-    def __repr__(self):
-        return self.name
+
+class Task(SMSNode):
+
+    def __init__(self, name, parent=None):
+        super(Task, self).__init__(name)
+        self.parent = parent
+        self.variables = dict()
+
+
+class SuiteGraph(pgv.AGraph):
+
+    def __init__(self, suite, name=None, strict=True, directed=False, **kwargs):
+        self.suite = suite
+        if name is None:
+            name = suite.name
+        super(SuiteGraph, self).__init__(name=name, strict=strict, 
+                                         directed=directed, **kwargs)
+        self.add_node(suite)
+        for f in suite.families:
+            self._add_family(f)
+
+    def _add_family(self, family):
+        self.add_node(family, color='red')
+        self.add_edge(family.parent, family, color='blue')
+        for fam in family.families:
+            self._add_family(fam)
+        for task in family.tasks:
+            self._add_task(task)
+
+    def _add_task(self, task):
+        self.add_node(task)
+        self.add_edge(task.parent, task)
 
 
 class NewCDPProxy(object):
@@ -198,7 +240,8 @@ class NewCDPProxy(object):
         return result
 
     #FIXME - finish this method
-    def parse_definition(self, definition):
+    def parse_definition(self, suite):
+        definition = self.get_definition(suite)
         current = None
         result = None
         for line in definition:
@@ -216,6 +259,21 @@ class NewCDPProxy(object):
                 current.families.append(fam)
                 current = fam
             elif first_word == 'endfamily':
+                if isinstance(current, Family):
+                    current = current.parent
+                else:
+                    current = current.parent.parent
+            elif first_word == 'task':
+                if isinstance(current, Family):
+                    t = Task(words[1], parent=current)
+                    current.tasks.append(t)
+                    current = t
+                else:
+                    parent = current.parent
+                    t = Task(words[1], parent=parent)
+                    parent.tasks.append(t)
+                    current = t
+            elif first_word == 'endtask':
                 current = current.parent
             else:
                 pass
