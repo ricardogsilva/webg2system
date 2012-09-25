@@ -30,7 +30,7 @@ def initialize():
 
     The SMS variables are inserted by the SMS pre-processor at
     runtime, by replacing the strings that are marked with leading
-    and trailing '&' characters. After the SMS variables are put into
+    and trailing ampersand characters. After the SMS variables are put into
     the running environment, the external 'smsinit' program is called,
     in order to let the SMS server that a new task has been started.
     '''
