@@ -167,6 +167,8 @@ class RunningPackage(models.Model):
                     - tile (string): None
                     - populateCSW: True
                     - generate_series: False
+                SWIMetadataHandler
+                    - send_to_csw: True
         '''
 
         logger = self._get_logger(log_level)
@@ -201,6 +203,7 @@ class RunningPackage(models.Model):
                         g2packages.OWSPreparator,
                         g2packages.QuickLookGenerator,
                         g2packages.MetadataGenerator,
+                        g2packages.SWIMetadataHandler,
                     ]
                     runPackage = False
                     for cls in special_classes:
