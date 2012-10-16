@@ -1329,6 +1329,10 @@ class SWIMetadataHandler(ProcessingPackage):
             self.md_modifier.modify_download_url(self.timeslot)
             xml_name = os.path.split(xml_path)[-1]
             out_path = os.path.join(self.outputDir, xml_name)
+            #SANDRA
+            self.md_modifier.modify_temporal_extent(self.timeslot)
+            self.md_modifier._modify_citation()
+            #SANDRA
             self.md_modifier.save_xml(out_path)
             result = out_path
         else:
