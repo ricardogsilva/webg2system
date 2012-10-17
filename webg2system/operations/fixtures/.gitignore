@@ -1,0 +1,2 @@
+# Ignore .svn files from the 'subversion' repository
+.svn
