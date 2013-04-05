@@ -9,6 +9,7 @@ processing system.
 import os
 import re
 import logging
+import datetime
 import time
 from lxml import etree
 import urllib
@@ -177,6 +178,43 @@ class SWIMetadataModifier(MetadataHandler):
                                      namespaces=self.ns)[0]
         linkage_el.text = vito_url
 
+        #SANDRA
+    def modify_temporal_extent(self, timeslot):
+
+        parentEl = self.tree.xpath('gmd:identificationInfo/*/gmd:extent/'\
+                               'gmd:EX_Extent/gmd:temporalElement/'\
+                               'gmd:EX_TemporalExtent/gmd:extent/'\
+                               'gml:TimePeriod', namespaces=self.ns)[0]
+        
+        bTimeslot = timeslot - datetime.timedelta(hours=12) 
+        beginEl = parentEl.xpath('gml:beginPosition', namespaces=self.ns)[0]
+        beginEl.text = bTimeslot.strftime('%Y-%m-%dT%H:%M:%SZ')
+        
+        eTimeslot = timeslot + datetime.timedelta(hours=12)
+        endEl = parentEl.xpath('gml:endPosition', namespaces=self.ns)[0]
+        endEl.text = eTimeslot.strftime('%Y-%m-%dT%H:%M:%SZ')
+        #SANDRA
+
+        #SANDRA
+    def modify_temporal_tags(self, timeslot):
+        '''
+        alterar este codigo para fazer as alteracoes ao xml nas tags relacionadas com tempoo.... 
+        '''
+
+        parentEl = self.tree.xpath('gmd:identificationInfo/*/gmd:extent/'\
+                               'gmd:EX_Extent/gmd:temporalElement/'\
+                               'gmd:EX_TemporalExtent/gmd:extent/'\
+                               'gml:TimePeriod', namespaces=self.ns)[0]
+        
+        bTimeslot = timeslot - datetime.timedelta(hours=12) 
+        beginEl = parentEl.xpath('gml:beginPosition', namespaces=self.ns)[0]
+        beginEl.text = bTimeslot.strftime('%Y-%m-%dT%H:%M:%SZ')
+        
+        eTimeslot = timeslot + datetime.timedelta(hours=12)
+        endEl = parentEl.xpath('gml:endPosition', namespaces=self.ns)[0]
+        endEl.text = eTimeslot.strftime('%Y-%m-%dT%H:%M:%SZ')
+        #SANDRA
+
     def save_xml(self, path):
         self.logger.debug('save path: %s' % path)
         self.tree.write(path)
@@ -334,6 +372,21 @@ class SWIMetadataModifier(MetadataHandler):
                                        namespaces=self.ns)[0]
         function_el.attrib['codeListValue'] = function
         function_el.text = function
+
+
+    #SANDRA
+    def _modify_citation(self):
+        citationEl = self.tree.xpath('gmd:identificationInfo/*/gmd:citation/*',
+                                     namespaces=self.ns)[0]
+        otherDetailsEl = citationEl.xpath('gmd:otherCitationDetails/'\
+                                          'gco:CharacterString', 
+                                          namespaces=self.ns)[0]
+        baseURL = ss.WebServer.objects.get().public_URL
+        userManualURL = '%s/operations/products/%s/docs/pum' % \
+                (baseURL, "SWI")
+        otherDetailsEl.text = userManualURL
+    #SANDRA
+
 
 
 class MetadataGenerator(object):

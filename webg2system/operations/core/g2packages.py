@@ -1290,10 +1290,14 @@ class SWIMetadataHandler(ProcessingPackage):
             self.md_modifier = metadatas.SWIMetadataModifier(self.product)
 
     def run_main(self, callback=None, send_to_csw=True):
+        result = False
         xml_file = self.modify_xml()
         self.archive_outputs(compress=False)
         if send_to_csw:
             self.send_to_csw(xml_file)
+        if xml_file is not None:
+            result = True
+        return result
 
     def modify_xml(self):
         '''
@@ -1302,10 +1306,10 @@ class SWIMetadataHandler(ProcessingPackage):
         This method will modify the self-generated XML file from the external
         SWI_g2 code package. It will insert the correct information regarding:
 
-        - UUID of the product in all the places it appears (done)
-        - UUID of the parent series (done)
-        - Contact details of the dissemination facility (done)
-        - URLs for the product and the quicklook (done)
+        - UUID of the product in all the places it appears
+        - UUID of the parent series
+        - Contact details of the dissemination facility
+        - URLs for the product and the quicklook
         '''
 
         self.host.make_dir(self.workingDir)
@@ -1325,6 +1329,10 @@ class SWIMetadataHandler(ProcessingPackage):
             self.md_modifier.modify_download_url(self.timeslot)
             xml_name = os.path.split(xml_path)[-1]
             out_path = os.path.join(self.outputDir, xml_name)
+            #SANDRA
+            self.md_modifier.modify_temporal_extent(self.timeslot)
+            self.md_modifier._modify_citation()
+            #SANDRA
             self.md_modifier.save_xml(out_path)
             result = out_path
         else:

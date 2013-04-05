@@ -17,3 +17,6 @@ settings_local.py
 
 # ignore the database for the operations app
 operations_db.db
+
+# ignore .svn files from the 'subversion' repository
+.svn
