@@ -40,6 +40,38 @@ def _get_code_dir():
 env.hosts = _get_active_hosts()
 
 def setup_dev_machine():
+    '''
+    Install all the needed dependencies in order to setup a new
+    dev machine.
+
+    This task will download and install the dependencies for running
+    the external product generation algorithms (such as HDF5 libraries,
+    FORTRAN compilers, etc.) and also for setting up and running the 
+    production system (such as the python packages that are used in the 
+    system).
+    After the downloading and installation, the external algorithms are 
+    compiled.
+
+    The correct order for setting up new machines is therefore:
+
+    1 - install git
+    2 - clone the webg2system repository
+    3 - run this fabfile as
+            
+            $ fab setup_dev_machine
+    '''
+
+    install_apt_dependencies()
+    install_pip_dependencies()
+    install_gdal_dependencies()
+    get_extra_libs()
+    compile_external_code()
+
+def install_gdal_dependencies():
+    gdal_config_path = local('which gdal-config')
+    print(gdal_config_path)
+
+def compile_external_code():
     pass
 
 def prepare_deploy():
@@ -83,10 +115,10 @@ def first_deployment():
     #get_private_code()
 
 def install_apt_dependencies():
-    sudo('apt-get install git python-pip python-virtualenv python-pexpect ' \
-         'python-pyparsing python-lxml python-tables python-imaging ' \
-         'gdal-bin python-gdal python-mapscript libapache2-mod-wsgi ' \
-         'cgi-mapserver mapserver-bin ttf-freefont subversion gfortran')
+    sudo('apt-get install python-pip python-virtualenv ' \
+         'python-dev gdal-bin python-gdal python-mapscript ' \
+         'libapache2-mod-wsgi cgi-mapserver mapserver-bin ttf-freefont ' \
+         'subversion gfortran')
 
 def clone_repo():
     code_dir = _get_code_dir()

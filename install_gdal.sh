@@ -7,7 +7,8 @@
 
 # symlink gdal-config to the virtualenv's bin directory
 GDAL_CONFIG=$(which gdal-config)
-ln -s ${GDAL_CONFIG} python/bin/gdal-config
+PYTHON_VIRTUALENV_DIR=$(dirname $(which python))
+ln -s ${GDAL_CONFIG} ${PYTHON_VIRTUALENV_DIR}/gdal-config
 
 # get the special variables from gdal-config
 MINVERSION=$(gdal-config --version | sed "s_\(\w\.\w\).*_\1_g")
