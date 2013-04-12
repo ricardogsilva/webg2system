@@ -42,13 +42,13 @@ def install_apt_dependencies():
     distro_dt = dt.datetime.strptime(distro, '%y.%m')
     # libhdf5 changed name in Ubuntu 13.04
     if distro_dt < dt.datetime(2013, 4, 1):
-        hdf5_package_name = 'libhdf5'
+        hdf5_package_name = 'libhdf5-serial-1.8.4'
     else:
         hdf5_package_name = 'libhdf5-7'
-    local('sudo apt-get install %s libhdf5-dev libxml2 libxml2-dev ' \
-          'libxslt1.1 libxslt1-dev gfortran subversion ttf-freefont ' \
-          'libgdal-dev gdal-bin cgi-mapserver mapserver-bin fabric ' \
-          'python-dev python-virtualenv python-pip python-mapscript' \
+    local('sudo apt-get install %s hdf5-tools libhdf5-dev libxml2 ' \
+          'libxml2-dev libxslt1.1 libxslt1-dev gfortran subversion ' \
+          'ttf-freefont libgdal-dev gdal-bin cgi-mapserver mapserver-bin ' \
+          'fabric python-dev python-virtualenv python-pip python-mapscript' \
           % hdf5_package_name) 
 
 def install_pip_dependencies():
