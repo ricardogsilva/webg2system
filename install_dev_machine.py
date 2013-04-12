@@ -35,10 +35,10 @@ def install_apt_dependencies():
     system-wide.
     '''
 
-    local('sudo apt-get install libxml2 libxml2-dev libxslt1.1 libxslt1-dev ' \
-          'gfortran subversion ttf-freefont gdal-bin cgi-mapserver ' \
-          'mapserver-bin fabric python-dev python-virtualenv python-pip ' \
-          'python-mapscript') 
+    local('sudo apt-get install libhdf5-serial-dev libxml2 libxml2-dev ' \
+          'libxslt1.1 libxslt1-dev gfortran subversion ttf-freefont ' \
+          'gdal-bin cgi-mapserver mapserver-bin fabric python-dev ' \
+          'python-virtualenv python-pip python-mapscript') 
 
 def install_pip_dependencies():
     '''
