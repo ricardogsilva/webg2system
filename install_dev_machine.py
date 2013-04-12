@@ -8,7 +8,9 @@ development machines.
 
 import os
 import re
+import datetime as dt
 from subprocess import Popen, PIPE
+
 from fabric.api import local, lcd
 
 def install_first():
@@ -35,10 +37,19 @@ def install_apt_dependencies():
     system-wide.
     '''
 
-    local('sudo apt-get install libhdf5-serial-dev libxml2 libxml2-dev ' \
+    distro_version = local('lsb_release --release', capture=True)
+    distro = re.search(r'Release:\s+([\d\.]+)', distro_version).group(1)
+    distro_dt = dt.datetime.strptime(distro, '%y.%m')
+    # libhdf5 changed name in Ubuntu 13.04
+    if distro_dt < dt.datetime(2013, 4, 1):
+        hdf5_package_name = 'libhdf5'
+    else:
+        hdf5_package_name = 'libhdf5-7'
+    local('sudo apt-get install %s libhdf5-dev libxml2 libxml2-dev ' \
           'libxslt1.1 libxslt1-dev gfortran subversion ttf-freefont ' \
-          'gdal-bin cgi-mapserver mapserver-bin fabric python-dev ' \
-          'python-virtualenv python-pip python-mapscript') 
+          'libgdal-dev gdal-bin cgi-mapserver mapserver-bin fabric ' \
+          'python-dev python-virtualenv python-pip python-mapscript' \
+          % hdf5_package_name) 
 
 def install_pip_dependencies():
     '''
