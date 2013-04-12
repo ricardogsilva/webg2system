@@ -84,7 +84,7 @@ def install_python_gdal():
     min_version = re.search(r'\A(\d\.\d)', gdal_version).group()
     max_version = float(min_version) + 0.1
     lib_dir = local('gdal-config --libs', capture=True)
-    re_match = re.search(r'-L(?P<dir>[\w\/]+) -l(?P<lib>\w+)', lib_dir)
+    re_match = re.search(r'-L(?P<dir>[\w\/]+) -l(?P<lib>[\w\.]+)', lib_dir)
     dir_name = re_match.group('dir')
     lib_name = re_match.group('lib')
     local('pip install --no-install "GDAL>=%s, <%3.1f"' % (min_version, max_version))
