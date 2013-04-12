@@ -1,0 +1,2 @@
+# the tables module depends on numexpr being already installed
+tables==2.4

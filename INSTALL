@@ -1,3 +1,9 @@
+INSTALLING THE WEB SERVER COMPONENTS ON A NEW MACHINE:
+
+1 - ssh to the machine and make sure that pip is installed
+2 - refer to your own development environment and add the webserver in the settings
+
+
 INSTALLING ON A NEW MACHINE:
 
 You can use the fabfile present in this repository to remotely deploy the
@@ -44,6 +50,27 @@ code to a production machine.
 		$ mkdir -p ~/dev
 		$ cd ~/dev
 		$ git clone https://github.com/ricardogsilva/webg2system.git 
+
+
+	4 - Run the install_apt_dependencies.sh script in order to install some additional
+	    packages.
+
+		$ cd webg2system
+		$ ./install_apt_dependencies
+
+	5 - Create a python virtualenv for working with the project. Name this virtualenv 'python'
+
+		$ virtualenv python
+
+	6 - Activate the virtualenv in order to work within a constrained python environment
+
+		$ source python/bin/activate
+
+	7 - Install the aditional python packages needed by the system using pip and the requirements file
+
+		$ pip install -r requirements.txt
+
+
 
 	4 - Install the python-fabric package
 
@@ -187,7 +214,7 @@ http://stackoverflow.com/questions/7029228/is-using-multiple-databases-and-south
 
         $ free -mt
     
-    - Set the kernel's shmmax value to be abou 1/4th of the total RAM 
+    - Set the kernel's shmmax value to be about 1/4th of the total RAM 
 	  (or more). For example, for a machine with 4GB RAM, setting shmmax
       of 1GB:
 

@@ -39,6 +39,32 @@ def _get_code_dir():
 
 env.hosts = _get_active_hosts()
 
+def setup_web_server():
+    '''
+    Connect to the remote machine that is to be used as a web server and
+    perform the various steps needed in order to use it.
+    '''
+
+    pass
+
+def install_web_server_dependencies():
+    '''
+    Install the needed software dependencies in order to run the web server.
+    '''
+
+    # get GIS base data (world borders, etc.) from the archive
+    #run('scp')
+
+    # install apache web server, tomcat server, postgreSQL + PostGIS database, geonetwork
+    #sudo('apt-get install apache2')
+
+    # tweak apache configurations and setup virtualhosts
+    # tweak tomcat configurations (memory for the Java VM, logging)
+    # create the PostgreSQL Postgis template, then create the geonetwork user and database
+    # tweak geonetwork's configurations
+    # fetch the webg2system code
+
+
 def setup_dev_machine():
     '''
     Install all the needed dependencies in order to setup a new
@@ -115,9 +141,9 @@ def first_deployment():
     #get_private_code()
 
 def install_apt_dependencies():
-    sudo('apt-get install python-pip python-virtualenv ' \
+    local('sudo apt-get install python-pip python-virtualenv ' \
          'python-dev gdal-bin python-gdal python-mapscript ' \
-         'libapache2-mod-wsgi cgi-mapserver mapserver-bin ttf-freefont ' \
+         'cgi-mapserver mapserver-bin ttf-freefont ' \
          'subversion gfortran')
 
 def clone_repo():
