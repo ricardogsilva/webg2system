@@ -11,9 +11,15 @@ import re
 import datetime as dt
 from subprocess import Popen, PIPE
 
-from fabric.api import local, lcd
+from fabric.api import local, lcd, settings
 
 def install_first():
+    # TODO: add an extra step:
+    # - add the ubuntugis-unstable ppa in order to get GDAL from it
+    local('sudo apt-get install python-software-properties')
+    local('sudo add-apt-repository ppa:ubuntugis/ubuntugis-unstable')
+    with settings(warn_only=True):
+        result = local('sudo apt-get update', capture=True)
     install_apt_dependencies()
     print('\n- First set of dependencies installed. Now create the python ' \
           'virtual environment by executing:\n\n' \
@@ -23,11 +29,6 @@ def install_first():
           'Then proceed with the installation of the second set of ' \
           'dependencies, which are python-specific. Execute:\n\n' \
           '\t$ fab -f install_dev_machine install_second')
-
-def install_second():
-    install_pip_dependencies()
-    install_python_gdal()
-    link_mapscript_virtualenv()
 
 def install_apt_dependencies():
     '''
@@ -48,8 +49,13 @@ def install_apt_dependencies():
     local('sudo apt-get install %s hdf5-tools libxml2 libxml2-dev ' \
           'libxslt1.1 libxslt1-dev gfortran subversion ttf-freefont ' \
           'libgdal-dev gdal-bin cgi-mapserver mapserver-bin fabric ' \
-          'python-dev python-virtualenv python-pip python-mapscript' \
-          % ' '.join(hdf5_package_names)) 
+          'python-dev python-virtualenv python-pip python-mapscript ' \
+          'python-software-properties' % ' '.join(hdf5_package_names))
+
+def install_second():
+    install_pip_dependencies()
+    install_python_gdal()
+    link_mapscript_virtualenv()
 
 def install_pip_dependencies():
     '''
