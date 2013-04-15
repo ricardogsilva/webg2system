@@ -113,11 +113,17 @@ def link_mapscript_virtualenv():
 
     process = Popen(['env', 'python', '--version'], stdout=PIPE, stderr=PIPE)
     stdout, stderr = process.communicate()
-    version_list = stderr.replace('Python', '').strip().split('.')
-    if len(version_list) > 2:
-        version_list = version_list[:2]
-    python_version = '.'.join(version_list)
-    local('ln -s /usr/lib/python%s/dist-packages/mapscript.py $VIRTUAL_ENV/' \
-          'lib/python%s/site-packages' % (python_version, python_version))
-    local('ln -s /usr/lib/python%s/dist-packages/_mapscript.so $VIRTUAL_ENV/' \
-          'lib/python%s/site-packages' % (python_version, python_version))
+    python_version = re.search(r'(\d\.\d)', stderr).group()
+    virtualenv_dir = local('echo $VIRTUAL_ENV', capture=True)
+    if virtualenv_dir == '':
+        print('Unable to detect virtual python environment. Did you remember ' \
+              'to activate your virtualenv?')
+        raise SystemExit
+    link_dir = os.path.join(virtualenv_dir, 'lib', 
+                            'python%s' % python_version, 'site-packages')
+    link_names = ['mapscript.py', '_mapscript.so']
+    for i in link_names:
+        link_path = os.path.join(link_dir, i)
+        if not os.path.islink(link_path):
+            local('ln -s /usr/lib/python%s/dist-packages/%s %s' % \
+                  (python_version, i, link_path))
