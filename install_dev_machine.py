@@ -56,6 +56,7 @@ def install_second():
     install_pip_dependencies()
     install_python_gdal()
     link_mapscript_virtualenv()
+    create_operations_database()
 
 def install_pip_dependencies():
     '''
@@ -127,3 +128,7 @@ def link_mapscript_virtualenv():
         if not os.path.islink(link_path):
             local('ln -s /usr/lib/python%s/dist-packages/%s %s' % \
                   (python_version, i, link_path))
+
+def create_operations_database():
+    with lcd('webg2system'):
+        local('python manage.py syncdb --database=operations_db')
