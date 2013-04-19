@@ -142,10 +142,10 @@ def install_web_server(db_name='geonetwork_db', db_user='geonetwork_user',
     #alter_mapfile()
     install_web_server_apt_dependencies()
     create_database(db_name, db_user, db_pass)
-    #tune_memory()
-    #tune_webserver()
-    #tune_database_server()
-    #configure_tomcat()
+    tune_memory()
+    tune_webserver()
+    tune_database_server()
+    configure_tomcat()
     #install_catalogue_server()
 
 def get_gis_base_data():
@@ -212,11 +212,29 @@ def _get_available_ram():
     available_ram = float(re.search(r'\d+', ram_out).group()) * 1024 # Bytes
     return available_ram
 
+def tune_webserver():
+    '''
+    Change the MaxClients parameter if it proves to be problematic
+    '''
+
+    pass
+
+
+def _replace_file(original_file_path, tmp_file_name, content_list, 
+                  backup=True):
+    with open(tmp_file_name, 'w') as new_fh:
+            new_fh.writelines(new_contents)
+    if backup:
+        _backup_file(original_file_path)
+    local('sudo mv %s %s' % (tmp_file_name, original_file_path))
 
 #TODO - test this task
-def tune_database_server(ram_to_shared_buffers_ratio=0.2):
+def tune_database_server(ram_to_shared_buffers_ratio=0.2, backup=True):
     '''
     Alter the database server's settings.
+
+    This task will alter the main postgresql configuration file and set
+    the 'shared_buffers' parameter to (hopefully) optimal values.
     '''
 
     available_ram = _get_available_ram()
@@ -232,16 +250,29 @@ def tune_database_server(ram_to_shared_buffers_ratio=0.2):
                 new_contents.append(new_line)
             else:
                 new_contents.append(line)
-    with open('tmp_postgresql.conf', 'w') as new_fh:
-            new_fh.writelines(new_contents)
-    local('sudo mv tmp_postgresql.conf %s' % pg_conf_path)
-        
+    _replace_file(pg_conf_path, 'tmp_postgresql.conf', new_contents, backup)
+    local('sudo service postgresql restart')
 
+def _backup_file(original_path):
+    '''
+    Make a backup copy if the input file.
+    '''
+
+    backup_dir = os.path.expanduser('~/g2system_backups')
+    local('mkdir -p %s' % backup_dir)
+    now = dt.datetime.utcnow()
+    file_name = os.path.basename(original_path)
+    local('cp %s %s/%s.%s' % (original_path, backup_dir, file_name, 
+          now.strftime('%Y_%m_%d_%H_%M')))
 
 #TODO - test this task
-def tune_memory(ram_to_shmmax_ratio=0.25):
+def tune_memory(ram_to_shmmax_ratio=0.25, backup=True):
     '''
     Tune the available memory appropriately.
+
+    This task alters the shmmax and shmall kernel parameters
+    and writes the new values in the /etc/sysctl.conf file so that
+    the changes are persisted after a reboot.
     '''
 
     available_ram = _get_available_ram()
@@ -249,35 +280,87 @@ def tune_memory(ram_to_shmmax_ratio=0.25):
     shmmax_out = local('sysctl kernel.shmmax', capture=True)
     used_shmmax = float(re.search(r'\d+', shmmax_out).group()) # Bytes
     if used_shmmax <= ram_to_use:
-        # change the runtime memory settings AND write them in the 
-        # sysctl.conf file so that they get restored upon reboots
+        shmall_out = local('sysctl kernel.shmall', capture=True)
+        used_shmall = float(re.search(r'\d+', shmall_out).group()) # pages
+        page_size = float(local('getconf PAGE_SIZE', capture=True))
+        shmall_to_use = max(used_shmall, ram_to_use * page_size)
         local('sudo sysctl -w kernel.shmmax=%i' % ram_to_use)
+        local('sudo sysctl -w kernel.shmall=%i' % shmall_to_use)
         new_contents = []
         added_shmmax_param = False
-        with open('/etc/sysctl.conf') as fh:
+        added_shmall_param = False
+        conf_file_path = '/etc/sysctl.conf'
+        with open(conf_file_path) as fh:
             for line in fh:
                 if re.search(r'kernel\.shmmax *= *\d+', line) is not None:
                     new_line = 'kernel.shmmax = %i\n' % ram_to_use
                     new_contents.append(new_line)
                     added_shmmax_param = True
+                elif re.search(r'kernel\.shmall *= *\d+', line) is not None:
+                    new_line = 'kernel.shmall = %i\n' % shmall_to_use
+                    new_contents.append(new_line)
+                    added_shmall_param = True
                 else:
                     new_contents.append(line)
         if not added_shmmax_param:
             new_contents.append('kernel.shmmax = %i\n' % ram_to_use)
-        with open('tmp_sysctl.conf', 'w') as new_fh:
-                fh.writelines(new_contents)
-        local('sudo mv tmp_sysctl.conf /etc/sysctl.conf')
+        if not added_shmall_param:
+            new_contents.append('kernel.shmall = %i\n' % shmall_to_use)
+        _replace_file(conf_file_path, 'tmp_sysctl.conf', new_contents, backup)
 
+#TODO - test this task
+def configure_tomcat(Xmx_to_ram_ratio=0.17, Xms_to_ram_ratio=0.1):
+    '''
+    Configure the Tomcat java server in order to optimize performance.
 
+    This task modifies the ammount of memory available and also adds some
+    tweaks specific to geonetwork.
+    '''
 
+    available_ram = _get_available_ram()
+    Xmx = int((available_ram * Xmx_to_ram_ratio) / (1024 ** 2)) # MegaBytes
+    Xms = int((available_ram * Xms_to_ram_ratio) / (1024 ** 2)) # MegaBytes
+    perm_size = Xms
+    max_perm_size = int(Xmx / 2)
+    memory_opts_line = 'JAVA_OPTS="$JAVA_OPTS -Xms%sm -Xmx%sm ' \
+                       '-XX:PermSize=%sm -XX:MaxPermSize=%sm"' % \
+                       (Xms, Xmx, perm_size, max_perm_size)
+    print('memory_opts_line: %s' % memory_opts_line)
+    tweak_opts_line = 'JAVA_OPTS="$JAVA_OPTS -XX:CompileCommand=exclude,' \
+                      'net/sf/saxon/event/ReceivingContentHandler.' \
+                      'startElement"'
+    conf_file_path = '/usr/share/tomcat7/bin/catalina.sh'
+    found_memory_opts_line = False
+    found_tweak_line = False
+    new_contents = []
+    with open(conf_file_path) as fh:
+        for line in fh:
+            if re.search(r'\-Xms\w+ \-Xmx\w+ \-XX\:PermSize\=\w+ ' \
+                         '\-XX\:MaxPermSize\=\w+', line) is not None:
+                new_contents.append(memory_opts_line)
+                found_memory_opts_line = True
+            else:
+                if re.search(r'-XX:CompileCommand\=exclude', line) is not None:
+                    found_tweak_line = True
+                new_contents.append(line)
+    if not found_tweak_line:
+        new_contents.insert(0, tweak_opts_line)
+    if not found_memory_opts_line:
+        new_contents.insert(0, memory_opts_line)
+    _replace_file(conf_file_path, 'tmp_catalina.sh', new_contents, backup)
+    local('sudo service tomcat7 stop')
+    local('sudo service tomcat7 start')
 
-
-
-def configure_tomcat():
-    pass
-
+#TODO - Finish this task, following the slides for geonetwork installation
 def install_geonetwork():
-    pass
+    '''
+    Get the geonetwork war file and install it.
+    '''
+
+    remote_directory = '/media/Data3/geoland2/SOFTWARE'
+    war_name = 'geonetwork.war'
+    get('%s/%s' % (remote_directory, war_name), '.')
+    local('sudo cp %s /var/lib/tomcat7/webapps' % war_name)
 
 def configure_geonetwork():
     pass
