@@ -1,3 +1,15 @@
+NEW METHOD FOR INSTALLATION
+
+1 - ssh into your desired machine
+2 - sudo apt-get install git fabric python-lxml
+3 - git clone https://github.com/ricardogsilva/webg2system.git 
+3 - run the install_dev_machine.py fabric script multiple times:
+    3.1 - first run to install more dependencies
+    3.2 - second run to install aditional python dependencies
+    3.3 - optionally third run to install the web server and SDI components
+
+
+
 INSTALLING THE WEB SERVER COMPONENTS ON A NEW MACHINE:
 
 1 - ssh to the machine and make sure that pip is installed

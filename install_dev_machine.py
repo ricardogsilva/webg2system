@@ -10,8 +10,13 @@ import os
 import re
 import datetime as dt
 from subprocess import Popen, PIPE
+from lxml import etree
 
 from fabric.api import local, lcd, settings, get
+
+_hosts = {
+    'archive' : 'g2user@192.168.151.29',
+}
 
 def install_first():
     install_apt_dependencies()
@@ -139,6 +144,7 @@ def create_operations_database():
 def install_web_server(db_name='geonetwork_db', db_user='geonetwork_user', 
                        db_pass='geonetwork_pass'):
     get_gis_base_data()
+    setup_wms()
     #alter_mapfile()
     install_web_server_apt_dependencies()
     create_database(db_name, db_user, db_pass)
@@ -146,20 +152,43 @@ def install_web_server(db_name='geonetwork_db', db_user='geonetwork_user',
     tune_webserver()
     tune_database_server()
     configure_tomcat()
-    #install_catalogue_server()
+    install_geonetwork()
+    configure_geonetwork_config_xml(db_name, db_pass, db_user)
+    configure_geonetwork_gui()
 
 def get_gis_base_data():
     '''
     Fetch the GIS base data from the archives.
     '''
 
+    global _hosts
     remote_directory = '/media/Data3/geoland2/STATIC_INPUTS/geoland2_aux'
     with lcd('aux_wms'):
         file_names = ['geoland2_aux.map', 'geoland2_db.sqlite']
         for fn in file_names:
             if not os.path.isfile('aux_wms/%s' % fn):
-                with settings(host_string='g2user@192.168.151.29'):
+                with settings(host_string=_hosts['archive']):
                     get('%s/%s' % (remote_directory, fn), '.')
+
+# TODO - Finish this task
+def setup_wms():
+    '''
+    Edit and copy the relevant configuration files to the cgi-bin directory.
+    '''
+    
+    config_files = [
+        'apache/auxiliary',
+        'apache/latest',
+    ]
+    aux_mapfile = os.path.realpath('aux_wms/geoland2_aux.map')
+    new_contents = []
+    with open('apache/auxiliary') as fh:
+        for line in fh:
+            if re.search(r'^MS_MAPFILE', line) is not None:
+                new_line = 'MS_MAPFILE="%s" exec ${MAPSERV}\n' % aux_mapfile
+                new_contents.append(new_line)
+            else:
+                new_contents.append(line)
 
 #TODO - to be finished
 #def alter_mapfile():
@@ -321,23 +350,88 @@ def configure_tomcat(Xmx_to_ram_ratio=0.17, Xms_to_ram_ratio=0.1):
     local('sudo service tomcat7 stop')
     local('sudo service tomcat7 start')
 
-#TODO - Finish this task, following the slides for geonetwork installation
+#TODO - test this task
 def install_geonetwork():
     '''
     Get the geonetwork war file and install it.
     '''
 
+    global _hosts
     remote_directory = '/media/Data3/geoland2/SOFTWARE'
     war_name = 'geonetwork.war'
     tomcat_apps_directory = '/var/lib/tomcat7/webapps'
-    get('%s/%s' % (remote_directory, war_name), '.')
+    with settings(host_string=_hosts['archive']):
+        get('%s/%s' % (remote_directory, war_name), '.')
     local('sudo mv --force %s %s' % (war_name, tomcat_apps_directory))
-    with lcd('%s/geonetwork/WEB-INF' % tomcat_apps_directory):
-        #local
-        pass
+    local('sudo rm -rf %s/%s' % (tomcat_apps_directory, war_name))
 
-def configure_geonetwork():
-    pass
+def configure_geonetwork_config_xml(db_name, db_pass, db_user, backup=True):
+    '''
+    '''
+
+    config_file_path = '/var/lib/tomcat7/webapps/geonetwork/WEB-INF/config.xml'
+    #config_file_path = '/home/geo2/Downloads/geonetwork/WEB-INF/config.xml'
+    tree = etree.parse(config_file_path)
+    for resource in tree.xpath('/geonet/resources/resource'):
+        try:
+            driver = resource.xpath('./config/driver')[0]
+        except IndexError:
+            driver = None
+        if (driver is not None) and (re.search(r'org\.postg\w+\.Driver',
+                driver.text) is not None):
+            resource.set('enabled', 'true')
+            for c in resource.xpath('./config/*'):
+                if c.tag == 'user':
+                    c.text = db_user
+                elif c.tag == 'password':
+                    c.text = db_pass
+                elif c.tag == 'driver':
+                    c.text = 'org.postgis.DriverWrapper'
+                elif c.tag == 'url':
+                    c.text = 'jdbc:postgreslq_postGIS://localhost:5432/' \
+                             '%s' % db_name
+        else:
+            resource.set('enabled', 'false')
+    _replace_xml_file(config_file_path, 'tmp_config.xml', tree, backup)
+
+def configure_geonetwork_gui(map_search_layer='coastline', 
+                             map_viewer_layer='coastline', backup=True):
+    '''
+    Enable the geoland2 WMS layers for both the map searcher and mapviewer.
+    '''
+
+    geoland2_aux_server_url = 'http://geoland2.meteo.pt/cgi-bin/auxiliary'
+    geoland2_latest_server_url = 'http://geoland2.meteo.pt/cgi-bin/latest'
+    config_file_path = '/var/lib/tomcat7/webapps/geonetwork/WEB-INF/' \
+                       'config-gui.xml'
+    #config_file_path = '/home/geo2/Downloads/geonetwork/WEB-INF/config-gui.xml'
+    tree = etree.parse(config_file_path)
+    map_search_layers_element = tree.xpath('/config/mapSearch/layers')[0]
+    map_search_layers_element.clear()
+    layer = etree.Element('layer')
+    layer.set('server', 'http://geoland2.meteo.pt/cgi-bin/auxiliary')
+    layer.set('tocName',map_search_layer)
+    layer.set('params', '{layers: "%s", format: "image/png"}' % \
+              map_search_layer)
+    layer.set('options', '{isBaseLayer: true}')
+    map_search_layers_element.append(layer)
+    map_viewer_layers_element = tree.xpath('/config/mapViewer/layers')[0]
+    map_viewer_layers_element.clear()
+    for product in ['LST', 'DSLF', 'DSSF']:
+        layer = etree.Element('layer')
+        layer.set('server', geoland2_latest_server_url)
+        layer.set('tocName', product)
+        layer.set('params', '{layers: %s, transparent: "true"}' % product)
+        layer.set('options', '{visibility: false}')
+        map_viewer_layers_element.append(layer)
+    base_layer = etree.Element('layer')
+    base_layer.set('server', geoland2_aux_server_url)
+    base_layer.set('tocName', map_viewer_layer)
+    base_layer.set('params', '{layers: %s, transparent: "true"}' % \
+                   map_viewer_layer)
+    base_layer.set('options', '{isBaseLayer: true}')
+    map_viewer_layers_element.append(base_layer)
+    _replace_xml_file(config_file_path, 'tmp_config-gui.xml', tree, backup)
 
 def _backup_file(original_path):
     '''
@@ -364,6 +458,13 @@ def _replace_file(original_file_path, tmp_file_name, content_list,
                   backup=True):
     with open(tmp_file_name, 'w') as new_fh:
             new_fh.writelines(new_contents)
+    if backup:
+        _backup_file(original_file_path)
+    local('sudo mv %s %s' % (tmp_file_name, original_file_path))
+
+def _replace_xml_file(original_file_path, tmp_file_name, xml_tree, 
+                      backup=True):
+    xml_tree.write(tmp_file_name)
     if backup:
         _backup_file(original_file_path)
     local('sudo mv %s %s' % (tmp_file_name, original_file_path))
