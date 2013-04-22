@@ -203,30 +203,12 @@ def create_database(db_name, db_user, db_pass):
     local('sudo -u postgres psql --dbname=%s -c "CREATE EXTENSION postgis;"' \
           % db_name)
 
-def _get_available_ram():
-    '''
-    Return the available RAM, measured in Bytes.
-    '''
-
-    ram_out = local('grep MemTotal /proc/meminfo', capture=True)
-    available_ram = float(re.search(r'\d+', ram_out).group()) * 1024 # Bytes
-    return available_ram
-
 def tune_webserver():
     '''
     Change the MaxClients parameter if it proves to be problematic
     '''
 
     pass
-
-
-def _replace_file(original_file_path, tmp_file_name, content_list, 
-                  backup=True):
-    with open(tmp_file_name, 'w') as new_fh:
-            new_fh.writelines(new_contents)
-    if backup:
-        _backup_file(original_file_path)
-    local('sudo mv %s %s' % (tmp_file_name, original_file_path))
 
 #TODO - test this task
 def tune_database_server(ram_to_shared_buffers_ratio=0.2, backup=True):
@@ -252,18 +234,6 @@ def tune_database_server(ram_to_shared_buffers_ratio=0.2, backup=True):
                 new_contents.append(line)
     _replace_file(pg_conf_path, 'tmp_postgresql.conf', new_contents, backup)
     local('sudo service postgresql restart')
-
-def _backup_file(original_path):
-    '''
-    Make a backup copy if the input file.
-    '''
-
-    backup_dir = os.path.expanduser('~/g2system_backups')
-    local('mkdir -p %s' % backup_dir)
-    now = dt.datetime.utcnow()
-    file_name = os.path.basename(original_path)
-    local('cp %s %s/%s.%s' % (original_path, backup_dir, file_name, 
-          now.strftime('%Y_%m_%d_%H_%M')))
 
 #TODO - test this task
 def tune_memory(ram_to_shmmax_ratio=0.25, backup=True):
@@ -359,8 +329,41 @@ def install_geonetwork():
 
     remote_directory = '/media/Data3/geoland2/SOFTWARE'
     war_name = 'geonetwork.war'
+    tomcat_apps_directory = '/var/lib/tomcat7/webapps'
     get('%s/%s' % (remote_directory, war_name), '.')
-    local('sudo cp %s /var/lib/tomcat7/webapps' % war_name)
+    local('sudo mv --force %s %s' % (war_name, tomcat_apps_directory))
+    with lcd('%s/geonetwork/WEB-INF' % tomcat_apps_directory):
+        #local
+        pass
 
 def configure_geonetwork():
     pass
+
+def _backup_file(original_path):
+    '''
+    Make a backup copy if the input file.
+    '''
+
+    backup_dir = os.path.expanduser('~/g2system_backups')
+    local('mkdir -p %s' % backup_dir)
+    now = dt.datetime.utcnow()
+    file_name = os.path.basename(original_path)
+    local('cp %s %s/%s.%s' % (original_path, backup_dir, file_name, 
+          now.strftime('%Y_%m_%d_%H_%M')))
+
+def _get_available_ram():
+    '''
+    Return the available RAM, measured in Bytes.
+    '''
+
+    ram_out = local('grep MemTotal /proc/meminfo', capture=True)
+    available_ram = float(re.search(r'\d+', ram_out).group()) * 1024 # Bytes
+    return available_ram
+
+def _replace_file(original_file_path, tmp_file_name, content_list, 
+                  backup=True):
+    with open(tmp_file_name, 'w') as new_fh:
+            new_fh.writelines(new_contents)
+    if backup:
+        _backup_file(original_file_path)
+    local('sudo mv %s %s' % (tmp_file_name, original_file_path))
