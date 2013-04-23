@@ -144,7 +144,8 @@ def create_operations_database():
 def install_web_server(db_name='geonetwork_db', db_user='geonetwork_user', 
                        db_pass='geonetwork_pass'):
     get_gis_base_data()
-    setup_wms()
+    setup_auxiliary_wms()
+    setup_dynamic_wms_services()
     #alter_mapfile()
     install_web_server_apt_dependencies()
     create_database(db_name, db_user, db_pass)
@@ -170,25 +171,20 @@ def get_gis_base_data():
                 with settings(host_string=_hosts['archive']):
                     get('%s/%s' % (remote_directory, fn), '.')
 
-# TODO - Finish this task
-def setup_wms():
-    '''
-    Edit and copy the relevant configuration files to the cgi-bin directory.
-    '''
-    
-    config_files = [
-        'apache/auxiliary',
-        'apache/latest',
+def setup_auxiliary_wms():
+    _setup_wms('apache/cgi-bin/auxiliary', 'aux_wms/geoland2_aux.map')
+
+def setup_dynamic_wms_services():
+    services = [
+        {
+            'apache_alias_path' : 'apache/cgi-bin/latest',
+            'mapfile_path' : os.path.expanduser('~/data/OUTPUT_DATA/' \
+                                                'wms_preparation/mapfiles/' \
+                                                'latestproducts.map'),
+        },
     ]
-    aux_mapfile = os.path.realpath('aux_wms/geoland2_aux.map')
-    new_contents = []
-    with open('apache/auxiliary') as fh:
-        for line in fh:
-            if re.search(r'^MS_MAPFILE', line) is not None:
-                new_line = 'MS_MAPFILE="%s" exec ${MAPSERV}\n' % aux_mapfile
-                new_contents.append(new_line)
-            else:
-                new_contents.append(line)
+    for s in services:
+        _setup_wms(s['apache_alias_path'], s['mapfile_path'])
 
 #TODO - to be finished
 #def alter_mapfile():
@@ -468,3 +464,17 @@ def _replace_xml_file(original_file_path, tmp_file_name, xml_tree,
     if backup:
         _backup_file(original_file_path)
     local('sudo mv %s %s' % (tmp_file_name, original_file_path))
+
+def _setup_wms(apache_alias_path, mapfile_path):
+    apache_alias_name = os.path.basename(apache_alias_path)
+    new_contents = []
+    new_line_template = 'MS_MAPFILE="%s" exec ${MAPSERV}\n'
+    search_pattern = re.compile(r'^MS_MAPFILE')
+    with open(apache_alias_path) as fh:
+        for line in fh:
+            if search_pattern.search(line) is not None:
+                new_contents.append(new_line_template % mapfile_path)
+            else:
+                new_contents.append(line)
+    _replace_file('/usr/lib/cgi-bin/%s' % apache_alias_name, 
+                  'tmp_%s' % apache_alias_name, new_contents, backup=False)
