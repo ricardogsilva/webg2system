@@ -10,7 +10,6 @@ import os
 import re
 import datetime as dt
 from subprocess import Popen, PIPE
-from lxml import etree
 
 from fabric.api import local, lcd, settings, get
 
@@ -142,12 +141,17 @@ def create_operations_database():
         local('python manage.py syncdb --database=operations_db')
 
 def install_web_server(db_name='geonetwork_db', db_user='geonetwork_user', 
-                       db_pass='geonetwork_pass'):
-    get_gis_base_data()
-    setup_auxiliary_wms()
+                       db_pass='geonetwork_pass', 
+                       server_name='geoland2.meteo.pt'):
+    # import line is here because this task is to be run inside virtualenv
+    # and since the first run of this script is to be executed outside
+    # a virtualenv, we would be forcing the user to install lxml system-wide
+    from lxml import etree
+    get_gis_base_data() # OK!
+    install_web_server_apt_dependencies() # OK!
+    alter_auxiliary_mapfile(server_name) # OK!
+    setup_auxiliary_wms() # OK
     setup_dynamic_wms_services()
-    #alter_mapfile()
-    install_web_server_apt_dependencies()
     create_database(db_name, db_user, db_pass)
     tune_memory()
     tune_webserver()
@@ -186,23 +190,29 @@ def setup_dynamic_wms_services():
     for s in services:
         _setup_wms(s['apache_alias_path'], s['mapfile_path'])
 
-#TODO - to be finished
-#def alter_mapfile():
-#    '''
-#    '''
-#
-#    with open('aux_wms/geoland2_aux.map') as old_fh, 
-#            open('aux_wms/temp') as new_fh:
-#        new_contents = []
-#        for line in old_fh:
-#            if re.search(r'SHAPEPATH', line) is not None:
-#                the_path = os.path.realpath('aux_wms')
-#                new_line = "\tSHAPEPATH '%s'\n" % the_path
-#                new_contents.append(new_line)
-#            elif re.search(r'wms_onlineresource', line) is not None:
-#                the_resource = ''
-#            else:
-#                new_contents.append(line)
+def alter_auxiliary_mapfile(wms_base_url='127.0.0.1'):
+    '''
+    '''
+
+    the_path = os.path.realpath('aux_wms/geoland2_aux.map')
+    mapfile_directory, mapfile_name = os.path.split(the_path)
+    with open(the_path) as fh: 
+        new_contents = []
+        for line in fh:
+            if re.search(r'^\s*#', line) is None:
+                if re.search(r'SHAPEPATH', line) is not None:
+                    new_line = "\tSHAPEPATH '%s'\n" % mapfile_directory
+                    new_contents.append(new_line)
+                elif re.search(r'\'wms_onlineresource\'', line) is not None:
+                    new_line = "\t\t\t'wms_onlineresource' " \
+                               "'http://%s/cgi-bin/mapserv?map=%s'\n" % \
+                               (wms_base_url, the_path)
+                    new_contents.append(new_line)
+                else:
+                    new_contents.append(line)
+            else:
+                new_contents.append(line)
+    _replace_file(the_path, 'tmp_%s' % mapfile_name, new_contents)
 
 def install_web_server_apt_dependencies():
     '''
@@ -451,12 +461,17 @@ def _get_available_ram():
     return available_ram
 
 def _replace_file(original_file_path, tmp_file_name, content_list, 
-                  backup=True):
+                  backup=True, chmod_mask=755):
     with open(tmp_file_name, 'w') as new_fh:
-            new_fh.writelines(new_contents)
+            new_fh.writelines(content_list)
     if backup:
         _backup_file(original_file_path)
-    local('sudo mv %s %s' % (tmp_file_name, original_file_path))
+    with settings(warn_only=True):
+        result = local('mv %s %s' % (tmp_file_name, original_file_path))
+    if not result.succeeded:
+        local('sudo mv %s %s' % (tmp_file_name, original_file_path))
+        local('sudo chown root:root %s' % original_file_path)
+        local('sudo chmod 755 %s' % original_file_path)
 
 def _replace_xml_file(original_file_path, tmp_file_name, xml_tree, 
                       backup=True):
@@ -473,7 +488,8 @@ def _setup_wms(apache_alias_path, mapfile_path):
     with open(apache_alias_path) as fh:
         for line in fh:
             if search_pattern.search(line) is not None:
-                new_contents.append(new_line_template % mapfile_path)
+                new_contents.append(new_line_template % \
+                                    os.path.realpath(mapfile_path))
             else:
                 new_contents.append(line)
     _replace_file('/usr/lib/cgi-bin/%s' % apache_alias_name, 
