@@ -8,6 +8,7 @@ development machines.
 
 import os
 import re
+import time
 import datetime as dt
 from subprocess import Popen, PIPE
 
@@ -151,15 +152,16 @@ def install_web_server(db_name='geonetwork_db', db_user='geonetwork_user',
     install_web_server_apt_dependencies() # OK!
     alter_auxiliary_mapfile(server_name) # OK!
     setup_auxiliary_wms() # OK
-    setup_dynamic_wms_services()
-    create_database(db_name, db_user, db_pass)
-    tune_memory()
-    tune_webserver()
-    tune_database_server()
-    configure_tomcat()
-    install_geonetwork()
-    configure_geonetwork_config_xml(db_name, db_pass, db_user)
-    configure_geonetwork_gui()
+    setup_dynamic_wms_services() # OK
+    tune_memory() # OK
+    tune_webserver() # OK
+    tune_database_server() # OK
+    configure_tomcat() # OK
+    deploy_geonetwork() # OK
+    create_database(db_name, db_user, db_pass) # OK
+    create_geonetwork_tables(db_name, db_user) # OK
+    #configure_geonetwork_config_xml(db_name, db_pass, db_user)
+    #configure_geonetwork_gui()
 
 def get_gis_base_data():
     '''
@@ -214,10 +216,11 @@ def alter_auxiliary_mapfile(wms_base_url='127.0.0.1'):
                 new_contents.append(line)
     _replace_file(the_path, 'tmp_%s' % mapfile_name, new_contents)
 
+# TODO - Evaluate the need to add vsftpd (ftp server) as aditional dependency
 def install_web_server_apt_dependencies():
     '''
     Download and install the software dependencies for the web server machine.
-            
+
     These dependencies are installed using apt-get and thus are installed
     system-wide.
     '''
@@ -245,7 +248,6 @@ def tune_webserver():
 
     pass
 
-#TODO - test this task
 def tune_database_server(ram_to_shared_buffers_ratio=0.2, backup=True):
     '''
     Alter the database server's settings.
@@ -267,10 +269,10 @@ def tune_database_server(ram_to_shared_buffers_ratio=0.2, backup=True):
                 new_contents.append(new_line)
             else:
                 new_contents.append(line)
-    _replace_file(pg_conf_path, 'tmp_postgresql.conf', new_contents, backup)
+    _replace_file(pg_conf_path, 'tmp_postgresql.conf', new_contents,
+                  user_and_group='postgres', chmod_mask=644, backup=backup)
     local('sudo service postgresql restart')
 
-#TODO - test this task
 def tune_memory(ram_to_shmmax_ratio=0.25, backup=True):
     '''
     Tune the available memory appropriately.
@@ -311,10 +313,10 @@ def tune_memory(ram_to_shmmax_ratio=0.25, backup=True):
             new_contents.append('kernel.shmmax = %i\n' % ram_to_use)
         if not added_shmall_param:
             new_contents.append('kernel.shmall = %i\n' % shmall_to_use)
-        _replace_file(conf_file_path, 'tmp_sysctl.conf', new_contents, backup)
+        _replace_file(conf_file_path, 'tmp_sysctl.conf', new_contents,
+                      user_and_group='root', chmod_mask=644, backup=backup)
 
-#TODO - test this task
-def configure_tomcat(Xmx_to_ram_ratio=0.17, Xms_to_ram_ratio=0.1):
+def configure_tomcat(Xmx_to_ram_ratio=0.17, Xms_to_ram_ratio=0.1, backup=True):
     '''
     Configure the Tomcat java server in order to optimize performance.
 
@@ -326,14 +328,14 @@ def configure_tomcat(Xmx_to_ram_ratio=0.17, Xms_to_ram_ratio=0.1):
     Xmx = int((available_ram * Xmx_to_ram_ratio) / (1024 ** 2)) # MegaBytes
     Xms = int((available_ram * Xms_to_ram_ratio) / (1024 ** 2)) # MegaBytes
     perm_size = Xms
-    max_perm_size = int(Xmx / 2)
+    #max_perm_size = int(Xmx / 2)
+    max_perm_size = int((Xmx + Xms) / 2.0)
     memory_opts_line = 'JAVA_OPTS="$JAVA_OPTS -Xms%sm -Xmx%sm ' \
-                       '-XX:PermSize=%sm -XX:MaxPermSize=%sm"' % \
+                       '-XX:PermSize=%sm -XX:MaxPermSize=%sm"\n' % \
                        (Xms, Xmx, perm_size, max_perm_size)
-    print('memory_opts_line: %s' % memory_opts_line)
     tweak_opts_line = 'JAVA_OPTS="$JAVA_OPTS -XX:CompileCommand=exclude,' \
                       'net/sf/saxon/event/ReceivingContentHandler.' \
-                      'startElement"'
+                      'startElement"\n'
     conf_file_path = '/usr/share/tomcat7/bin/catalina.sh'
     found_memory_opts_line = False
     found_tweak_line = False
@@ -352,12 +354,12 @@ def configure_tomcat(Xmx_to_ram_ratio=0.17, Xms_to_ram_ratio=0.1):
         new_contents.insert(0, tweak_opts_line)
     if not found_memory_opts_line:
         new_contents.insert(0, memory_opts_line)
-    _replace_file(conf_file_path, 'tmp_catalina.sh', new_contents, backup)
+    _replace_file(conf_file_path, 'tmp_catalina.sh', new_contents,
+                  user_and_group='root', chmod_mask=755, backup=backup)
     local('sudo service tomcat7 stop')
     local('sudo service tomcat7 start')
 
-#TODO - test this task
-def install_geonetwork():
+def deploy_geonetwork():
     '''
     Get the geonetwork war file and install it.
     '''
@@ -369,7 +371,23 @@ def install_geonetwork():
     with settings(host_string=_hosts['archive']):
         get('%s/%s' % (remote_directory, war_name), '.')
     local('sudo mv --force %s %s' % (war_name, tomcat_apps_directory))
-    local('sudo rm -rf %s/%s' % (tomcat_apps_directory, war_name))
+    local('sudo chown root:root %s' % os.path.join(tomcat_apps_directory,
+          war_name))
+    time.sleep(5) # give tomcat some time to unpack the geonetwork.war file
+
+def create_geonetwork_tables(db_name, db_user):
+    '''
+    Run the geonetwork scripts that initialize the database.
+    '''
+
+    scripts_base_dir = '/var/lib/tomcat7/webapps/geonetwork/WEB-INF/classes/' \
+                       'setup/sql'
+    with lcd('%s/create' % scripts_base_dir):
+        local('psql -h localhost -d %s -U %s -W -f create-db-postgis.sql' \
+              % (db_name, db_user))
+    with lcd('%s/data' % scripts_base_dir):
+        local('psql -h localhost -d %s -U %s -W -f data-db-default.sql' \
+              % (db_name, db_user))
 
 def configure_geonetwork_config_xml(db_name, db_pass, db_user, backup=True):
     '''
@@ -460,8 +478,8 @@ def _get_available_ram():
     available_ram = float(re.search(r'\d+', ram_out).group()) * 1024 # Bytes
     return available_ram
 
-def _replace_file(original_file_path, tmp_file_name, content_list, 
-                  backup=True, chmod_mask=755):
+def _replace_file(original_file_path, tmp_file_name, content_list,
+                  user_and_group=None, chmod_mask=None, backup=True):
     with open(tmp_file_name, 'w') as new_fh:
             new_fh.writelines(content_list)
     if backup:
@@ -470,10 +488,11 @@ def _replace_file(original_file_path, tmp_file_name, content_list,
         result = local('mv %s %s' % (tmp_file_name, original_file_path))
     if not result.succeeded:
         local('sudo mv %s %s' % (tmp_file_name, original_file_path))
-        local('sudo chown root:root %s' % original_file_path)
-        local('sudo chmod 755 %s' % original_file_path)
+        local('sudo chown %s:%s %s' % (user_and_group, user_and_group, 
+              original_file_path))
+        local('sudo chmod %s %s' % (chmod_mask, original_file_path))
 
-def _replace_xml_file(original_file_path, tmp_file_name, xml_tree, 
+def _replace_xml_file(original_file_path, tmp_file_name, xml_tree,
                       backup=True):
     xml_tree.write(tmp_file_name)
     if backup:
@@ -492,5 +511,6 @@ def _setup_wms(apache_alias_path, mapfile_path):
                                     os.path.realpath(mapfile_path))
             else:
                 new_contents.append(line)
-    _replace_file('/usr/lib/cgi-bin/%s' % apache_alias_name, 
-                  'tmp_%s' % apache_alias_name, new_contents, backup=False)
+    _replace_file('/usr/lib/cgi-bin/%s' % apache_alias_name,
+                  'tmp_%s' % apache_alias_name, new_contents,
+                  user_and_group='root', chmod_mask=755, backup=False)
