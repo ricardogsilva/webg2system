@@ -11,6 +11,8 @@ import re
 import time
 import datetime as dt
 from subprocess import Popen, PIPE
+# some tasks also import the lxml module, that will be available in the 
+# virtualenv
 
 from fabric.api import local, lcd, settings, get
 
@@ -90,8 +92,7 @@ def install_python_gdal():
     '''
 
     gdal_config_path = local('which gdal-config', capture=True)
-    virtualenv_dir = local('echo $VIRTUAL_ENV', capture=True)
-    #virtualenv_dir = os.path.dirname(local('which python', capture=True))
+    virtualenv_dir = _get_virtualenv_dir()
     local('rm --force %s' % os.path.join(virtualenv_dir, 'bin', 'gdal-config'))
     local('ln -s %s %s' % (gdal_config_path, 
                            os.path.join(virtualenv_dir, 'bin', 'gdal-config')))
@@ -120,15 +121,9 @@ def link_mapscript_virtualenv():
     package and then symlink from inside the virtualenv.
     '''
 
-    process = Popen(['env', 'python', '--version'], stdout=PIPE, stderr=PIPE)
-    stdout, stderr = process.communicate()
-    python_version = re.search(r'(\d\.\d)', stderr).group()
-    virtualenv_dir = local('echo $VIRTUAL_ENV', capture=True)
-    if virtualenv_dir == '':
-        print('Unable to detect virtual python environment. Did you remember ' \
-              'to activate your virtualenv?')
-        raise SystemExit
-    link_dir = os.path.join(virtualenv_dir, 'lib', 
+    python_version = _get_python_version()
+    virtualenv_dir = _get_virtualenv_dir()
+    link_dir = os.path.join(virtualenv_dir, 'lib',
                             'python%s' % python_version, 'site-packages')
     link_names = ['mapscript.py', '_mapscript.so']
     for i in link_names:
@@ -144,24 +139,22 @@ def create_operations_database():
 def install_web_server(db_name='geonetwork_db', db_user='geonetwork_user', 
                        db_pass='geonetwork_pass', 
                        server_name='geoland2.meteo.pt'):
-    # import line is here because this task is to be run inside virtualenv
-    # and since the first run of this script is to be executed outside
-    # a virtualenv, we would be forcing the user to install lxml system-wide
-    from lxml import etree
-    get_gis_base_data() # OK!
-    install_web_server_apt_dependencies() # OK!
-    alter_auxiliary_mapfile(server_name) # OK!
-    setup_auxiliary_wms() # OK
-    setup_dynamic_wms_services() # OK
-    tune_memory() # OK
-    tune_webserver() # OK
-    tune_database_server() # OK
-    configure_tomcat() # OK
-    deploy_geonetwork() # OK
-    create_database(db_name, db_user, db_pass) # OK
-    create_geonetwork_tables(db_name, db_user) # OK
+    #get_gis_base_data() # OK!
+    #install_web_server_apt_dependencies() # OK!
+    #alter_auxiliary_mapfile(server_name) # OK!
+    #setup_auxiliary_wms() # OK
+    #setup_dynamic_wms_services() # OK
+    #tune_memory() # OK
+    #tune_webserver() # OK
+    #tune_database_server() # OK
+    #configure_tomcat() # OK
+    #deploy_geonetwork() # OK
+    #create_database(db_name, db_user, db_pass) # OK
+    #create_geonetwork_tables(db_name, db_user) # OK
     #configure_geonetwork_config_xml(db_name, db_pass, db_user)
-    #configure_geonetwork_gui()
+    #configure_geonetwork_gui(server_name) # OK
+    setup_virtualhost_geonetwork()
+    setup_virtualhost_g2system()
 
 def get_gis_base_data():
     '''
@@ -393,8 +386,8 @@ def configure_geonetwork_config_xml(db_name, db_pass, db_user, backup=True):
     '''
     '''
 
+    from lxml import etree
     config_file_path = '/var/lib/tomcat7/webapps/geonetwork/WEB-INF/config.xml'
-    #config_file_path = '/home/geo2/Downloads/geonetwork/WEB-INF/config.xml'
     tree = etree.parse(config_file_path)
     for resource in tree.xpath('/geonet/resources/resource'):
         try:
@@ -416,26 +409,29 @@ def configure_geonetwork_config_xml(db_name, db_pass, db_user, backup=True):
                              '%s' % db_name
         else:
             resource.set('enabled', 'false')
-    _replace_xml_file(config_file_path, 'tmp_config.xml', tree, backup)
+    _replace_xml_file(config_file_path, 'tmp_config.xml', tree, 'tomcat7', 644,
+                      backup)
 
-def configure_geonetwork_gui(map_search_layer='coastline', 
+def configure_geonetwork_gui(server_name, map_search_layer='coastline',
                              map_viewer_layer='coastline', backup=True):
     '''
     Enable the geoland2 WMS layers for both the map searcher and mapviewer.
     '''
 
-    geoland2_aux_server_url = 'http://geoland2.meteo.pt/cgi-bin/auxiliary'
-    geoland2_latest_server_url = 'http://geoland2.meteo.pt/cgi-bin/latest'
+    from lxml import etree
+    geoland2_aux_server_url = 'http://%s/cgi-bin/auxiliary' % server_name
+    geoland2_latest_server_url = 'http://%s/cgi-bin/latest' % server_name
     config_file_path = '/var/lib/tomcat7/webapps/geonetwork/WEB-INF/' \
                        'config-gui.xml'
     #config_file_path = '/home/geo2/Downloads/geonetwork/WEB-INF/config-gui.xml'
-    tree = etree.parse(config_file_path)
+    parser = etree.XMLParser(remove_blank_text=True)
+    tree = etree.parse(config_file_path, parser)
     map_search_layers_element = tree.xpath('/config/mapSearch/layers')[0]
     map_search_layers_element.clear()
     layer = etree.Element('layer')
-    layer.set('server', 'http://geoland2.meteo.pt/cgi-bin/auxiliary')
+    layer.set('server', 'http://%s/cgi-bin/auxiliary' % server_name)
     layer.set('tocName',map_search_layer)
-    layer.set('params', '{layers: "%s", format: "image/png"}' % \
+    layer.set('params', "{layers: '%s', format: 'image/png'}" % \
               map_search_layer)
     layer.set('options', '{isBaseLayer: true}')
     map_search_layers_element.append(layer)
@@ -445,17 +441,64 @@ def configure_geonetwork_gui(map_search_layer='coastline',
         layer = etree.Element('layer')
         layer.set('server', geoland2_latest_server_url)
         layer.set('tocName', product)
-        layer.set('params', '{layers: %s, transparent: "true"}' % product)
+        layer.set('params', "{layers: '%s', transparent: 'true'}" % product)
         layer.set('options', '{visibility: false}')
         map_viewer_layers_element.append(layer)
     base_layer = etree.Element('layer')
     base_layer.set('server', geoland2_aux_server_url)
     base_layer.set('tocName', map_viewer_layer)
-    base_layer.set('params', '{layers: %s, transparent: "true"}' % \
+    base_layer.set('params', "{layers: '%s', transparent: 'true'}" % \
                    map_viewer_layer)
     base_layer.set('options', '{isBaseLayer: true}')
     map_viewer_layers_element.append(base_layer)
-    _replace_xml_file(config_file_path, 'tmp_config-gui.xml', tree, backup)
+    _replace_xml_file(config_file_path, 'tmp_config-gui.xml', tree, 'tomcat7',
+                      644, backup)
+
+# TODO - write this task
+def setup_virtualhost_geonetwork():
+    pass
+
+# TODO - finish this task
+def setup_virtualhost_g2system(server_name, num_processes=1, num_threads=1):
+    config_file_path = 'apache/g2system.conf'
+    with open(config_file_path) as fh:
+        new_contents = []
+        for line in fh:
+            if re.search(r'^\s*#', line) is None: # not a comment line
+                if re.search(r'ServerName', line) is not None:
+                    new_line = '\tServerName g2system.%s\n' % server_name
+                    new_contents.append(new_line)
+                elif re.search(r'WSGIScriptAlias', line) is not None:
+                    new_line = '\tWSGIScriptAlias /g2system %s\n' % \
+                               os.path.realpath('webg2system/wsgi.py')
+                    new_contents.append(new_line)
+                elif re.search(r'WSGIDaemonProcess', line) is not None:
+                    user = os.getenv('USER')
+                    virtualenv_dir = _get_virtualenv_dir()
+                    python_version = _get_python_version()
+                    python_paths = os.path.realpath('webg2system')
+                    python_paths += ':%s/lib/python%s/site-packages' % \
+                                    (virtualenv_dir, python_version)
+                    new_line = '\tWSGIDaemonProcess webg2system user=%s ' \
+                               'group=%s processes=%i threads=%i ' \
+                               'display-name="%{GROUP}" python-path=%s\n' % \
+                               (user, user, num_processes, num_threads,
+                               python_paths)
+                    new_contents.append(new_line)
+                elif re.search(r'<Directory>', line) is not None:
+                    template = '\t<Directory %s>\n'
+                    sitestatic_dir_re = re.search(r'sitestatic', line)
+                    cgi_bin_dir_re = re.search(r'cgi-bin', line)
+                    if sitestatic_dir_re is None and cgi_bin_dir_re is None:
+                        replacement = os.path.realpath('webg2system')
+                        new_contents.append(template % replacement)
+                    elif sitestatic_dir_re is not None:
+                        replacement = os.path.realpath('sitestatic')
+                        new_contents.append(template % replacement)
+                elif re.search(r'\sAlias', line) is not None:
+                    new_line = '\tAlias /static/ %s/\n' % \
+                               os.path.realpath('sitestatic')
+                    new_contents.append(new_line)
 
 def _backup_file(original_path):
     '''
@@ -478,6 +521,20 @@ def _get_available_ram():
     available_ram = float(re.search(r'\d+', ram_out).group()) * 1024 # Bytes
     return available_ram
 
+def _get_python_version():
+    process = Popen(['env', 'python', '--version'], stdout=PIPE, stderr=PIPE)
+    stdout, stderr = process.communicate()
+    python_version = re.search(r'(\d\.\d)', stderr).group()
+    return python_version
+
+def _get_virtualenv_dir():
+    virtualenv_dir = local('echo $VIRTUAL_ENV', capture=True)
+    if virtualenv_dir == '':
+        print('Unable to detect virtual python environment. Did you remember ' \
+              'to activate your virtualenv?')
+        raise SystemExit
+    return virtualenv_dir
+
 def _replace_file(original_file_path, tmp_file_name, content_list,
                   user_and_group=None, chmod_mask=None, backup=True):
     with open(tmp_file_name, 'w') as new_fh:
@@ -493,11 +550,17 @@ def _replace_file(original_file_path, tmp_file_name, content_list,
         local('sudo chmod %s %s' % (chmod_mask, original_file_path))
 
 def _replace_xml_file(original_file_path, tmp_file_name, xml_tree,
-                      backup=True):
-    xml_tree.write(tmp_file_name)
+                      user_and_group=None, chmod_mask=None, backup=True):
+    xml_tree.write(tmp_file_name, pretty_print=True)
     if backup:
         _backup_file(original_file_path)
-    local('sudo mv %s %s' % (tmp_file_name, original_file_path))
+    with settings(warn_only=True):
+        result = local('mv --force %s %s' % (tmp_file_name, original_file_path))
+    if not result.succeeded:
+        local('sudo mv %s %s' % (tmp_file_name, original_file_path))
+        local('sudo chown %s:%s %s' % (user_and_group, user_and_group,
+              original_file_path))
+        local('sudo chmod %s %s' % (chmod_mask, original_file_path))
 
 def _setup_wms(apache_alias_path, mapfile_path):
     apache_alias_name = os.path.basename(apache_alias_path)
