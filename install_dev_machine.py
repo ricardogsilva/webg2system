@@ -2,19 +2,20 @@
 #-*- coding: utf-8 -*-
 
 """
-A fabric fabfile in order to automate system installation/upgrade on 
+A fabric fabfile in order to automate system installation/upgrade on
 development machines.
 """
 
 import os
 import re
 import time
+import socket
 import datetime as dt
 from subprocess import Popen, PIPE
 # some tasks also import the lxml module, that will be available in the 
 # virtualenv
 
-from fabric.api import local, lcd, settings, get
+from fabric.api import local, lcd, settings, get, hide
 
 _hosts = {
     'archive' : 'g2user@192.168.151.29',
@@ -62,11 +63,18 @@ def add_ubuntugis_repo():
     with settings(warn_only=True):
         result = local('sudo apt-get update', capture=True)
 
-def install_second():
+def install_processing_machine():
+    server_name = _get_server_name()
+    num_processes = 1
+    num_threads = 1
     install_pip_dependencies()
     install_python_gdal()
     link_mapscript_virtualenv()
     create_operations_database()
+    install_web_server()
+    setup_virtualhost_g2system(server_name, num_processes, num_threads)
+    configure_g2system_django_settings()
+    restart_web_server()
 
 def install_pip_dependencies():
     '''
@@ -136,25 +144,30 @@ def create_operations_database():
     with lcd('webg2system'):
         local('python manage.py syncdb --database=operations_db')
 
-def install_web_server(db_name='geonetwork_db', db_user='geonetwork_user', 
-                       db_pass='geonetwork_pass', 
-                       server_name='geoland2.meteo.pt'):
-    #get_gis_base_data() # OK!
-    #install_web_server_apt_dependencies() # OK!
-    #alter_auxiliary_mapfile(server_name) # OK!
-    #setup_auxiliary_wms() # OK
-    #setup_dynamic_wms_services() # OK
-    #tune_memory() # OK
-    #tune_webserver() # OK
-    #tune_database_server() # OK
-    #configure_tomcat() # OK
-    #deploy_geonetwork() # OK
-    #create_database(db_name, db_user, db_pass) # OK
-    #create_geonetwork_tables(db_name, db_user) # OK
-    #configure_geonetwork_config_xml(db_name, db_pass, db_user)
-    #configure_geonetwork_gui(server_name) # OK
-    setup_virtualhost_geonetwork()
-    setup_virtualhost_g2system()
+def install_server_catalogue(db_name='geonetwork_db', db_user='geonetwork_user',
+                             db_pass='geonetwork_pass'):
+    server_name = _get_server_name()
+    num_processes = 2
+    num_threads = 1
+    get_gis_base_data()
+    install_catalogue_server_dependencies()
+    alter_auxiliary_mapfile(server_name)
+    setup_auxiliary_wms()
+    setup_dynamic_wms_services()
+    tune_memory()
+    configure_web_server()
+    tune_database_server()
+    configure_tomcat()
+    deploy_geonetwork()
+    create_geonetwork_database(db_name, db_user, db_pass)
+    create_geonetwork_tables(db_name, db_user)
+    configure_geonetwork_config_xml(db_name, db_pass, db_user)
+    configure_geonetwork_gui(server_name)
+    configure_geonetwork_logging()
+    setup_virtualhost_g2system(server_name, num_processes, num_threads)
+    setup_virtualhost_proxy()
+    restart_web_server()
+    restart_tomcat()
 
 def get_gis_base_data():
     '''
@@ -209,8 +222,11 @@ def alter_auxiliary_mapfile(wms_base_url='127.0.0.1'):
                 new_contents.append(line)
     _replace_file(the_path, 'tmp_%s' % mapfile_name, new_contents)
 
+def install_web_server():
+    local('sudo apt-get install apache2 libapache2-mod-wsgi')
+
 # TODO - Evaluate the need to add vsftpd (ftp server) as aditional dependency
-def install_web_server_apt_dependencies():
+def install_catalogue_server_dependencies():
     '''
     Download and install the software dependencies for the web server machine.
 
@@ -219,10 +235,9 @@ def install_web_server_apt_dependencies():
     '''
 
     add_ubuntugis_repo()
-    local('sudo apt-get install apache2 libapache2-mod-wsgi postgresql-9.1 ' \
-          'postgis tomcat7')
+    local('sudo apt-get install postgresql-9.1 postgis tomcat7')
 
-def create_database(db_name, db_user, db_pass):
+def create_geonetwork_database(db_name, db_user, db_pass):
     '''
     Create the PostGIS database and user for the catalogue server.
     '''
@@ -234,8 +249,10 @@ def create_database(db_name, db_user, db_pass):
     local('sudo -u postgres psql --dbname=%s -c "CREATE EXTENSION postgis;"' \
           % db_name)
 
-def tune_webserver():
+def configure_web_server():
     '''
+    This task will configure the web server.
+
     Change the MaxClients parameter if it proves to be problematic
     '''
 
@@ -349,6 +366,8 @@ def configure_tomcat(Xmx_to_ram_ratio=0.17, Xms_to_ram_ratio=0.1, backup=True):
         new_contents.insert(0, memory_opts_line)
     _replace_file(conf_file_path, 'tmp_catalina.sh', new_contents,
                   user_and_group='root', chmod_mask=755, backup=backup)
+
+def restart_tomcat():
     local('sudo service tomcat7 stop')
     local('sudo service tomcat7 start')
 
@@ -405,7 +424,7 @@ def configure_geonetwork_config_xml(db_name, db_pass, db_user, backup=True):
                 elif c.tag == 'driver':
                     c.text = 'org.postgis.DriverWrapper'
                 elif c.tag == 'url':
-                    c.text = 'jdbc:postgreslq_postGIS://localhost:5432/' \
+                    c.text = 'jdbc:postgresql_postGIS://localhost:5432/' \
                              '%s' % db_name
         else:
             resource.set('enabled', 'false')
@@ -454,19 +473,30 @@ def configure_geonetwork_gui(server_name, map_search_layer='coastline',
     _replace_xml_file(config_file_path, 'tmp_config-gui.xml', tree, 'tomcat7',
                       644, backup)
 
-# TODO - write this task
-def setup_virtualhost_geonetwork():
-    pass
+def configure_geonetwork_logging():
+    '''
+    Tone the logging in geonetwork down from DEBUG to WARN.
+    '''
 
-# TODO - finish this task
-def setup_virtualhost_g2system(server_name, num_processes=1, num_threads=1):
+    conf_path = '/var/lib/tomcat7/webapps/geonetwork/WEB-INF/log4j.cfg'
+    with open(conf_path) as fh:
+        new_contents = []
+        for line in fh:
+            if re.search(r'^log4j\.logger\.jeeves *=', line) is not None:
+                new_line = 'log4j.logger.jeeves = WARN, console, jeeves\n'
+                new_contents.append(new_line)
+            else:
+                new_contents.append(line)
+    _replace_file(conf_path, 'tmp_log4j.cfg', new_contents, 'tomcat7', 644)
+
+def setup_virtualhost_g2system(server_name, num_processes, num_threads):
     config_file_path = 'apache/g2system.conf'
     with open(config_file_path) as fh:
         new_contents = []
         for line in fh:
             if re.search(r'^\s*#', line) is None: # not a comment line
                 if re.search(r'ServerName', line) is not None:
-                    new_line = '\tServerName g2system.%s\n' % server_name
+                    new_line = '\tServerName %s\n' % server_name
                     new_contents.append(new_line)
                 elif re.search(r'WSGIScriptAlias', line) is not None:
                     new_line = '\tWSGIScriptAlias /g2system %s\n' % \
@@ -481,7 +511,7 @@ def setup_virtualhost_g2system(server_name, num_processes=1, num_threads=1):
                                     (virtualenv_dir, python_version)
                     new_line = '\tWSGIDaemonProcess webg2system user=%s ' \
                                'group=%s processes=%i threads=%i ' \
-                               'display-name="%{GROUP}" python-path=%s\n' % \
+                               'display-name="%%{GROUP}" python-path=%s\n' % \
                                (user, user, num_processes, num_threads,
                                python_paths)
                     new_contents.append(new_line)
@@ -499,18 +529,75 @@ def setup_virtualhost_g2system(server_name, num_processes=1, num_threads=1):
                     new_line = '\tAlias /static/ %s/\n' % \
                                os.path.realpath('sitestatic')
                     new_contents.append(new_line)
+                else:
+                    new_contents.append(line)
+            else:
+                new_contents.append(line)
+        _replace_file('/etc/apache2/sites-available/g2system.conf',
+                      'tmp_g2system.conf', new_contents, 'root', 644)
+        local('sudo a2ensite g2system.conf')
+
+def setup_virtualhost_proxy():
+    '''
+    Make the catalogue accessible at port 80 of the virtualhost.
+    '''
+
+    conf_path = '/etc/apache2/sites-available/g2system.conf'
+    with open(conf_path) as fh:
+        new_contents = fh.readlines()
+    last_line = new_contents.pop()
+    proxy_directive = ['\t<Proxy /geonetwork>\n',
+                       '\t\tOrder allow,deny\n',
+                       '\t\tAllow from all\n',
+                       '\t</Proxy>\n']
+    new_contents += proxy_directive
+    proxy_info = '/geonetwork http://localhost:8080/geonetwork\n'
+    new_contents.append('\t\tProxyPass %s' % proxy_info)
+    new_contents.append('\t\tProxyPassReverse %s' % proxy_info)
+    new_contents.append(last_line)
+    _replace_file(conf_path, 'tmp_g2system.conf', new_contents, 'root', 644)
+    local('sudo a2enmod proxy')
+    local('sudo a2enmod proxy_http')
+
+def configure_g2system_django_settings():
+    '''
+    Change the relevant django settings.
+
+    This task will copy the webg2system/settings_local.py.template file
+    and tweak its settings.
+    '''
+
+    template_path = 'webg2system/settings_local.py.template'
+    conf_path = 'webg2system/settings_local.py'
+    with open(template_path) as fh:
+        new_contents = []
+        for line in fh:
+            if re.search(r'^STATIC_ROOT', line) is not None:
+                new_contents.append("STATIC_ROOT = '%s'\n" % \
+                                    os.path.realpath('sitestatic'))
+            else:
+                new_contents.append(line)
+    with open(conf_path, 'w') as new_fh:
+        new_fh.writelines(new_contents)
+    with lcd('webg2system'):
+        local('python manage.py collectstatic')
+
+def restart_web_server():
+    local('sudo service apache2 reload')
 
 def _backup_file(original_path):
     '''
-    Make a backup copy if the input file.
+    Make a backup copy of the input file.
     '''
 
     backup_dir = os.path.expanduser('~/g2system_backups')
     local('mkdir -p %s' % backup_dir)
     now = dt.datetime.utcnow()
     file_name = os.path.basename(original_path)
-    local('cp %s %s/%s.%s' % (original_path, backup_dir, file_name, 
-          now.strftime('%Y_%m_%d_%H_%M')))
+    with settings(warn_only=True):
+        result = local('cp %s %s/%s.%s' % (original_path, backup_dir,
+                       file_name, now.strftime('%Y_%m_%d_%H_%M')), 
+                       capture=True)
 
 def _get_available_ram():
     '''
@@ -520,6 +607,10 @@ def _get_available_ram():
     ram_out = local('grep MemTotal /proc/meminfo', capture=True)
     available_ram = float(re.search(r'\d+', ram_out).group()) * 1024 # Bytes
     return available_ram
+
+def _get_server_name():
+    host = socket.gethostname()
+    return '%s.meteo.pt' % host
 
 def _get_python_version():
     process = Popen(['env', 'python', '--version'], stdout=PIPE, stderr=PIPE)
@@ -541,11 +632,11 @@ def _replace_file(original_file_path, tmp_file_name, content_list,
             new_fh.writelines(content_list)
     if backup:
         _backup_file(original_file_path)
-    with settings(warn_only=True):
-        result = local('mv %s %s' % (tmp_file_name, original_file_path))
+    with settings(hide('warnings', 'output'), warn_only=True):
+        result = local('mv --force %s %s' % (tmp_file_name, original_file_path))
     if not result.succeeded:
         local('sudo mv %s %s' % (tmp_file_name, original_file_path))
-        local('sudo chown %s:%s %s' % (user_and_group, user_and_group, 
+        local('sudo chown %s:%s %s' % (user_and_group, user_and_group,
               original_file_path))
         local('sudo chmod %s %s' % (chmod_mask, original_file_path))
 
@@ -554,7 +645,7 @@ def _replace_xml_file(original_file_path, tmp_file_name, xml_tree,
     xml_tree.write(tmp_file_name, pretty_print=True)
     if backup:
         _backup_file(original_file_path)
-    with settings(warn_only=True):
+    with settings(hide('warnings', 'output'), warn_only=True):
         result = local('mv --force %s %s' % (tmp_file_name, original_file_path))
     if not result.succeeded:
         local('sudo mv %s %s' % (tmp_file_name, original_file_path))
