@@ -12,8 +12,8 @@ import time
 import socket
 import datetime as dt
 from subprocess import Popen, PIPE
-# some tasks also import the lxml module, that will be available in the 
-# virtualenv
+# some tasks import the lxml module, that is available in the virtualenv
+# some tasks also import django settings, that are available in the virtualenv
 
 from fabric.api import local, lcd, settings, get, hide
 
@@ -31,6 +31,110 @@ def install_first():
           'Then proceed with the installation of the second set of ' \
           'dependencies, which are python-specific. Execute:\n\n' \
           '\t$ fab -f install_dev_machine install_second')
+
+def install_processing_machine():
+    server_name = _get_server_name()
+    num_processes = 1
+    num_threads = 1
+    install_pip_dependencies()
+    install_python_gdal()
+    link_mapscript_virtualenv()
+    create_operations_database()
+    install_web_server()
+    setup_virtualhost_g2system(server_name, num_processes, num_threads)
+    configure_g2system_django_settings()
+    restart_web_server()
+
+def install_server_catalogue(db_name='geonetwork_db', db_user='geonetwork_user',
+                             db_pass='geonetwork_pass'):
+    server_name = _get_server_name()
+    num_processes = 2
+    num_threads = 1
+    get_gis_base_data()
+    install_catalogue_server_dependencies()
+    alter_auxiliary_mapfile(server_name)
+    setup_auxiliary_wms()
+    setup_dynamic_wms_services()
+    tune_memory()
+    configure_web_server()
+    tune_database_server()
+    configure_tomcat()
+    deploy_geonetwork()
+    create_geonetwork_database(db_name, db_user, db_pass)
+    create_geonetwork_tables(db_name, db_user)
+    configure_geonetwork_config_xml(db_name, db_pass, db_user)
+    configure_geonetwork_gui(server_name)
+    configure_geonetwork_logging()
+    setup_virtualhost_g2system(server_name, num_processes, num_threads)
+    setup_virtualhost_proxy()
+    restart_web_server()
+    restart_tomcat()
+
+#TODO - test this task
+def install_products_code(*products):
+    '''
+    Download and compile the code for the products
+
+    Inputs:
+
+        *products - A list of strings with the names of the packages to get.
+            If None, all the packages will be processed.
+    '''
+
+    from django.core.exceptions import ObjectDoesNotExist
+    from django.core.management import setup_environ
+    import sys
+    sys.path.append('webg2system')
+    import settings as s
+    setup_environ(s)
+    import systemsettings.models as sm
+
+    products_to_get = []
+    if len(products) == 0:
+        products_to_get = sm.ExternalCode.objects.all()
+    else:
+        for p in products:
+            try:
+                products_to_get.append(sm.ExternalCode.objects.get(name=p))
+            except ObjectDoesNotExist:
+                print('Couldn\'t find product %s' % p)
+    for ec in products_to_get:
+        _get_product_package_code(ec)
+        _create_compilation_auxiliary_files(ec)
+        _compile_product_package(ec)
+
+#TODO - the fflags variable must be part of each product's settings
+def _create_compilation_auxiliary_files(product):
+    '''
+    Create the .mk files used in making the products.
+    '''
+
+    install_path = os.path.join(os.path.realpath('extra_code'),
+                                product.get_relative_install_path())
+    libs_file = os.path.join(install_path, 'GEOLAND_LIBS.mk')
+    with open(libs_file, 'w') as fh:
+        fh.write('GEOLAND_LIBS = /usr\n')
+    own_flags_file = os.path.join(path, 'SELF_FLAGS.mk')
+    fflags = ''
+    with open(own_flags_file, 'w') as fh:
+        fh.write('SELF_FFLAGS = %s\n' % fflags)
+
+#TODO - test this task
+def _compile_product_package(product):
+    '''
+    Compil the external algorithms that generate GIO products.
+
+    Inputs:
+
+        product - a django webg2system.systemsettings.models.ExternalCode
+                  object, with the details needed for retreival of the code
+                  from the remote repository.
+    '''
+
+    install_path = os.path.join(os.path.realpath('extra_code'),
+                                product.get_relative_install_path())
+    with lcd(install_path):
+        local('make')
 
 def install_apt_dependencies():
     '''
@@ -62,19 +166,6 @@ def add_ubuntugis_repo():
         local('sudo add-apt-repository ppa:ubuntugis/ubuntugis-unstable')
     with settings(warn_only=True):
         result = local('sudo apt-get update', capture=True)
-
-def install_processing_machine():
-    server_name = _get_server_name()
-    num_processes = 1
-    num_threads = 1
-    install_pip_dependencies()
-    install_python_gdal()
-    link_mapscript_virtualenv()
-    create_operations_database()
-    install_web_server()
-    setup_virtualhost_g2system(server_name, num_processes, num_threads)
-    configure_g2system_django_settings()
-    restart_web_server()
 
 def install_pip_dependencies():
     '''
@@ -143,31 +234,6 @@ def link_mapscript_virtualenv():
 def create_operations_database():
     with lcd('webg2system'):
         local('python manage.py syncdb --database=operations_db')
-
-def install_server_catalogue(db_name='geonetwork_db', db_user='geonetwork_user',
-                             db_pass='geonetwork_pass'):
-    server_name = _get_server_name()
-    num_processes = 2
-    num_threads = 1
-    get_gis_base_data()
-    install_catalogue_server_dependencies()
-    alter_auxiliary_mapfile(server_name)
-    setup_auxiliary_wms()
-    setup_dynamic_wms_services()
-    tune_memory()
-    configure_web_server()
-    tune_database_server()
-    configure_tomcat()
-    deploy_geonetwork()
-    create_geonetwork_database(db_name, db_user, db_pass)
-    create_geonetwork_tables(db_name, db_user)
-    configure_geonetwork_config_xml(db_name, db_pass, db_user)
-    configure_geonetwork_gui(server_name)
-    configure_geonetwork_logging()
-    setup_virtualhost_g2system(server_name, num_processes, num_threads)
-    setup_virtualhost_proxy()
-    restart_web_server()
-    restart_tomcat()
 
 def get_gis_base_data():
     '''
@@ -608,6 +674,23 @@ def _get_available_ram():
     available_ram = float(re.search(r'\d+', ram_out).group()) * 1024 # Bytes
     return available_ram
 
+def _get_product_package_code(product):
+    '''
+    Fetch the external algorithm generating packages.
+
+    Inputs:
+
+        product - a django webg2system.systemsettings.models.ExternalCode
+                  object, with the details needed for retreival of the code
+                  from the remote repository.
+    '''
+
+    repo_url, repo_user, repo_pass = product.repository_credentials()
+    install_path = os.path.join(os.path.realpath('extra_code'),
+                                product.get_relative_install_path())
+    if product.version_control_sw == 'svn':
+        _svn_get_code(repo_url, repo_user, repo_pass, install_path)
+
 def _get_server_name():
     host = socket.gethostname()
     return '%s.meteo.pt' % host
@@ -668,3 +751,16 @@ def _setup_wms(apache_alias_path, mapfile_path):
     _replace_file('/usr/lib/cgi-bin/%s' % apache_alias_name,
                   'tmp_%s' % apache_alias_name, new_contents,
                   user_and_group='root', chmod_mask=755, backup=False)
+
+def _svn_get_code(repository, user, password, destination_dir):
+    first = False
+    if not os.path.isdir(destination_dir):
+        first = True
+    if first:
+        local('mkdir -p %s' % destination_dir)
+        with lcd(destination_dir):
+            local('svn checkout --username %s --password %s %s .' % \
+                  (user, password, repository))
+    else:
+        with lcd(destination_dir):
+            local('svn update --username %s --password %s' % (user, password))
