@@ -339,7 +339,17 @@ def _configure_web_server():
     Change the MaxClients parameter if it proves to be problematic
     '''
 
-    pass
+    conf_file_path = '/etc/hosts'
+    found_line = False
+    new_contents = []
+    with open(conf_file_path) as fh:
+        for line in fh:
+            if re.search(r'^127\.0\.1\.1', line) is not None:
+                found_line = True
+            new_contents.append(line)
+    if not found_line:
+        new_contents.append('127.0.1.1 %s\n' % socket.gethostname())
+        _replace_file(conf_file_path, 'tmp_hosts', new_contents, 'root', 644)
 
 #TODO - the fflags variable must be part of each product's settings
 def _create_compilation_auxiliary_files(product):
