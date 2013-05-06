@@ -404,9 +404,12 @@ def _deploy_geonetwork():
     # give the tomcat daemon some time to unpack the geonetwork.war file
     elapsed_seconds = 0
     sleep_for_seconds = 1
+    print('sleeping for a bit, waiting for the tomcat daemon to unpack the ' \
+          'geonetwork war file...')
     while not os.path.isdir('%s/geonetwork' % tomcat_apps_directory) or \
-            elapsed_seconds < 30:
+            elapsed_seconds < 60:
         time.sleep(sleep_for_seconds)
+        print('slept for %i seconds...' % elapsed_seconds)
         elapsed_seconds += sleep_for_seconds
     print('slept for %i seconds' % elapsed_seconds)
 
