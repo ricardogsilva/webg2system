@@ -656,6 +656,8 @@ def _setup_virtualhost_g2system(server_name, num_processes, num_threads):
                     elif sitestatic_dir_re is not None:
                         replacement = os.path.realpath('sitestatic')
                         new_contents.append(template % replacement)
+                    elif cgi_bin_dir_re is not None:
+                        new_contents.append(line)
                 elif re.search(r'\sAlias', line) is not None:
                     new_line = '\tAlias /static/ %s/\n' % \
                                os.path.realpath('sitestatic')
