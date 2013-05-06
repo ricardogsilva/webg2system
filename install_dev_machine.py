@@ -646,7 +646,7 @@ def _setup_virtualhost_g2system(server_name, num_processes, num_threads):
                                (user, user, num_processes, num_threads,
                                python_paths)
                     new_contents.append(new_line)
-                elif re.search(r'<Directory>', line) is not None:
+                elif re.search(r'<Directory', line) is not None:
                     template = '\t<Directory %s>\n'
                     sitestatic_dir_re = re.search(r'sitestatic', line)
                     cgi_bin_dir_re = re.search(r'cgi-bin', line)
