@@ -404,14 +404,11 @@ def _deploy_geonetwork():
     # give the tomcat daemon some time to unpack the geonetwork.war file
     elapsed_seconds = 0
     sleep_for_seconds = 1
-    print('sleeping for a bit, waiting for the tomcat daemon to unpack the ' \
-          'geonetwork war file...')
+    max_sleep = 30
     while not os.path.isdir('%s/geonetwork' % tomcat_apps_directory) or \
-            elapsed_seconds < 60:
+            elapsed_seconds < max_sleep:
         time.sleep(sleep_for_seconds)
-        print('slept for %i seconds...' % elapsed_seconds)
         elapsed_seconds += sleep_for_seconds
-    print('slept for %i seconds' % elapsed_seconds)
 
 def _get_available_ram():
     '''
@@ -454,7 +451,7 @@ def _get_product_package_code(product):
         _svn_get_code(repo_url, repo_user, repo_pass, install_path)
 
 def _get_python_version():
-    process = suprocess.Popen(['env', 'python', '--version'],
+    process = subprocess.Popen(['env', 'python', '--version'],
                               stdout=subprocess.PIPE,
                               stderr=subprocess.PIPE)
     stdout, stderr = process.communicate()
