@@ -367,6 +367,7 @@ def _create_compilation_auxiliary_files(product):
     with open(own_flags_file, 'w') as fh:
         fh.write('SELF_FFLAGS = %s\n' % fflags)
 
+# TODO - Test this task
 def _create_geonetwork_database(db_name, db_user, db_pass):
     '''
     Create the PostGIS database and user for the catalogue server.
@@ -378,6 +379,10 @@ def _create_geonetwork_database(db_name, db_user, db_pass):
           % (db_name, db_user))
     local('sudo -u postgres psql --dbname=%s -c "CREATE EXTENSION postgis;"' \
           % db_name)
+    for t in ('geography_columns', 'geometry_columns', 'raster_columns',
+              'raster_overviews', 'spatial_ref_sys'):
+        local('sudo -u postgres psql --dbname=%s -c "ALTER TABLE %s OWNER ' \
+              'TO %s"' % (db_name, t, db_user))
 
 def _create_geonetwork_tables(db_name, db_user):
     '''

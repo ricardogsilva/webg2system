@@ -2,7 +2,7 @@
 #-*- coding: utf-8 -*-
 
 """
-A fabric fabfile to automate the geonetwork's database into the archives.
+A fabric fabfile to automate backing up geonetwork's database into the archives.
 
 It is to be executed as:
 
