@@ -1491,7 +1491,7 @@ class MetadataGenerator(object):
         logoutReq = urllib2.Request(logout_url)
         response = urllib2.urlopen(logoutReq)
         #self.logger.debug(response.read())
-        
+
     def insert_csw(self, csw_url, login_url, logout_url, username,
                     password, filePaths=None):
         '''
