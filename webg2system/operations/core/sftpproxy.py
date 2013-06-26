@@ -5,7 +5,7 @@
 A module providing a class for executing file transfer operations through SFTP.
 """
 
-from ftplib import FTP, error_temp, error_perm
+#from ftplib import FTP, error_temp, error_perm
 import socket # needed to check ftplib's error
 socket.setdefaulttimeout(10) # timeout for ftp connections, in seconds
 import os
@@ -24,8 +24,8 @@ class SFTPProxy(object):
         '''
         Inputs:
 
-            host - A G2Host object specifying the host that started this 
-                connection. 
+            host - A G2Host object specifying the host that started this
+                connection.
         '''
 
         self.logger = logger
@@ -42,7 +42,7 @@ class SFTPProxy(object):
                 self.connection = pysftp.Connection(
                                       host=self.remote_host.host, 
                                       username=self.remote_host.user,
-                                      password=self.remote_host.password
+                                      password=self.remote_host.password,
                                   )
             except pysftp.paramiko.AuthenticationException:
                 self.connection = None
@@ -200,4 +200,4 @@ class SFTPProxy(object):
     def close_connection(self):
         if self.connection is not None:
             self.connection.close()
-
+            self.connection = None

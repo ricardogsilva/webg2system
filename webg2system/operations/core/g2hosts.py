@@ -7,11 +7,10 @@ file IO operations between the different host machines involved in the
 G2system's processes.
 
 The G2Host classes should not be instantiated directly. They should use the
-create_host() function, that simultaneously implements a factory and sigleton
+create_host() function, that simultaneously implements a factory and singleton
 pattern for unique hosts.
 """
 
-# standard library imports
 import shutil
 import logging
 import os
@@ -29,7 +28,6 @@ import zipfile
 # django imports
 from django.core.exceptions import ObjectDoesNotExist
 
-
 import tables
 
 # specific imports
@@ -43,6 +41,7 @@ import utilities
 # - Review all the methods that have a FIXME tag
 # - Implement the remaining methods on G2RemoteHost class
 
+# this class is not needed. it should be replaced by module-level functions.
 class HostFactory(object):
 
     _hosts = dict()
@@ -52,6 +51,18 @@ class HostFactory(object):
             self.logger = logger
         else:
             self.logger = logging.getLogger(__name__)
+
+    @staticmethod
+    def get_host(host_settings=None, logger=None):
+        factory = HostFactory(logger)
+        return factory.create_host(host_settings)
+
+    @staticmethod
+    def clear_all_hosts():
+        factory = HostFactory()
+        for host in factory._hosts.values():
+            host.close_connections()
+        factory._hosts = dict()
 
     def create_host(self, hostSettings=None):
         '''
@@ -78,8 +89,6 @@ class HostFactory(object):
         name = hostSettings.name
         ip = hostSettings.ip
         if name not in self._hosts.keys():
-            #self.logger.debug('Creating a new %s host object...' % 
-            #                 (name))
             if name == localName or ip == localIP:
                 theClass = G2LocalHost
             else:
@@ -87,16 +96,6 @@ class HostFactory(object):
             hostObj = theClass(hostSettings, logger=self.logger)
             self._hosts[name] = hostObj
         return self._hosts.get(name)
-
-        #self.logger.debug('Creating a new %s host object...' % 
-        #                 (name))
-        #if name == localName or ip == localIP:
-        #    theClass = G2LocalHost
-        #else:
-        #    theClass = G2RemoteHost
-        #hostObj = theClass(hostSettings)
-
-        #return hostObj
 
 
 class G2Host(object):
@@ -147,6 +146,13 @@ class G2Host(object):
 
     def __repr__(self):
         return self.name
+
+    def close_connections(self):
+        for conn_name, conn_dict in self.connections.iteritems():
+            sftp_proxy = conn_dict.get('sftp')
+            if sftp_proxy is not None:
+                sftp_proxy.close_connection()
+        self.connections = dict()
 
     def _match_file_patterns(self, **kwargs):
         '''
@@ -564,6 +570,7 @@ class G2LocalHost(G2Host):
             self.logger.debug('About to perform a remote send...')
             result = self._send_to_remote(fullPaths, destDir, destHost)
         return result
+
 
     # FIXME
     # - return the actual returncode, and not a hardcoded zero
@@ -1130,8 +1137,12 @@ class G2RemoteHost(G2Host):
                                       working_dir=working_dir)
         return result
 
-    def close_connection(self):
-        self._localConnection['sftp'].close_connection()
+    def close_connections(self):
+        super(G2RemoteHost, self).close_connections
+        sftp_proxy = self._localConnection.get('sftp')
+        if sftp_proxy is not None:
+            sftp_proxy.close_connection()
+        self._localConnection = dict()
 
     def monitor_file_system_usage(self):
         '''
