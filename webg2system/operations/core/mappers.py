@@ -10,10 +10,9 @@ import os
 import logging
 from subprocess import Popen, PIPE
 import numpy as np
-import Image as img
-import ImageFont as imgFont
-import ImageDraw as imgDraw
-
+from PIL import Image as img
+from PIL import ImageFont as imgFont
+from PIL import ImageDraw as imgDraw
 from osgeo import gdal
 from osgeo import osr
 import mapscript
@@ -712,34 +711,37 @@ class NewNGPMapper(object):
         miny = maxy - tileYLength
         return minx, miny, maxx, maxy
 
-    def _complete_quicklook(self, filePath, legendPath, title=None, 
+    def _complete_quicklook(self, file_path, legend_path, title=None, 
                             cleanRaw=True):
         '''
         Create the final quicklook file by incorporating the extra elements.
 
         Inputs:
 
-            filePath - Full path to the raw quicklook.
+            file_path - Full path to the raw quicklook.
 
-            legendPath - Full path to the legend image.
+            legend_path - Full path to the legend image.
 
             title - Title for the quicklook.
         '''
 
         rawPatt = re.compile(r'rawquicklook_')
         if title is None:
-            fname = os.path.basename(filePath).rpartition('.')[0]
+            fname = os.path.basename(file_path).rpartition('.')[0]
             title = rawPatt.sub('', fname).replace('_', ' ')
-        quicklook = self._stitch_images([img.open(p) for p in filePath, \
-                                        legendPath])
+        print('file_path: %s' % file_path)
+        print('legend_path: %s' % legend_path)
+        quicklook = self._stitch_images([img.open(p) for p in file_path, \
+                                        legend_path])
         quicklook = self._expand_image(quicklook, 0, 30, keep='bl')
         quicklook = self._expand_image(quicklook, 20, 20, keep='middle')
         self._write_text(quicklook, title, position=(quicklook.size[0]/2, 20))
-        outPath = rawPatt.sub('', filePath)
+        outPath = rawPatt.sub('', file_path)
         quicklook.save(outPath)
         return outPath
 
     def _stitch_images(self, ims):
+        print('locals(): %s' % locals())
         sizes = np.asarray([i.size for i in ims])
         newRows = np.max(sizes[:,1])
         newCols = np.sum(sizes[:,0])
@@ -748,6 +750,9 @@ class NewNGPMapper(object):
         accumCIndex = 0
         for i in ims:
             arr = np.asarray(i)
+            print('i: %s' % i)
+            print('arr: %s' % arr)
+            print('arr.shape: %s' % (arr.shape,))
             endRow = accumRIndex + arr.shape[0]
             endCol = accumCIndex + arr.shape[1]
             final[accumRIndex: endRow, accumCIndex:endCol] = arr

@@ -34,7 +34,7 @@ def install_first():
           '\t$ source python/bin/activate\n\n' \
           'Then proceed with the installation of the second set of ' \
           'dependencies, which are python-specific. Execute:\n\n' \
-          '\t$ fab -f install_dev_machine install_second')
+          '\t$ fab -f install_dev_machine install_processing_machine')
 
 def install_processing_machine():
     '''
