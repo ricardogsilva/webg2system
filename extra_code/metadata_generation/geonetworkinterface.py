@@ -22,10 +22,11 @@ class GeonetworkManager(object):
     print(etree.tostring(users_tree, encoding=encoding, pretty_print=True))
     '''
 
-    _csw_manager = CSWManager()
     _username = ''
     _password = ''
-    _base_url = ''
+    _csw_suffix = 'srv/eng/csw'
+    _csw_publication_suffix = 'srv/eng/csw-publication'
+    _headers = {'content-type' : 'application/xml'}
     _security_queries = {
         'logout' : {
             'url_suffix' : 'j_spring_security_logout',
@@ -40,14 +41,10 @@ class GeonetworkManager(object):
             'url_suffix' : 'srv/eng/xml.info',
             'data' : {'type' : 'users'},
         },
-        'csw_get_capabilities' : {'url_suffix' : 'srv/eng/csw',},
-        'csw_describe_record' : {'url_suffix' : 'srv/eng/csw',},
-        'csw_get_record_by_id' : {'url_suffix' : 'srv/eng/csw',},
-        'csw_transaction_insert' : {'url_suffix' : 'srv/eng/csw-publication'},
     }
 
     def __init__(self, base_url='', username='', password=''):
-        #self._csw_manager = CSWManager()
+        self._csw_manager = CSWManager()
         self._session = requests.Session()
         self.base_url = base_url
         self.username = username
@@ -99,38 +96,32 @@ class GeonetworkManager(object):
         tree = etree.fromstring(stripped_text)
         return encoding, tree
 
-    def execute_query(self, query_name, login_first=False, parse_as_xml=True,
-                      **kwargs):
-        headers = {'content-type' : 'application/xml'}
-        if login_first:
-            logout_response = self._logout()
-            login_response = self._login()
-        query = self._queries[query_name]
-        url = '/'.join((self.base_url, query['url_suffix']))
-        if query_name == 'csw_get_capabilities':
-            request = self._csw_manager.build_get_capabilities_request()
-            response = self._session.post(url, data=request, headers=headers)
-        elif query_name == 'csw_describe_record':
-            request = self._csw_manager.build_describe_record_request()
-            response = self._session.post(url, data=request, headers=headers)
-        elif query_name == 'csw_get_record_by_id':
-            id_ = kwargs['id']
-            request = self._csw_manager.build_get_record_by_id_request(id_)
-            response = self._session.post(url, data=request, headers=headers)
-        elif query_name == 'csw_transaction_insert':
-            metadatas = kwargs['metadata_list']
-            request = self._csw_manager.build_insert_record_request(metadatas)
-            response = self._session.post(url, data=request, headers=headers)
-        else:
-            try:
-                response = self._session.post(url, data=query['data'])
-            except KeyError:
-                response = self._session.post(url)
-        result = response
-        if parse_as_xml:
-            encoding, tree = self.parse_response(response)
-            result = response, encoding, tree
-        return result
+    def get_capabilities(self):
+        request = self._csw_manager.build_get_capabilities_request()
+        url = '/'.join((self.base_url, self._csw_suffix))
+        response = self._session.post(url, data=request, headers=self._headers)
+        encoding, tree = self.parse_response(response)
+        return response, encoding, tree
+
+    def get_records_cql(self, cql, result_type, start_position=1,
+                        max_records=10):
+        request = self._csw_manager.build_get_records_CQL_request(
+            cql,
+            result_type,
+            start_position,
+            max_records
+        )
+        url = '/'.join((self.base_url, self._csw_suffix))
+        response = self._session.post(url, data=request, headers=self._headers)
+        encoding, tree = self.parse_response(response)
+        return response, encoding, tree
+
+    def get_record_by_id(self, id_):
+        request = self._csw_manager.build_get_record_by_id_request(id_)
+        url = '/'.join((self.base_url, self._csw_suffix))
+        response = self._session.post(url, data=request, headers=self._headers)
+        encoding, tree = self.parse_response(response)
+        return response, encoding, tree
 
 
 class CSWManager(object):
@@ -192,7 +183,53 @@ class CSWManager(object):
         request = self._finish_request(root, encoding)
         return request
 
-    def build_insert_record_request(self, metadata_list, encoding='utf-8'):
+    def build_get_records_CQL_request(self, cql_text, result_type='hits',
+                                      start_position=1, max_records=10,
+                                      encoding='utf-8'):
+        '''
+        Return a CSW GetRecords request.
+
+        Inputs:
+
+            cql_text - 
+
+            result_type - Accepted values: 'hits', 'results', 'validate'
+
+            start_position - 
+
+            max_records - 
+        '''
+
+        root = etree.Element(
+            '{%s}GetRecords' % self._NAMESPACES['csw'],
+            attrib={
+                'service':'CSW',
+                'version':'2.0.2',
+                'maxRecords':unicode(max_records),
+                'startPosition':unicode(start_position),
+                'resultType':result_type,
+            },
+            nsmap=self._NAMESPACES
+        )
+        query_el = etree.SubElement(
+            root,
+            '{%s}Query' % self._NAMESPACES['csw'],
+            attrib={'typeNames':'csw:Record'},
+        )
+        constraint_el = etree.SubElement(
+            query_el,
+            '{%s}Constraint' % self._NAMESPACES['csw'],
+            attrib={'version':'1.1.0'}
+        )
+        text_el = etree.SubElement(
+            constraint_el,
+            '{%s}CqlText' % self._NAMESPACES['csw']
+        )
+        text_el.text = cql_text
+        request = self._finish_request(root, encoding)
+        return request
+
+    def build_insert_records_request(self, metadata_list, encoding='utf-8'):
         '''
         Inputs:
 
