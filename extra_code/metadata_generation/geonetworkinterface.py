@@ -44,7 +44,7 @@ class GeonetworkManager(object):
     }
 
     def __init__(self, base_url='', username='', password=''):
-        self._csw_manager = CSWManager()
+        self.csw_manager = CSWManager()
         self._session = requests.Session()
         self.base_url = base_url
         self.username = username
@@ -97,7 +97,7 @@ class GeonetworkManager(object):
         return encoding, tree
 
     def get_capabilities(self):
-        request = self._csw_manager.build_get_capabilities_request()
+        request = self.csw_manager.build_get_capabilities_request()
         url = '/'.join((self.base_url, self._csw_suffix))
         response = self._session.post(url, data=request, headers=self._headers)
         encoding, tree = self.parse_response(response)
@@ -105,7 +105,7 @@ class GeonetworkManager(object):
 
     def get_records_cql(self, cql, result_type, start_position=1,
                         max_records=10):
-        request = self._csw_manager.build_get_records_CQL_request(
+        request = self.csw_manager.build_get_records_CQL_request(
             cql,
             result_type,
             start_position,
@@ -117,39 +117,72 @@ class GeonetworkManager(object):
         return response, encoding, tree
 
     def get_record_by_id(self, id_):
-        request = self._csw_manager.build_get_record_by_id_request(id_)
+        request = self.csw_manager.build_get_record_by_id_request(id_)
         url = '/'.join((self.base_url, self._csw_suffix))
         response = self._session.post(url, data=request, headers=self._headers)
         encoding, tree = self.parse_response(response)
         return response, encoding, tree
 
+    def find_metadata(self, title):
+        '''
+        Inputs:
+
+            title - A wildcard for use when searching the title of the
+                metadata record to find. Wildcards use '%'.
+        '''
+
+        cql_text = "AnyText like '%s'" % title
+        response, encoding, tree = self.get_records_cql(cql_text, 'results')
+        search_result = tree.xpath('csw:SearchResults',
+                                   namespaces=self.csw_manager.NAMESPACES)[0]
+        matches = int(search_result.get('numberOfRecordsMatched', 0))
+        found = False
+        uuid = None
+        if matches > 0:
+            if matches > 1:
+                print('Warning: found multiple records. Was expecting to ' \
+                      'find only one')
+            found = True
+            ns = self.csw_manager.NAMESPACES
+            ns.update(self.csw_manager.ISO_NAMESPACES)
+            uuid_el = tree.xpath('csw:SearchResults/gmd:MD_Metadata/gmd:' \
+                                 'fileIdentifier/gco:CharacterString', 
+                                 namespaces=ns)[0]
+            uuid = uuid_el.text
+        return found, uuid
+
 
 class CSWManager(object):
 
-    _NAMESPACES = {
+    NAMESPACES = {
         'csw' : 'http://www.opengis.net/cat/csw/2.0.2',
         'ows' : 'http://www.opengis.net/ows',
     }
 
+    ISO_NAMESPACES = {
+            'gmd' : 'http://www.isotc211.org/2005/gmd',
+            'gco' : 'http://www.isotc211.org/2005/gco'
+    }
+
     def build_get_capabilities_request(self, encoding='utf-8'):
-        root = etree.Element('{%s}GetCapabilities' % self._NAMESPACES['csw'],
-                             attrib={'service':'CSW'}, nsmap=self._NAMESPACES)
+        root = etree.Element('{%s}GetCapabilities' % self.NAMESPACES['csw'],
+                             attrib={'service':'CSW'}, nsmap=self.NAMESPACES)
         accept_versions = etree.SubElement(
             root,
-            '{%s}AcceptVersions' % self._NAMESPACES['ows']
+            '{%s}AcceptVersions' % self.NAMESPACES['ows']
         )
         version = etree.SubElement(
             accept_versions,
-            '{%s}Version' % self._NAMESPACES['ows']
+            '{%s}Version' % self.NAMESPACES['ows']
         )
         version.text = '2.0.2'
         accept_formats = etree.SubElement(
             root,
-            '{%s}AcceptFormats' % self._NAMESPACES['ows']
+            '{%s}AcceptFormats' % self.NAMESPACES['ows']
         )
         output_format = etree.SubElement(
             accept_formats,
-            '{%s}OutputFormat' % self._NAMESPACES['ows']
+            '{%s}OutputFormat' % self.NAMESPACES['ows']
         )
         output_format.text = 'application/xml'
         request = self._finish_request(root, encoding)
@@ -157,28 +190,28 @@ class CSWManager(object):
 
     def build_describe_record_request(self, encoding='utf-8'):
         root = etree.Element(
-            '{%s}DescribeRecord' % self._NAMESPACES['csw'],
+            '{%s}DescribeRecord' % self.NAMESPACES['csw'],
             attrib = {
                 'service' : 'CSW',
                 'version' : '2.0.2',
                 'outputFormat' : 'application/xml',
                 'schemaLanguage' : 'http://www.w3.org/XML/Schema',
             },
-            nsmap=self._NAMESPACES
+            nsmap=self.NAMESPACES
         )
         request = self._finish_request(root, encoding)
         return request
 
     def build_get_record_by_id_request(self, id_, encoding='utf-8'):
         root = etree.Element(
-            '{%s}GetRecordById' % self._NAMESPACES['csw'],
+            '{%s}GetRecordById' % self.NAMESPACES['csw'],
             attrib={'service':'CSW', 'version':'2.0.2'},
-            nsmap=self._NAMESPACES
+            nsmap=self.NAMESPACES
         )
-        id_element = etree.SubElement(root, '{%s}Id' % self._NAMESPACES['csw'])
+        id_element = etree.SubElement(root, '{%s}Id' % self.NAMESPACES['csw'])
         id_element.text = id_
         element_set_name = etree.SubElement(root, '{%s}ElementSetName' % \
-                                            self._NAMESPACES['csw'])
+                                            self.NAMESPACES['csw'])
         element_set_name.text = 'full'
         request = self._finish_request(root, encoding)
         return request
@@ -201,29 +234,31 @@ class CSWManager(object):
         '''
 
         root = etree.Element(
-            '{%s}GetRecords' % self._NAMESPACES['csw'],
+            '{%s}GetRecords' % self.NAMESPACES['csw'],
             attrib={
                 'service':'CSW',
                 'version':'2.0.2',
                 'maxRecords':unicode(max_records),
                 'startPosition':unicode(start_position),
                 'resultType':result_type,
+                'outputFormat':'application/xml',
+                'outputSchema':'csw:IsoRecord',
             },
-            nsmap=self._NAMESPACES
+            nsmap=self.NAMESPACES
         )
         query_el = etree.SubElement(
             root,
-            '{%s}Query' % self._NAMESPACES['csw'],
-            attrib={'typeNames':'csw:Record'},
+            '{%s}Query' % self.NAMESPACES['csw'],
+            attrib={'typeNames':'gmd:MD_Metadata'},
         )
         constraint_el = etree.SubElement(
             query_el,
-            '{%s}Constraint' % self._NAMESPACES['csw'],
+            '{%s}Constraint' % self.NAMESPACES['csw'],
             attrib={'version':'1.1.0'}
         )
         text_el = etree.SubElement(
             constraint_el,
-            '{%s}CqlText' % self._NAMESPACES['csw']
+            '{%s}CqlText' % self.NAMESPACES['csw']
         )
         text_el.text = cql_text
         request = self._finish_request(root, encoding)
@@ -237,13 +272,13 @@ class CSWManager(object):
         '''
 
         root = etree.Element(
-            '{%s}Transaction' % self._NAMESPACES['csw'],
+            '{%s}Transaction' % self.NAMESPACES['csw'],
             attrib={'version' : '2.0.2', 'service' : 'CSW'},
-            nsmap=self._NAMESPACES
+            nsmap=self.NAMESPACES
         )
         for metadata in metadata_list:
             insert_el = etree.SubElement(root, '{%s}Insert' % \
-                                       self._NAMESPACES['csw'])
+                                       self.NAMESPACES['csw'])
             insert_el.append(metadata)
         request = self._finish_request(root, encoding)
 
