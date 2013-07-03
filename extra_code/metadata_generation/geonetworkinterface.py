@@ -10,17 +10,6 @@ import requests
 from lxml import etree
 
 class GeonetworkManager(object):
-    '''
-    Example usage:
-
-    gn_url = 'http://geoland2.meteo.pt/geonetwork'
-    user = 'admin'
-    passw = 'admin'
-    manager = GeonetworkManager(gn_url, user, passw)
-    guest_users_response = manager.execute_query('info')
-    encoding, users_tree = manager.parse_response(guest_users_response)
-    print(etree.tostring(users_tree, encoding=encoding, pretty_print=True))
-    '''
 
     _username = ''
     _password = ''
@@ -34,12 +23,6 @@ class GeonetworkManager(object):
         'login' : {
             'url_suffix' : 'j_spring_security_check',
             'data' : {'username' : None, 'password' : None},
-        },
-    }
-    _queries = {
-        'info_users' : {
-            'url_suffix' : 'srv/eng/xml.info',
-            'data' : {'type' : 'users'},
         },
     }
 
@@ -123,12 +106,15 @@ class GeonetworkManager(object):
         encoding, tree = self.parse_response(response)
         return response, encoding, tree
 
-    def find_metadata(self, title):
+    def get_record_by_title(self, title):
         '''
         Inputs:
 
             title - A wildcard for use when searching the title of the
                 metadata record to find. Wildcards use '%'.
+
+        Returns an etree.Element with the metadata records in the IsoRecord
+        output schema or None, if the record is not found.
         '''
 
         cql_text = "AnyText like '%s'" % title
@@ -136,20 +122,84 @@ class GeonetworkManager(object):
         search_result = tree.xpath('csw:SearchResults',
                                    namespaces=self.csw_manager.NAMESPACES)[0]
         matches = int(search_result.get('numberOfRecordsMatched', 0))
-        found = False
-        uuid = None
+        record = None
         if matches > 0:
             if matches > 1:
                 print('Warning: found multiple records. Was expecting to ' \
                       'find only one')
-            found = True
             ns = self.csw_manager.NAMESPACES
             ns.update(self.csw_manager.ISO_NAMESPACES)
-            uuid_el = tree.xpath('csw:SearchResults/gmd:MD_Metadata/gmd:' \
-                                 'fileIdentifier/gco:CharacterString', 
-                                 namespaces=ns)[0]
-            uuid = uuid_el.text
-        return found, uuid
+            record = tree.xpath('csw:SearchResults/gmd:MD_Metadata[1]',
+                                namespaces=ns)[0]
+        return record
+
+    def insert_records(self, metadata_files):
+        '''
+        Inputs:
+
+            metadata_files - a list of xml files with the individual metadata
+                for each record.
+        '''
+
+        logout_response = self._logout()
+        login_response = self._login()
+        metadatas = []
+        for file_path in metadata_files:
+            tree = etree.parse(file_path)
+            metadatas.append(tree.getroot())
+        request = self.csw_manager.build_insert_records_request(metadatas)
+        url = '/'.join((self.base_url, self._csw_publication_suffix))
+        response = self._session.post(url, data=request, headers=self._headers)
+        print('response: %s' % response.text)
+        encoding, tree = self.parse_response(response)
+        return response, encoding, tree
+
+    def delete_records(self, uuids):
+        '''
+        Inputs:
+
+            uuids - A list of UUIDs for each of the metadata records to
+                delete from the catalogue.
+        '''
+
+        cql_texts = ["AnyText like '%s'" % id_ for id_ in uuids]
+        request = self.csw_manager.build_delete_records_request(cql_texts)
+        url = '/'.join((self.base_url, self._csw_publication_suffix))
+        response = self._session.post(url, data=request, headers=self._headers)
+        encoding, tree = self.parse_response(response)
+        return response, encoding, tree
+
+
+# TODO - Decode and reencode all the strings
+class MetadataRecord(object):
+
+    namespaces = dict()
+    uuid = None
+
+    @staticmethod
+    def from_xml(xml_element, encoding='utf-8'):
+        record = MetadataRecord()
+        record.namespaces = xml_element.nsmap
+        record.uuid = xml_element.xpath(
+            'gmd:fileIdentifier/gco:CharacterString',
+            namespaces=record.namespaces)[0].text
+        return record
+
+    def to_xml(self):
+        root = etree.Element('{%s}MD_Metadata' % self.namespaces['gmd'],
+                             nsmap=self.namespaces)
+        file_identifier_el = etree.SubElement(root,
+                                              '{%s}fileIdentifier' % \
+                                              self.namespaces['gmd'])
+        self._gco_character_string(file_identifier_el, self.uuid)
+        tree = etree.ElementTree(root)
+        return tree
+
+    def _gco_character_string(self, parent_el, text):
+        cs_el = etree.SubElement(parent_el,
+                                 '{%s}CharacterString' % \
+                                 self.namespaces['gco'])
+        cs_el.text = text
 
 
 class CSWManager(object):
@@ -271,23 +321,50 @@ class CSWManager(object):
             metadata_list - A list of lxml.etree.Element objects
         '''
 
-        root = etree.Element(
-            '{%s}Transaction' % self.NAMESPACES['csw'],
-            attrib={'version' : '2.0.2', 'service' : 'CSW'},
-            nsmap=self.NAMESPACES
-        )
+        root = self._start_transaction_request()
         for metadata in metadata_list:
             insert_el = etree.SubElement(root, '{%s}Insert' % \
                                        self.NAMESPACES['csw'])
             insert_el.append(metadata)
         request = self._finish_request(root, encoding)
+        return request
 
     def build_update_record_request(self, record_id, new_record,
                                     encoding='utf-8'):
         raise NotImplementedError
 
-    def build_delete_record_request(self, record_id, encoding='utf-8'):
-        raise NotImplementedError
+    def build_delete_records_request(self, record_ids, encoding='utf-8'):
+        '''
+        Inputs:
+
+            record_ids - A list of CQL queries each defining the UUID of a
+                record to delete.
+        '''
+
+        root = self._start_transaction_request()
+        for uuid in record_ids:
+            delete_el = etree.SubElement(root, '{%s}Delete' % \
+                                         self.NAMESPACES['csw'])
+            constraint_el = etree.SubElement(
+                delete_el,
+                '{%s}Constraint' % self.NAMESPACES['csw'],
+                attrib={'version':'1.1.0'}
+            )
+            text_el = etree.SubElement(
+                constraint_el,
+                '{%s}CqlText' % self.NAMESPACES['csw']
+            )
+            text_el.text = uuid
+        request = self._finish_request(root, encoding)
+        return request
+
+    def _start_transaction_request(self):
+        root = etree.Element(
+            '{%s}Transaction' % self.NAMESPACES['csw'],
+            attrib={'version':'2.0.2', 'service':'CSW'},
+            nsmap=self.NAMESPACES
+        )
+        return root
 
     def _finish_request(self, root_element, encoding):
         tree = etree.ElementTree(root_element)
@@ -296,19 +373,9 @@ class CSWManager(object):
         return request
 
 
-
 if __name__ == '__main__':
     gn_url = 'http://geoland2.meteo.pt/geonetwork'
     user = 'admin'
     passw = 'g2admin1234'
     manager = GeonetworkManager(gn_url, user, passw)
-    guest_users_response = manager.execute_query('info_users')
-    encoding, guest_users_tree = manager.parse_response(guest_users_response)
-    print(etree.tostring(guest_users_tree,
-          encoding=encoding, pretty_print=True))
-    print('----------------')
-    admin_users_response = manager.execute_query('info_users', login_first=True)
-    encoding, admin_users_tree = manager.parse_response(admin_users_response)
-    print(etree.tostring(admin_users_tree,
-          encoding=encoding, pretty_print=True))
     manager.close()
