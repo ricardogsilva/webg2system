@@ -9,8 +9,6 @@ from django.db import models
 import django.contrib.auth.models as am
 from systemsettings.models import Package, Area
 
-from cloghandler import ConcurrentRotatingFileHandler
-
 from core import g2packages, g2hosts
 
 class RunningPackage(models.Model):
@@ -29,6 +27,7 @@ class RunningPackage(models.Model):
                                 'available?')
     result = models.BooleanField(default=False, editable=False)
     timestamp = models.DateTimeField(editable=False)
+    _loggers = dict()
 
     class Meta:
         ordering = ['-id']
@@ -74,59 +73,54 @@ class RunningPackage(models.Model):
         return pack
 
     def _get_logger(self, log_level):
-        logger = logging.getLogger(__name__)
-        hf = g2hosts.HostFactory(log_level)
-        host = hf.create_host()
-        formatter = logging.Formatter('%(levelname)s %(asctime)s %(module)s ' \
-                                      '%(process)s %(message)s')
-        short_formatter = logging.Formatter('%(levelname)s %(asctime)s ' \
-                                            '%(message)s')
-        log_dir = host.make_dir(self.timeslot.strftime('LOGS/%Y/%m/%d/%H'), relativeTo='data')
-        log_file = os.path.join(log_dir, '%s_%s.log' % \
-                   (self.settings, 
-                    self.timeslot.strftime('%Y%m%d%H%M')))
+        if self._loggers.get(__name__) is None:
+            logger = logging.getLogger(__name__)
+            hf = g2hosts.HostFactory(log_level)
+            host = hf.create_host()
+            formatter = logging.Formatter('%(levelname)s %(asctime)s %(module)s ' \
+                                          '%(process)s %(message)s')
+            short_formatter = logging.Formatter('%(levelname)s %(asctime)s ' \
+                                                '%(message)s')
+            log_dir = host.make_dir(self.timeslot.strftime('LOGS/%Y/%m/%d/%H'),
+                                    relativeTo='data')
+            log_file = os.path.join(log_dir, '%s_%s.log' % \
+                       (self.settings, 
+                        self.timeslot.strftime('%Y%m%d%H%M')))
+            file_handler = logging.handlers.WatchedFileHandler(log_file, 'a', 
+                                                               'UTF-8')
+            file_handler.setFormatter(short_formatter)
+            console_handler = logging.StreamHandler()
+            console_handler.setFormatter(formatter)
+            mail_host = ('perseus.ipma.pt', 587)
+            from_addr = 'ricardo.silva@ipma.pt'
+            subject = '%s - g2system error' % (host.name)
+            mail_destinations = [u.email for u in am.User.objects.filter(is_staff=True)]
+            mail_handler = logging.handlers.SMTPHandler(mail_host, from_addr, 
+                                                        mail_destinations, 
+                                                        subject,
+                                                        credentials=(from_addr,'geo2123'),
+                                                        secure=())
+            mail_handler.setLevel(logging.ERROR)
+            mail_handler.setFormatter(formatter)
+            existing_handlers = logger.handlers
+            for hdlr in existing_handlers:
+                logger.removeHandler(hdlr)
+            logger.addHandler(file_handler)
+            logger.addHandler(console_handler)
+            logger.addHandler(mail_handler)
+            logger.setLevel(log_level)
+            # reassing the host's logger to ensure it gets the created handler
+            # this is because the HostFactory class has a caching mechanism
+            # and it will not create new hosts
+            host.logger = logger
+            for host_name, conn_dict in host.connections.iteritems():
+                for proxy_obj in conn_dict.values():
+                    proxy_obj.host = host
+            self._loggers[__name__] = logger
+        return self._loggers[__name__]
 
-        #handler = ConcurrentRotatingFileHandler(log_file, 'a', 512*1024, 3)
-        #handler.setFormatter(formatter)
-
-        file_handler = logging.handlers.WatchedFileHandler(log_file, 'a', 
-                                                           'UTF-8')
-        file_handler.setFormatter(short_formatter)
-
-        console_handler = logging.StreamHandler()
-        console_handler.setFormatter(formatter)
-
-        mail_host = ('perseus.ipma.pt', 587)
-        from_addr = 'ricardo.silva@ipma.pt'
-        subject = '%s - g2system error' % (host.name)
-        mail_destinations = [u.email for u in am.User.objects.filter(is_staff=True)]
-        mail_handler = logging.handlers.SMTPHandler(mail_host, from_addr, 
-                                                    mail_destinations, 
-                                                    subject,
-                                                    credentials=('ricardo.silva@ipma.pt','geo2123'),
-                                                    secure=())
-        mail_handler.setLevel(logging.ERROR)
-        mail_handler.setFormatter(formatter)
-        existing_handlers = logger.handlers
-        for hdlr in existing_handlers:
-            logger.removeHandler(hdlr)
-
-        #logger.addHandler(handler)
-
-        logger.addHandler(file_handler)
-        logger.addHandler(console_handler)
-        logger.addHandler(mail_handler)
-        logger.setLevel(log_level)
-        # reassing the host's logger to ensure it gets the created handler
-        # this is because the HostFactory class has a caching mechanism
-        # and it will not create new hosts
-        host.logger = logger
-        for host_name, conn_dict in host.connections.iteritems():
-            for proxy_obj in conn_dict.values():
-                proxy_obj.host = host
-        return logger
-
-    def run(self, callback=None, log_level=logging.DEBUG, *args, **kwargs):
+    def run(self, callback=None, log_level=logging.DEBUG, clean_up=True, 
+            *args, **kwargs):
         '''
         Interfaces with the core packages, calling their public
         delete_outputs(), run_main() and clean_up() methods sequentially.
@@ -225,9 +219,10 @@ class RunningPackage(models.Model):
                 log_callbacks(line)
             self.result = False
         finally:
-            log_callbacks((self.progress(5, processSteps), 
-                          'Cleaning up...'))
-            cleanResult = pack.clean_up()
+            if clean_up:
+                log_callbacks((self.progress(5, processSteps), 
+                              'Cleaning up...'))
+                cleanResult = pack.clean_up()
             del pack
             log_callbacks(self.progress(6, processSteps),
                           'Deleting hosts...')

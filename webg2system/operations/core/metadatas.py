@@ -39,35 +39,6 @@ class MetadataHandler(object):
         else:
             self.logger = logger
 
-    def _execute_csw_insert_request(self, fileList, url, headers, opener):
-        theRequest = '<?xml version="1.0" encoding="UTF-8"?>'\
-            '<csw:Transaction service="CSW" version="2.0.2" '\
-            'xmlns:csw="http://www.opengis.net/cat/csw/2.0.2">'
-        for filePath in fileList:
-            theXML = etree.parse(filePath)
-            xml_as_string = etree.tostring(theXML)
-            theRequest += '<csw:Insert>' + xml_as_string + '</csw:Insert>'
-        theRequest += '</csw:Transaction>'
-        try:
-            result = False
-            insertReq = urllib2.Request(url, theRequest, headers)
-            response = opener.open(insertReq)
-            # CSW response
-            xml_response = response.read()
-            self.logger.info('xml_response: %s' % xml_response)
-            tree = etree.fromstring(xml_response)
-            if 'TransactionResponse' in tree.tag:
-                result = True
-            elif 'ExceptionReport' in tree.tag:
-                self.logger.error('Couldn\'t send the data to the catalogue '\
-                                  'server. This is the server\'s response:')
-                self.logger.debug(xml_response)
-            else:
-                self.logger.debug('unspecified condition')
-        except urllib2.HTTPError, error:
-            self.logger.error(error.read())
-        return result
-
 
 class SWIMetadataModifier(MetadataHandler):
 
@@ -140,7 +111,6 @@ class SWIMetadataModifier(MetadataHandler):
                                 'pointOfContact/gmd:CI_ResponsibleParty', 
                                 namespaces=self.ns)[1]
         self._modify_ci_responsible_party(xpath, contact, role, position)
-
 
     def modify_quicklook_url(self, timeslot):
 
@@ -218,63 +188,6 @@ class SWIMetadataModifier(MetadataHandler):
     def save_xml(self, path):
         self.logger.debug('save path: %s' % path)
         self.tree.write(path)
-
-    def insert_csw(self, csw_url, login_url, logout_url, username,
-                    password, file_path):
-        '''
-        Insert metadata records in the catalogue server.
-
-        This code is adapted from
-        http://trac.osgeo.org/geonetwork/wiki/HowToDoCSWTransactionOperations#Python
-
-        Inputs:
-            
-            csw_url - URL for the CSW entry point.
-
-            login_url - URL for the CSW log in page.
-
-            logout_url - URL for the CSW log out page.
-
-            username - username for the catalogue server's insert operation.
-
-            password - password for the user
-
-            filePaths - The path to the xml file to send to the catalogue 
-                        server.
-        '''
-
-        headers_auth = {
-            "Content-type": "application/x-www-form-urlencoded", 
-            "Accept": "text/plain"
-        }
-        headers_xml = {
-            "Content-type": "application/xml", 
-            "Accept": "text/plain"
-        }
-        data = urllib.urlencode({"username": username, "password": password})
-        logoutReq = urllib2.Request(logout_url) # first, always log out
-        response = urllib2.urlopen(logoutReq)
-        #self.logger.debug(response.read())
-        # send authentication request
-        loginReq = urllib2.Request(login_url, data, headers_auth)
-        response = urllib2.urlopen(loginReq)
-        # a basic memory-only cookie jar instance
-        cookies = cookielib.CookieJar()
-        cookies.extract_cookies(response,loginReq)
-        cookie_handler= urllib2.HTTPCookieProcessor(cookies)
-        # a redirect handler
-        redirect_handler= urllib2.HTTPRedirectHandler()
-        # save cookie and redirect handler for future HTTP Posts
-        opener = urllib2.build_opener(redirect_handler,cookie_handler)
-        result = self._execute_csw_insert_request([file_path], 
-                                                  csw_url, 
-                                                  headers_xml, 
-                                                  opener)
-        self.logger.debug('result: %s' % result)
-        logoutReq = urllib2.Request(logout_url) # Last, always log out
-        response = opener.open(logoutReq)
-        #self.logger.debug(response.read())
-        return result
 
     def _modify_ci_responsible_party(self, xml_element, contact, role,
                                      position=None):
@@ -669,7 +582,6 @@ class MetadataGenerator(object):
         else:
             extra_keywords.append(tile)
         return extra_keywords
-
 
     def _apply_other_keywords(self, productSettings, tile):
         '''
@@ -1491,150 +1403,6 @@ class MetadataGenerator(object):
         logoutReq = urllib2.Request(logout_url)
         response = urllib2.urlopen(logoutReq)
         #self.logger.debug(response.read())
-
-    def insert_csw(self, csw_url, login_url, logout_url, username,
-                    password, filePaths=None):
-        '''
-        Insert metadata records in the catalogue server.
-
-        This code is adapted from
-        http://trac.osgeo.org/geonetwork/wiki/HowToDoCSWTransactionOperations#Python
-
-        Inputs:
-            
-            csw_url - URL for the CSW entry point.
-
-            login_url - URL for the CSW log in page.
-
-            logout_url - URL for the CSW log out page.
-
-            username - username for the catalogue server's insert operation.
-
-            password - password for the user
-
-            filePaths - A list of xml files with the metadata to insert in the
-                catalogue. If None (the default), this instance's own tree
-                will be used.
-        '''
-
-        self.csw_logout(logout_url)
-        opener = self.csw_login(login_url, username, password)
-        headers_xml = {
-            "Content-type": "application/xml", 
-            "Accept": "text/plain"
-        }
-        results = []
-        if filePaths is not None:
-            # Process up to 10 files in each transaction in order to
-            # prevent out of memory errors on the CSW server
-            requestList = []
-            for index, fp in enumerate(filePaths):
-                requestList.append(fp)
-                if (index + 1) % 10 == 0:
-                    result = self._execute_csw_insert_request(requestList, 
-                                                              csw_url, 
-                                                              headers_xml, 
-                                                              opener)
-                    results.append(result)
-                    requestList = []
-            else:
-                result = self._execute_csw_insert_request(requestList, csw_url, 
-                                                          headers_xml, opener)
-                results.append(result)
-        else:
-            result = self._execute_csw_insert_request([self.tree], csw_url, 
-                                                      headers_xml, opener)
-            results.append(result)
-        self.logger.debug('results: %s' % results)
-        self.csw_logout(logout_url)
-        if len(results) > 0:
-            the_result = not False in results
-        else:
-            the_result = False
-        return the_result
-
-    def _execute_csw_insert_request(self, file_list, url, headers, opener,
-                                    max_tries=5, sleep_for=5):
-        request = self._build_csw_insert_request(file_list)
-        response_tree = self._execute_csw_transaction(request, url, headers, 
-                                                      opener)
-        result = None
-        try_num = 0
-        while result is None and try_num < max_tries:
-            result = self._parse_transaction_result(response_tree)
-            if result is None:
-                self.logger.debug('The transaction did not execute ' \
-                                  'successfully. Will retry after %i ' \
-                                  'seconds.')
-                time.sleep(sleep_for)
-            try_num += 1
-        if result is None:
-            result = False
-        return result
-
-    def _parse_transaction_result(self, response):
-        '''
-        Parse the output of the CSW insert transaction.
-
-        Inputs:
-
-            response - An etree.Element object with the response
-                from the CSW server
-
-        Returns:
-
-            True - If the request went OK
-            False - If the request did not execute
-            None - If the request should be retried
-        '''
-
-        result = False
-        try:
-            report_title = response.tag.replace('{%s}' % response.nsmap['csw'], 
-                                                '')
-        except KeyError:
-            report_title = response.tag.replace('{%s}' % response.nsmap['ows'], 
-                                                '')
-        if report_title == 'TransactionResponse':
-            result = True
-        elif report_title == 'ExceptionReport':
-            exception = response.xpath('ows:Exception/ows:ExceptionText',
-                                   namespaces=response.nsmap)[0].text
-            for line in exception.split('\n'):
-                if 'retried' in line:
-                    result = None
-                elif 'duplicate' in line:
-                    self.logger.debug('Duplicate record found. this is the ' \
-                                      'server\'s response:')
-                    self.logger.debug(etree.tostring(response, 
-                                      pretty_print=True))
-        else:
-            self.logger.debug('Unspecified condition. This is the response:')
-            self.logger.debug(etree.tostring(response, pretty_print=True))
-            raise
-        return result
-
-    def _build_csw_insert_request(self, file_list):
-        the_request = '<?xml version="1.0" encoding="UTF-8"?>'\
-            '<csw:Transaction service="CSW" version="2.0.2" '\
-            'xmlns:csw="http://www.opengis.net/cat/csw/2.0.2">'
-        for path in file_list:
-            theXML = etree.parse(path)
-            xml_as_string = etree.tostring(theXML)
-            the_request += '<csw:Insert>' + xml_as_string + '</csw:Insert>'
-        the_request += '</csw:Transaction>'
-        return the_request
-
-    def _execute_csw_transaction(self, request, url, headers, opener):
-        try:
-            insert_req = urllib2.Request(url, request, headers)
-            response = opener.open(insert_req)
-            xml_response = response.read()
-            tree = etree.fromstring(xml_response)
-            return tree
-        except urllib2.HTTPError, error:
-            self.logger.error(error.read())
-            raise
 
     def _re_order(self, parent_element, order_dict):
         re_order = []

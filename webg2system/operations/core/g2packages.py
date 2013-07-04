@@ -13,6 +13,7 @@ from g2hosts import HostFactory
 import mappers
 import metadatas
 import utilities
+from geonetworkinterface import GeonetworkManager
 
 # to be deleted!
 import logging
@@ -1347,19 +1348,28 @@ class SWIMetadataHandler(ProcessingPackage):
 
             xml_file - The path to the XML file.
 
+            overwrite - A boolean specifying if the XML files should overwrite
+                the ones already in the catalogue, in case of conflict. The
+                default value (False) will always insert files even if they 
+                may already be present in the catalogue.
+
+
         Returns:
         
             A boolean with the insert operation's result.
         '''
 
-        cswSetts = ss.CatalogueServer.objects.get()
-        csw_url = '/'.join((cswSetts.base_URL, cswSetts.csw_URI))
-        login_url = '/'.join((cswSetts.base_URL, cswSetts.login_URI))
-        logout_url = '/'.join((cswSetts.base_URL, cswSetts.logout_URI))
-        result = self.md_modifier.insert_csw(csw_url, login_url, logout_url,
-                                             cswSetts.username, 
-                                             cswSetts.password,
-                                             xml_file)
+        csw_settings = ss.CatalogueServer.objects.get()
+        csw = GeonetworkManager(csw_settings.base_URL, 
+                                username=csw_settings.username,
+                                password=csw_settings.password)
+        if overwrite:
+            # try to find each file in the catalogue
+            # if found, it will be updated with the new metadata, but it 
+            # keeps the same UUID
+            raise NotImplementedError
+        else:
+            result = csw.insert_records([xml_file])
         return result
 
     def clean_up(self):
@@ -2437,28 +2447,36 @@ class MetadataGenerator(ProcessingPackage):
                                self.product.short_name)
         mdGenerator.save_xml(xmlPath)
 
-    def insert_metadata_csw(self, xmlFiles):
+    def insert_metadata_csw(self, xml_files, overwrite=False):
         '''
         Insert metadata records in the catalogue server.
 
         Inputs:
 
-            xmlFiles - A list of paths to the newly-generated XML metadata
+            xml_files - A list of paths to the newly-generated XML metadata
                 files.
+
+            overwrite - A boolean specifying if the XML files should overwrite
+                the ones already in the catalogue, in case of conflict. The
+                default value (False) will always insert files even if they 
+                may already be present in the catalogue.
 
         Returns:
         
             A boolean with the insert operation's result.
         '''
 
-        cswSetts = ss.CatalogueServer.objects.get()
-        csw_url = '/'.join((cswSetts.base_URL, cswSetts.csw_URI))
-        login_url = '/'.join((cswSetts.base_URL, cswSetts.login_URI))
-        logout_url = '/'.join((cswSetts.base_URL, cswSetts.logout_URI))
-        result = self.mdGenerator.insert_csw(csw_url, login_url, logout_url,
-                                             cswSetts.username, 
-                                             cswSetts.password,
-                                             filePaths=xmlFiles)
+        csw_settings = ss.CatalogueServer.objects.get()
+        csw = GeonetworkManager(csw_settings.base_URL, 
+                                username=csw_settings.username,
+                                password=csw_settings.password)
+        if overwrite:
+            # try to find each file in the catalogue
+            # if found, it will be updated with the new metadata, but it 
+            # keeps the same UUID
+            raise NotImplementedError
+        else:
+            result = csw.insert_records(xml_files)
         return result
 
     def run_main(self, callback=None, tile=None, populateCSW=True, 

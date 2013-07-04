@@ -139,20 +139,29 @@ class GeonetworkManager(object):
 
             metadata_files - a list of xml files with the individual metadata
                 for each record.
+
+        Returns a boolean indicating if all the metadata files were inserted
+        in the catalog.
         '''
 
         logout_response = self._logout()
         login_response = self._login()
         metadatas = []
         for file_path in metadata_files:
-            tree = etree.parse(file_path)
-            metadatas.append(tree.getroot())
+            try:
+                tree = etree.parse(file_path)
+                metadatas.append(tree.getroot())
+            except IOError as err:
+                print(err)
         request = self.csw_manager.build_insert_records_request(metadatas)
         url = '/'.join((self.base_url, self._csw_publication_suffix))
         response = self._session.post(url, data=request, headers=self._headers)
-        print('response: %s' % response.text)
         encoding, tree = self.parse_response(response)
-        return response, encoding, tree
+        summary = self._parse_transaction_summary(tree)
+        result = False
+        if summary['inserted'] == len(metadata_files):
+            result = True
+        return result
 
     def delete_records(self, uuids):
         '''
@@ -160,14 +169,44 @@ class GeonetworkManager(object):
 
             uuids - A list of UUIDs for each of the metadata records to
                 delete from the catalogue.
+
+        Returns a boolean indicating if all the requested records have been
+        deleted from the catalog.
         '''
 
+        logout_response = self._logout()
+        login_response = self._login()
         cql_texts = ["AnyText like '%s'" % id_ for id_ in uuids]
         request = self.csw_manager.build_delete_records_request(cql_texts)
         url = '/'.join((self.base_url, self._csw_publication_suffix))
         response = self._session.post(url, data=request, headers=self._headers)
         encoding, tree = self.parse_response(response)
-        return response, encoding, tree
+        summary = self._parse_transaction_summary(tree)
+        result = False
+        if summary['deleted'] == len(uuids):
+            result = True
+        return result
+
+    def _parse_transaction_summary(self, tree):
+        '''
+        Inputs:
+
+            tree - The response tree
+        '''
+
+        result = {
+            'inserted' : int(tree.xpath('csw:TransactionSummary/csw:' \
+                             'totalInserted/text()',
+                             namespaces=self.csw_manager.NAMESPACES)[0]),
+            'updated' : int(tree.xpath('csw:TransactionSummary/csw:' \
+                            'totalUpdated/text()',
+                            namespaces=self.csw_manager.NAMESPACES)[0]),
+            'deleted' : int(tree.xpath('csw:TransactionSummary/csw:' \
+                            'totalDeleted/text()',
+                            namespaces=self.csw_manager.NAMESPACES)[0])
+        }
+        return result
+
 
 
 # TODO - Decode and reencode all the strings
