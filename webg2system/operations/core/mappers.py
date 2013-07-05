@@ -14,6 +14,7 @@ from PIL import Image as img
 from PIL import ImageFont as imgFont
 from PIL import ImageDraw as imgDraw
 from osgeo import gdal
+gdal.UseExceptions()
 from osgeo import osr
 import mapscript
 
@@ -142,13 +143,11 @@ class NGPMapper(Mapper): #crappy name
 
         outputPaths = []
         for fNum, path in enumerate(fileList):
-            #self.logger.debug('(%i/%i) - Converting HDF5 to GeoTiff...' % (fNum+1, len(fileList)))
+            self.logger.debug('(%i/%i) - Converting HDF5 to GeoTiff...' % (fNum+1, len(fileList)))
             fileName = os.path.basename(path) + '.tif'
             outputPath = os.path.join(outputDir, fileName)
             outDriver = gdal.GetDriverByName('GTiff')
-            #inDs = gdal.Open('HDF5:"%s"://%s' % (path, dataset.name))
             inDs = gdal.Open(str("HDF5:%s://%s" % (path, dataset.name)))
-            #la = inDs.GetRasterBand(1).ReadAsArray()
             numpy_type = self.gdal_np_dtypes.get(self.dataType)
             la = inDs.GetRasterBand(1).ReadAsArray().astype(numpy_type)
             # dealing with the missing value and scaling factor
@@ -474,8 +473,15 @@ class NGPMapper(Mapper): #crappy name
         if title is None:
             fname = os.path.basename(filePath).rpartition('.')[0]
             title = rawPatt.sub('', fname).replace('_', ' ')
-        quicklook = self._stitch_images([img.open(p) for p in filePath, \
-                                        legendPath])
+        # using the 'with' statement so that files are explicitly
+        # closed, in order to avoid OSError: Too many open files
+        images = []
+        for path in filePath, legendPath:
+            with open(path, 'rb') as fh:
+                im = img.open(fh)
+                images.append(im)
+        quicklook = self._stitch_images(images)
+        del images
         quicklook = self._expand_image(quicklook, 0, 30, keep='bl')
         quicklook = self._expand_image(quicklook, 20, 20, keep='middle')
         self._write_text(quicklook, title, position=(quicklook.size[0]/2, 20))
@@ -731,8 +737,15 @@ class NewNGPMapper(object):
             title = rawPatt.sub('', fname).replace('_', ' ')
         print('file_path: %s' % file_path)
         print('legend_path: %s' % legend_path)
-        quicklook = self._stitch_images([img.open(p) for p in file_path, \
-                                        legend_path])
+        # using the 'with' statement so that files are explicitly
+        # closed, in order to avoid OSError: Too many open files
+        images = []
+        for path in filePath, legend_path:
+            with open(path, 'rb') as fh:
+                im = img.open(fh)
+                images.append(im)
+        quicklook = self._stitch_images(images)
+        del images
         quicklook = self._expand_image(quicklook, 0, 30, keep='bl')
         quicklook = self._expand_image(quicklook, 20, 20, keep='middle')
         self._write_text(quicklook, title, position=(quicklook.size[0]/2, 20))
