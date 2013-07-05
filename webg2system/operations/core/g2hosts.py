@@ -59,10 +59,9 @@ class HostFactory(object):
 
     @staticmethod
     def clear_all_hosts():
-        factory = HostFactory()
-        for host in factory._hosts.values():
+        for host in HostFactory._hosts.values():
             host.close_connections()
-        factory._hosts = dict()
+        HostFactory._hosts = dict()
 
     def create_host(self, hostSettings=None):
         '''
