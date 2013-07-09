@@ -455,54 +455,68 @@ class NGPMapper(Mapper): #crappy name
         maxy = firstLat
         return minx, miny, maxx, maxy
 
-    def _complete_quicklook(self, filePath, legendPath, title=None, 
+    def _complete_quicklook(self, file_path, legend_path, title=None,
                             cleanRaw=True):
         '''
         Create the final quicklook file by incorporating the extra elements.
 
         Inputs:
 
-            filePath - Full path to the raw quicklook.
+            file_path - Full path to the raw quicklook.
 
-            legendPath - Full path to the legend image.
+            legend_path - Full path to the legend image.
 
             title - Title for the quicklook.
         '''
 
         rawPatt = re.compile(r'rawquicklook_')
         if title is None:
-            fname = os.path.basename(filePath).rpartition('.')[0]
+            fname = os.path.basename(file_path).rpartition('.')[0]
             title = rawPatt.sub('', fname).replace('_', ' ')
         # using the 'with' statement so that files are explicitly
         # closed, in order to avoid OSError: Too many open files
-        images = []
-        for path in filePath, legendPath:
-            with open(path, 'rb') as fh:
-                im = img.open(fh)
-                images.append(im)
-        quicklook = self._stitch_images(images)
-        del images
+        with open(file_path, 'rb') as fh:
+            quick_look_im = img.open(fh)
+            quick_look_array = self.PIL_to_numpy(quick_look_im)
+        with open(legend_path, 'rb') as fh:
+            legend_im = img.open(fh)
+            legend_array = self.PIL_to_numpy(legend_im)
+        quicklook = self._stitch_arrays([quick_look_array, legend_array])
+
         quicklook = self._expand_image(quicklook, 0, 30, keep='bl')
         quicklook = self._expand_image(quicklook, 20, 20, keep='middle')
         self._write_text(quicklook, title, position=(quicklook.size[0]/2, 20))
-        outPath = rawPatt.sub('', filePath)
+        outPath = rawPatt.sub('', file_path)
         quicklook.save(outPath)
         return outPath
 
-    def _stitch_images(self, ims):
-        sizes = np.asarray([i.size for i in ims])
+    def _stitch_arrays(self, arrays):
+        '''
+        Stitch the arrays together
+        '''
+
+        sizes = np.asarray([a.shape for a in arrays])
         newRows = np.max(sizes[:,1])
         newCols = np.sum(sizes[:,0])
         final = np.ones((newRows, newCols, 3)) * 255
         accumRIndex = 0
         accumCIndex = 0
-        for i in ims:
-            arr = np.asarray(i)
+        for arr in arrays:
             endRow = accumRIndex + arr.shape[0]
             endCol = accumCIndex + arr.shape[1]
             final[accumRIndex: endRow, accumCIndex:endCol] = arr
             accumCIndex = endCol
         return img.fromarray(final.astype(arr.dtype))
+
+    def PIL_to_numpy(self, im):
+        '''
+        This code is adapted from:
+
+        http://code.activestate.com/recipes/577591-conversion-of-pil-image-and-numpy-array/
+        '''
+
+        arr = np.array(im.getdata(), np.uint8)
+        return arr.reshape(im.size[1], im.size[0], 3)
 
     def _expand_image(self, im, width=0, height=0, keep='ul', padValue=255):
         n1 = np.asarray(im)
@@ -739,13 +753,14 @@ class NewNGPMapper(object):
         print('legend_path: %s' % legend_path)
         # using the 'with' statement so that files are explicitly
         # closed, in order to avoid OSError: Too many open files
-        images = []
-        for path in filePath, legend_path:
-            with open(path, 'rb') as fh:
-                im = img.open(fh)
-                images.append(im)
-        quicklook = self._stitch_images(images)
-        del images
+        with open(file_path, 'rb') as fh:
+            quick_look_im = img.open(fh)
+            quick_look_array = self.PIL_to_numpy(quick_look_im)
+        with open(legend_path, 'rb') as fh:
+            legend_im = img.open(fh)
+            legend_array = self.PIL_to_numpy(legend_im)
+        quicklook = self._stitch_arrays([quick_look_array, legend_array])
+
         quicklook = self._expand_image(quicklook, 0, 30, keep='bl')
         quicklook = self._expand_image(quicklook, 20, 20, keep='middle')
         self._write_text(quicklook, title, position=(quicklook.size[0]/2, 20))
@@ -753,24 +768,33 @@ class NewNGPMapper(object):
         quicklook.save(outPath)
         return outPath
 
-    def _stitch_images(self, ims):
-        print('locals(): %s' % locals())
-        sizes = np.asarray([i.size for i in ims])
+    def _stitch_arrays(self, arrays):
+        '''
+        Stitch the arrays together
+        '''
+
+        sizes = np.asarray([a.shape for a in arrays])
         newRows = np.max(sizes[:,1])
         newCols = np.sum(sizes[:,0])
         final = np.ones((newRows, newCols, 3)) * 255
         accumRIndex = 0
         accumCIndex = 0
-        for i in ims:
-            arr = np.asarray(i)
-            print('i: %s' % i)
-            print('arr: %s' % arr)
-            print('arr.shape: %s' % (arr.shape,))
+        for arr in arrays:
             endRow = accumRIndex + arr.shape[0]
             endCol = accumCIndex + arr.shape[1]
             final[accumRIndex: endRow, accumCIndex:endCol] = arr
             accumCIndex = endCol
         return img.fromarray(final.astype(arr.dtype))
+
+    def PIL_to_numpy(self, im):
+        '''
+        This code is adapted from:
+
+        http://code.activestate.com/recipes/577591-conversion-of-pil-image-and-numpy-array/
+        '''
+
+        arr = np.array(im.getdata(), np.uint8)
+        return arr.reshape(im.size[1], im.size[0], 3)
 
     def _expand_image(self, im, width=0, height=0, keep='ul', padValue=255):
         n1 = np.asarray(im)
