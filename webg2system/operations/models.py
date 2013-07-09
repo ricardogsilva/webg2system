@@ -224,8 +224,8 @@ class RunningPackage(models.Model):
                               'Cleaning up...'))
                 cleanResult = pack.clean_up()
             del pack
-            log_callbacks(self.progress(6, processSteps),
-                          'Deleting hosts...')
+            log_callbacks((self.progress(6, processSteps),
+                          'Deleting hosts...'))
             g2hosts.HostFactory.clear_all_hosts()
             self.status = 'stopped'
             self.save()
