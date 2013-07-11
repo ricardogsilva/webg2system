@@ -1340,7 +1340,7 @@ class SWIMetadataHandler(ProcessingPackage):
             result = None
         return result
 
-    def send_to_csw(self, xml_file):
+    def send_to_csw(self, xml_file, overwrite=False):
         '''
         Insert metadata records in the catalogue server.
 
@@ -1920,20 +1920,20 @@ class OWSPreparator(ProcessingPackage):
 
         result = False
         if generate:
-           fetched = self.fetch_inputs(useArchive=True)
-           fileList = []
-           for g2f, pathList in fetched.iteritems():
-               if g2f.fileType == 'hdf5':
-                   fileList += pathList
-           if len(fileList) == 0:
-               self.logger.error('Couldn\'t find the input HDF5 tiles. ' \
-                                 'No Geotiff can be generated.')
-               geotiff = None
-           else:
-               self.logger.info('Generating a new Geotiff file from %s ' \
-                                'fetched tiles...' % len(fileList))
-               geotiff = self.generate_geotiff(fileList)
-               self.logger.info('geotiff file: %s' % geotiff)
+            fetched = self.fetch_inputs(useArchive=True)
+            fileList = []
+            for g2f, pathList in fetched.iteritems():
+                if g2f.fileType == 'hdf5':
+                    fileList += pathList
+            if len(fileList) == 0:
+                self.logger.error('Couldn\'t find the input HDF5 tiles. ' \
+                                  'No Geotiff can be generated.')
+                geotiff = None
+            else:
+                self.logger.info('Generating a new Geotiff file from %s ' \
+                                 'fetched tiles...' % len(fileList))
+                geotiff = self.generate_geotiff(fileList)
+                self.logger.info('geotiff file: %s' % geotiff)
         else:
             geotiff = self.fetch_geotiff(useArchive=True)
         if geotiff is not None:
@@ -1969,7 +1969,6 @@ class OWSPreparator(ProcessingPackage):
         self.host.clean_dirs(self.mapfileOutDir)
         self.host.clean_dirs(self.geotifOutDir)
         return 0
-
 
 class QuickLookGenerator(ProcessingPackage):
     '''
