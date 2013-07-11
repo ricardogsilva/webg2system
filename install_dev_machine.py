@@ -504,9 +504,9 @@ def _install_apt_dependencies():
         hdf5_package_names = ['libhdf5-7', 'libhdf5-dev']
     local('sudo apt-get install build-essential %s hdf5-tools libxml2 ' \
           'libxml2-dev libxslt1.1 libxslt1-dev gfortran subversion ' \
-          'ttf-freefont libgdal-dev gdal-bin cgi-mapserver mapserver-bin ' \
-          'fabric python-dev python-virtualenv python-pip python-mapscript ' \
-          % ' '.join(hdf5_package_names))
+          'ttf-freefont libfreetype6-dev libgdal-dev gdal-bin ' \
+          'cgi-mapserver mapserver-bin fabric python-dev python-virtualenv ' \
+          'python-pip python-mapscript ' % ' '.join(hdf5_package_names))
 
 def _install_catalogue_server_dependencies():
     '''
