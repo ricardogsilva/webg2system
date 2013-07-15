@@ -82,6 +82,8 @@ def convert_marks(markList, obj):
                 markValue = eval('obj.%s' % mark)
             except AttributeError:
                 pass
+        if markValue is None:
+            markValue = '.*'
         newMarks.append(markValue)
     return newMarks
 
