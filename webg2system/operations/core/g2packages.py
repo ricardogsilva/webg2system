@@ -2878,3 +2878,79 @@ class SWIDistributor(ProcessingPackage):
 
     def run_main(self):
         return self.get_zip()
+
+class Disseminator(ProcessingPackage):
+    '''
+    This class is used to disseminate files to both internal and
+    external hosts.
+    '''
+
+    def __init__(self, settings, timeslot, area, host=None, logger=None,
+                 createIO=True):
+        self.name = settings.name
+        self.product = settings.product
+        if settings.external_code is not None:
+            self.version = settings.external_code.version
+        else:
+            self.version = None
+        super(Disseminator, self).__init__(settings, timeslot, area,
+                                           host=host, logger=logger)
+        relWorkDir = utilities.parse_marked(
+            settings.packagepath_set.get(name='workingDir'), 
+            self
+        )
+        self.workingDir = os.path.join(self.host.dataPath, relWorkDir)
+        self.target_hosts = dict()
+        targets = settings.packageextrainfo_set.filter(name='target_host')
+        for host_info in targets:
+            name, protocol = [t.strip() for t in host_info.string.split(',')]
+            host_settings = ss.Host.objects.get(name=name)
+            t_host = HostFactory.get_host(host_settings)
+            self.target_hosts[t_host] = protocol
+
+        if createIO:
+            self.inputs = self._create_files(
+                'input', 
+                settings.packageInput_systemsettings_packageinput_related.all()
+            )
+            self.outputs = self._create_files(
+                'output', 
+                settings.packageOutput_systemsettings_packageoutput_related.all()
+            )
+
+    def clean_up(self):
+        self._delete_directories([self.workingDir])
+        return 0
+
+    def disseminate_files(self, compress, use_archive, bundle_files):
+        '''
+        Disseminate the inputs to the defined hosts
+        '''
+
+        if bundle_files:
+            # fetch files to the working directory
+            # decompress them
+            # create a tar file and compress it with bz2
+            # send the tar.bz2 archive to the destination_hosts
+            fetched = self.fetch_inputs(useArchive=True)
+            to_bundle = []
+            for g2f, fetched_paths in fetched.iteritems():
+                to_bundle += fetched_paths
+            if any(to_bundle):
+                zip_name = os.path.splitext(os.path.basename(to_bundle[0]))[0]
+                zip_path = self.host.build_zip(zip_name, to_bundle, 
+                                               self.workingDir)
+                for dest_host, protocol in self.target_hosts.iteritems():
+                    dest_dir = dest_host.dataPath
+                    self.host.send([zip_path], dest_dir, dest_host, protocol)
+        else:
+            for inp in self.inputs:
+                for dest_host, protocol in self.target_hosts.iteritems():
+                    inp.disseminate(self.workingDir, dest_host, 
+                                    remote_protocol='sftp', compress=compress,
+                                    use_archive=use_archive)
+
+    def run_main(self, callback=None, use_archive=True, bundle_files=True):
+        self.disseminate_files(compress=True, 
+                               use_archive=use_archive, 
+                               bundle_files=bundle_files)

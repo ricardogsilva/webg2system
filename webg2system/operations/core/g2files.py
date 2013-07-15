@@ -622,3 +622,73 @@ class G2File(GenericItem):
 
     def __repr__(self):
         return self.name
+
+    def disseminate(self, temp_dir, dest_host=None, dest_dir='', file_path=0,
+                    remote_protocol='sftp', compress=False, notify=[],
+                    use_archive=False, use_io_buffer=False):
+        '''
+        Send file from its own host to dest_host.
+
+        Inputs:
+
+            temp_dir - A string specifying a temporary directory where the 
+                files will be placed in case they have to be fetched from 
+                other host
+
+            dest_host - A G2Host instance. A value of None (the default)
+                will be interpreted as the local host.
+
+            dest_dir - A string with the path on the remote host where
+                the file is to be sent to. If it starts with / then an
+                absolute path is assumed. Otherwise the path will be
+                assumed to be relative to dest_host's dataPath. A value
+                of None (the default) will cause the file to be disseminated
+                to the same directory structure as if has defined in its
+                settings, only relative to it's target host's dataPath.
+
+            file_path - An integer specifying which of the file's paths
+                are to be used.
+
+            remote_protocol - A string indicating the name of the remote
+                protocol to use when sending the files. Currently supported
+                protocols are 'sftp' and 'ftp'. Defaults to 'sftp'.
+
+            compress - A boolean indicating if the files are to be compressed
+                before sending
+
+            notify - A list of string indicating types of notification to send
+                with the sending status.
+
+            use_archive - A boolean indicating if the files should be fetched
+                from the archives in case they are not found locally
+
+            use_io_buffer - A boolean indicating if the files should be fetched
+                from the available io buffers in case they are not found 
+                locally
+        '''
+
+        if dest_host is None:
+            dest_host = HostFactory.get_host(logger=self.logger)
+        if dest_dir is None:
+            target_path = os.path.join(dest_host.dataPath,
+                                    self.searchPath[file_path])
+        elif dest_dir.startswith('/'):
+            target_path = dest_dir
+        else:
+            target_path = os.path.join(dest_host.dataPath, dest_dir)
+        fetched = self.fetch(temp_dir, use_archive=use_archive, 
+                             use_io_buffer=use_io_buffer, decompress=True,
+                             restrict_pattern=None)
+        if len(fetched) > 0:
+            if compress:
+                fetched = self.host.compress(fetched)
+            return_code, sent_paths = self.host.send(
+                fetched,
+                target_path,
+                dest_host,
+                remoteProtocol=remote_protocol
+            )
+            for notification_type in notify:
+                # not implemented yet
+                pass
+            return return_code

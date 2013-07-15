@@ -1,5 +1,6 @@
 import os
 import sys
+import subprocess
 import datetime as dt
 import logging
 import logging.handlers
@@ -180,7 +181,7 @@ class RunningPackage(models.Model):
             log_callbacks((self.progress(2, processSteps), 
                      'Looking for previously available outputs...'))
             outputsAvailable = pack.outputs_available()
-            if outputsAvailable:
+            if outputsAvailable and len(pack.outputs) > 0:
                 if self.force:
                     runPackage = True
                     log_callbacks((self.progress(3, processSteps), 
@@ -231,6 +232,8 @@ class RunningPackage(models.Model):
             self.save()
             log_callbacks((self.progress(7, processSteps), 'All done!'))
             logger.info('--- Finished execution')
+            open_files = self.get_open_fds()
+            logger.warning('Open files: %i' % open_files)
         return self.result
 
     def progress(self, currentStep, totalSteps=100):
@@ -239,3 +242,13 @@ class RunningPackage(models.Model):
         '''
 
         return currentStep * 100 / totalSteps
+
+    def get_open_fds(self):
+        pid = os.getpid()
+        procs = subprocess.check_output(['lsof', '-w', '-Ff', '-p', str(pid)])
+        nprocs = len(
+            filter(
+                lambda s: s and s[0] == 'f' and s[1:].isdigit(), procs.split('\n')
+            )
+        )
+        return nprocs

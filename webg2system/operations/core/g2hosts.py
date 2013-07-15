@@ -22,8 +22,6 @@ import socket
 from pexpect import spawn
 import datetime as dt
 import zipfile
-#import glob
-#import fnmatch
 
 # django imports
 from django.core.exceptions import ObjectDoesNotExist
@@ -544,7 +542,7 @@ class G2LocalHost(G2Host):
                 )
         return self.connections[host.name][protocol]
 
-    def send(self, fullPaths, destDir, destHost=None):
+    def send(self, fullPaths, destDir, destHost=None, remoteProtocol='sftp'):
         '''
         Copy files to another directory, located on a G2Host machine.
 
@@ -559,6 +557,9 @@ class G2LocalHost(G2Host):
                 receive the files. A value of None (which is also the default)
                 is interpreted as meaning a local host.
 
+              remoteProtocol - a string with the name of the protocol to use
+                when sending files to a remote host.
+
         Returns:
         '''
 
@@ -567,7 +568,8 @@ class G2LocalHost(G2Host):
             result = self._send_to_local(fullPaths, destDir)
         else:
             self.logger.debug('About to perform a remote send...')
-            result = self._send_to_remote(fullPaths, destDir, destHost)
+            result = self._send_to_remote(fullPaths, destDir, destHost, 
+                                          protocol=remoteProtocol)
         return result
 
 
@@ -593,6 +595,7 @@ class G2LocalHost(G2Host):
         return (0, result)
 
     def _send_to_remote(self, paths, destDir, destHost, protocol='sftp'):
+        print('locals(): %s ' % locals())
         connection = self._get_connection(destHost, protocol)
         returnCode = connection.send(paths, destDir)
         if returnCode == 0: # sending went OK
