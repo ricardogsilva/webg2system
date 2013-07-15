@@ -8,6 +8,7 @@ Script's doctring goes here.
 import re
 import os
 import logging
+import subprocess
 from subprocess import Popen, PIPE
 import numpy as np
 from PIL import Image as img
@@ -17,6 +18,9 @@ from osgeo import gdal
 gdal.UseExceptions()
 from osgeo import osr
 import mapscript
+# using tables module to read HDF5 data because GDAL has a bug where it
+# will close HDF5 files properly
+import tables
 
 import utilities
 
@@ -88,8 +92,6 @@ class NGPMapper(Mapper): #crappy name
             ds = self.product.dataset_set.filter(isMainDataset=True)[0]
         else:
             ds = self.product.dataset_set.get(name=dataset)
-        #missingValue = int(ds.missingValue)
-        #scalingFactor = int(ds.scalingFactor)
         missingValue = float(ds.missingValue)
         scalingFactor = float(ds.scalingFactor)
         tilePaths = self.create_geotiffs(fileList, outDir, ds, missingValue, 
@@ -142,14 +144,16 @@ class NGPMapper(Mapper): #crappy name
         '''
 
         outputPaths = []
+        outDriver = gdal.GetDriverByName('GTiff')
         for fNum, path in enumerate(fileList):
             self.logger.debug('(%i/%i) - Converting HDF5 to GeoTiff...' % (fNum+1, len(fileList)))
             fileName = os.path.basename(path) + '.tif'
             outputPath = os.path.join(outputDir, fileName)
-            outDriver = gdal.GetDriverByName('GTiff')
-            inDs = gdal.Open(str("HDF5:%s://%s" % (path, dataset.name)))
             numpy_type = self.gdal_np_dtypes.get(self.dataType)
-            la = inDs.GetRasterBand(1).ReadAsArray().astype(numpy_type)
+            inDs = tables.openFile(path)
+            node = inDs.getNode('/%s' % dataset.name)
+            la = node.read().astype(numpy_type)
+            inDs.close()
             # dealing with the missing value and scaling factor
             la[abs(la - missingValue) > tolerance] = la[abs(la - missingValue) > tolerance] / scalingFactor
             la[abs(la - missingValue) <= tolerance] = missingValue
@@ -171,7 +175,6 @@ class NGPMapper(Mapper): #crappy name
             outDs.SetProjection(srs.ExportToWkt())
             outBand.SetNoDataValue(missingValue)
             outBand.FlushCache()
-            inDs = None
             outDs = None
             outputPaths.append(outputPath)
         return outputPaths
@@ -749,8 +752,6 @@ class NewNGPMapper(object):
         if title is None:
             fname = os.path.basename(file_path).rpartition('.')[0]
             title = rawPatt.sub('', fname).replace('_', ' ')
-        print('file_path: %s' % file_path)
-        print('legend_path: %s' % legend_path)
         # using the 'with' statement so that files are explicitly
         # closed, in order to avoid OSError: Too many open files
         with open(file_path, 'rb') as fh:
