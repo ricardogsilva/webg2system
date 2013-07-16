@@ -6,6 +6,8 @@ A testing of geonetwork's xml services.
 '''
 
 import re
+from uuid import uuid1
+
 import requests
 from lxml import etree
 
@@ -212,32 +214,101 @@ class GeonetworkManager(object):
 # TODO - Decode and reencode all the strings
 class MetadataRecord(object):
 
-    namespaces = dict()
+    NS = {
+        'gmd' : 'http://www.isotc211.org/2005/gmd',
+        'gmx' : 'http://www.isotc211.org/2005/gmx',
+        'gco' : 'http://www.isotc211.org/2005/gco',
+        'gsr' : 'http://www.isotc211.org/2005/gsr',
+        'gss' : 'http://www.isotc211.org/2005/gss',
+        'gts' : 'http://www.isotc211.org/2005/gts',
+        'gml' : 'http://www.opengis.net/gml',
+        'xsi' : 'http://www.w3.org/2001/XMLSchema-instance',
+    }
+
     uuid = None
+    id_ = None
+    encoding = 'utf8'
+    language_code = u'eng'
+    parent_id = None
+
+    def __init__(self):
+        self.uuid = str(uuid1())
 
     @staticmethod
     def from_xml(xml_element, encoding='utf-8'):
         record = MetadataRecord()
-        record.namespaces = xml_element.nsmap
+        record.NS = xml_element.nsmap
         record.uuid = xml_element.xpath(
             'gmd:fileIdentifier/gco:CharacterString',
-            namespaces=record.namespaces)[0].text
+            namespaces=record.NS)[0].text
         return record
 
-    def to_xml(self):
-        root = etree.Element('{%s}MD_Metadata' % self.namespaces['gmd'],
-                             nsmap=self.namespaces)
-        file_identifier_el = etree.SubElement(root,
-                                              '{%s}fileIdentifier' % \
-                                              self.namespaces['gmd'])
-        self._gco_character_string(file_identifier_el, self.uuid)
+    def serialize(self, format='xml'):
+        result = None
+        if format == 'xml':
+            result = self._serialize_to_xml()
+        return result
+
+    def _serialize_to_xml(self):
+        root = etree.Element('{%s}MD_Metadata' % self.NS['gmd'],
+                             nsmap=self.NS)
+        self._serialize_file_identifier(root)
+        self._serialize_language(root)
+        self._serialize_character_set(root)
+        self._serialize_parent_identifier(root)
+        self._serialize_hierarchy_level(root)
         tree = etree.ElementTree(root)
-        return tree
+        record = etree.tostring(tree, xml_declaration=True,
+                                encoding=self.encoding, pretty_print=True)
+        return record
+
+    def _serialize_file_identifier(self, root_node):
+        file_id_el = etree.Element('{%s}fileIdentifier' % self.NS['gmd'])
+        self._gco_character_string(file_id_el, self.uuid)
+        root_node.insert(0, file_id_el)
+
+    def _serialize_language(self, root_node):
+        codelist_uri = 'http://standards.iso.org/ittf/PubliclyAvailable' \
+                       'Standards/ISO_19139_Schemas/resources/Codelist/' \
+                       'ML_gmxCodelists.xml#LanguageCode'
+        lang_el = etree.Element('Language')
+        code_el = etree.SubElement(lang_el, 'LanguageCode',
+                                   codelist=codelist_uri,
+                                   codelistValue=self.language_code)
+        code_el.text = self.language_code
+        root_node.insert(1, lang_el)
+
+    def _serialize_character_set(self, root_node):
+        codelist_uri = 'http://standards.iso.org/ittf/PubliclyAvailable' \
+                       'Standards/ISO_19139_Schemas/resources/Codelist/' \
+                       'ML_gmxCodelists.xml#MD_CharacterSetCode'
+        char_set_el = etree.Element('{%s}characterSet' % self.NS['gmd'])
+        code_el = etree.SubElement(char_set_el, '{%s}MD_CharacterSetCode' % \
+                                   self.NS['gmd'], codeList=codelist_uri,
+                                   codeListValue=self.encoding)
+        code_el.text = self.encoding
+        root_node.insert(2, char_set_el)
+
+    def _serialize_parent_identifier(self, root_node):
+        parent_id_el = etree.Element('{%s}parentIdentifier' % self.NS['gmd'])
+        self._gco_character_string(parent_id_el, self.parent_id)
+        root_node.insert(3, parent_id_el)
+
+    def _serialize_hierarchy_level(self, root_node):
+        codelist_uri = 'http://standards.iso.org/ittf/PubliclyAvailable' \
+                       'Standards/ISO_19139_Schemas/resources/Codelist/' \
+                       'ML_gmxCodelists.xml#MD_ScopeCode'
+        hierarchy_el = etree.Element('{%s}hierarchyLevel' % self.NS['gmd'])
+        scope_code_el = etree.SubElement(hierarchy_el, '{%s}MD_ScopeCode' % \
+                                         self.NS['gmd'], codeList=codelist_uri,
+                                         codelistValue='dataset')
+        scope_code_el.text = u'dataset'
+        root_node.insert(4, hierarchy_el)
 
     def _gco_character_string(self, parent_el, text):
         cs_el = etree.SubElement(parent_el,
                                  '{%s}CharacterString' % \
-                                 self.namespaces['gco'])
+                                 self.NS['gco'])
         cs_el.text = text
 
 
