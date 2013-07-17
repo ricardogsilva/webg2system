@@ -230,9 +230,18 @@ class MetadataRecord(object):
     encoding = 'utf8'
     language_code = u'eng'
     parent_id = None
+    ci_responsible_party = None
+    timeslot = None
+    metadata_standard_name = 'ISO19115'
+    metadata_standard_version = '2003/Cor.1:2006'
 
     def __init__(self):
+        '''
+        This method should take the metadata settings from Django as input
+        '''
+
         self.uuid = str(uuid1())
+        self.responsible_party = ResponsibleParty()
 
     @staticmethod
     def from_xml(xml_element, encoding='utf-8'):
@@ -257,6 +266,10 @@ class MetadataRecord(object):
         self._serialize_character_set(root)
         self._serialize_parent_identifier(root)
         self._serialize_hierarchy_level(root)
+        self._serialize_contact(root)
+        self._serialize_datestamp(root)
+        self._serialize_metadata_standard_name(root)
+        self._serialize_metadata_standard_version(root)
         tree = etree.ElementTree(root)
         record = etree.tostring(tree, xml_declaration=True,
                                 encoding=self.encoding, pretty_print=True)
@@ -305,11 +318,172 @@ class MetadataRecord(object):
         scope_code_el.text = u'dataset'
         root_node.insert(4, hierarchy_el)
 
+    def _serialize_contact(self, root_node):
+        contact_el = etree.SubElement(root_node, '{%s}contact' % \
+                                      self.NS['gmd'])
+        contact_el.append(self.ci_responsible_party.serialize_xml())
+
+    def _serialize_datestamp(self, root_node):
+        datestamp_el = etree.SubElement(root_node, '{%s}dateStamp' % \
+                                      self.NS['gmd'])
+        the_date = self.timeslot.strftime('%Y-%m-%d')
+        self._gco_date(datestamp_el, the_date)
+
+    def _serialize_metadata_standard_name(self, root_node):
+        md_standard_el = etree.SubElement(root_node,
+                                          '{%s}metadataStandardName' % \
+                                          self.NS['gmd'])
+        md_standard_el.text = unicode(self.metadata_standard_name)
+
+    def _serialize_metadata_standard_version(self, root_node):
+        md_standard_el = etree.SubElement(root_node,
+                                          '{%s}metadataStandardName' % \
+                                          self.NS['gmd'])
+        md_standard_el.text = unicode(self.metadata_standard_version)
+
     def _gco_character_string(self, parent_el, text):
         cs_el = etree.SubElement(parent_el,
                                  '{%s}CharacterString' % \
                                  self.NS['gco'])
-        cs_el.text = text
+        cs_el.text = unicode(text)
+
+    def _gco_date(self, parent_el, text):
+        cs_el = etree.SubElement(parent_el,
+                                 '{%s}Date' % \
+                                 self.NS['gco'])
+        cs_el.text = unicode(text)
+
+class CI_ResponsibleParty(object):
+
+    def __init__(self, organization_name='', ci_contact=None, ci_role=None):
+        self.organization_name = organization_name
+        self.ci_contact = ci_contact
+        self.ci_role = ci_role
+
+    def serialize_xml(self):
+        ci_resp_party_el = etree.Element('{%s}CI_ResponsibleParty' % \
+                                         self.NS['gmd'])
+        org_name_el = etree.SubElement(ci_resp_party_el,
+                                       '{%s}organisationName' % \
+                                       self.NS['gmd'])
+        self._gco_character_string(org_name_el, self.organization_name)
+        contact_info_el = etree.SubElement(ci_resp_party_el,
+                                           '{%s}contactInfo' % self.NS['gmd'])
+        contact_info_el.append(self.ci_contact.serialize_xml())
+        role_el = etree.SubElement(ci_resp_party_el, '{%s}role' % \
+                                   self.NS['gmd'])
+        role_el.append(self.ci_role.serialize_xml())
+        return ci_resp_party_el
+
+
+class CI_Contact(MetadataRecord):
+
+    def __init__(self, ci_address=None, ci_online_resource=None,
+                 hours_of_service='', contact_instructions=''):
+        self.ci_address = ci_address
+        self.ci_online_resource = ci_online_resource
+        self.hours_of_service = hours_of_service
+        self.contact_instructions = contact_instructions
+
+    def serialize_xml(self):
+        ci_contact_el = etree.Element('{%s}CI_Contact' % self.NS['gmd'])
+        address_el = etree.SubElement(ci_contact_el, '{%s}address' % \
+                                      self.NS['gmd'])
+        address_el.append(self.ci_address.serialize_xml())
+        online_resource_el = etree.SubElement(ci_contact_el,
+                                              '{%s}onlineResource' % \
+                                              self.NS['gmd'])
+        online_resource_el.append(self.ci_online_resource.serialize_xml())
+        hours_service_el = etree.SubElement(ci_contact_el,
+                                            '{%s}hoursOfService' % \
+                                            self.NS['gmd'])
+        self._gco_character_string(hours_service_el, self.hours_of_service)
+        contact_instr_el = etree.SubElement(ci_contact_el,
+                                            '{%s}contactInstructions' % \
+                                            self.NS['gmd'])
+        self._gco_character_string(contact_instr_el, self.contact_instructions)
+
+class CI_OnlineResource(MetadataRecord):
+
+    def __init__(self, name='', description='', function='',
+                 url='', protocol='HTTP'):
+    self.name = name
+    self.description = description
+    self.function = function
+    self.url = url
+    self.protocol = protocol
+
+    def serialize_xml(self):
+        ci_online_res_el = etree.Element('{%s}CI_OnlineResource' % \
+                                         self.NS['gmd'])
+        linkage_el = etree.SubElement(ci_online_res_el, '{%s}linkage' % \
+                                      self.NS['gmd'])
+        url_el = etree.SubElement(linkage_el, '{%s}URL' % self.NS['gmd'])
+        url_el.text = unicode(self.url)
+        protocol_el = etree.SubElement(ci_online_res_el, '{%s}protocol' % \
+                                      self.NS['gmd'])
+        self._gco_character_string(protocol_el, self.protocol)
+        name_el = etree.SubElement(ci_online_res_el, '{%s}name' % \
+                                      self.NS['gmd'])
+        self._gco_character_string(name_el, self.name)
+        description_el = etree.SubElement(ci_online_res_el,
+                                          '{%s}description' % self.NS['gmd'])
+        self._gco_character_string(description_el,
+                                   self.description)
+        codelist_uri = 'http://standards.iso.org/ittf/PubliclyAvailable' \
+                       'Standards/ISO_19139_Schemas/resources/Codelist/' \
+                       'ML_gmxCodelists.xml#CI_OnLineFunctionCode'
+        function_el = etree.SubElement(ci_online_res_el,
+                                       '{%s}function' % self.NS['gmd'],
+                                       codeList=codelist_uri,
+                                       codeListValue='information')
+        function_el.text = u'information'
+        return ci_online_res_el
+
+class CI_Address(MetadataRecord):
+
+    def __init__(self, delivery_point='', city='', postal_code='',
+                 country='', email=''):
+        self.delivery_point = delivery_point
+        self.city = city
+        self.postal_code = postal_code
+        self.country = country
+        self.email = email
+
+    def serialize_xml(self):
+        ci_address_el = etree.Element('{%s}CI_Address' % self.NS['gmd'])
+        delivery_pt_el = etree.SubElement(ci_address_el, '{%s}deliveryPoint' \
+                                          % self.NS['gmd'])
+        self._gco_character_string(delivery_pt_el, self.delivery_point)
+        city_el = etree.SubElement(ci_address_el, '{%s}city' % self.NS['gmd'])
+        self._gco_character_string(city_el, self.city)
+        postal_code_el = etree.SubElement(ci_address_el, '{%s}postalCode' \
+                                          % self.NS['gmd'])
+        self._gco_character_string(postal_code_el, self.postal_code)
+        country_el = etree.SubElement(ci_address_el, '{%s}country' \
+                                          % self.NS['gmd'])
+        self._gco_character_string(country_el, self.country)
+        email_el = etree.SubElement(ci_address_el,
+                                    '{%s}electronicMailAddress' % \
+                                    self.NS['gmd'])
+        self._gco_character_string(email_el, self.email)
+        return ci_address_el
+
+
+class CI_Role(MetadataRecord):
+
+    def __init__(self, role_code=''):
+        self.role_code = role_code
+
+    def serialize_xml(self):
+        codelist_uri = 'http://standards.iso.org/ittf/PubliclyAvailable' \
+                       'Standards/ISO_19139_Schemas/resources/Codelist/' \
+                       'ML_gmxCodelists.xml#CI_RoleCode'
+        ci_role_code_el = etree.Element('{%s}CI_RoleCode' % self.NS['gmd'],
+                                        codeList=codelist_uri,
+                                        codeListValue=self.role_code)
+        ci_role_code_el.text = unicode(self.role_code)
+        return ci_role_code_el
 
 
 class CSWManager(object):
