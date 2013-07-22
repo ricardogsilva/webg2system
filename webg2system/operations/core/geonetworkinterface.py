@@ -234,6 +234,7 @@ class MetadataRecord(object):
     timeslot = None
     metadata_standard_name = 'ISO19115'
     metadata_standard_version = '2003/Cor.1:2006'
+    md_georectified = None
 
     def __init__(self):
         '''
@@ -241,7 +242,8 @@ class MetadataRecord(object):
         '''
 
         self.uuid = str(uuid1())
-        self.responsible_party = ResponsibleParty()
+        self.ci_responsible_party = CI_ResponsibleParty()
+        self.md_georectified = MD_Georectified()
 
     @staticmethod
     def from_xml(xml_element, encoding='utf-8'):
@@ -270,6 +272,7 @@ class MetadataRecord(object):
         self._serialize_datestamp(root)
         self._serialize_metadata_standard_name(root)
         self._serialize_metadata_standard_version(root)
+        self._serialize_spatial_representation_info(root)
         tree = etree.ElementTree(root)
         record = etree.tostring(tree, xml_declaration=True,
                                 encoding=self.encoding, pretty_print=True)
@@ -341,6 +344,12 @@ class MetadataRecord(object):
                                           self.NS['gmd'])
         md_standard_el.text = unicode(self.metadata_standard_version)
 
+    def _serialize_spatial_representation_info(self, root_node):
+        spatial_rep_el = etree.SubElement(root_node,
+                                          '{%s}spatialRepresentationInfo' % \
+                                          self.NS['gmd'])
+        spatial_rep_el.append(self.md_georectified.serialize_xml())
+
     def _gco_character_string(self, parent_el, text):
         cs_el = etree.SubElement(parent_el,
                                  '{%s}CharacterString' % \
@@ -348,10 +357,14 @@ class MetadataRecord(object):
         cs_el.text = unicode(text)
 
     def _gco_date(self, parent_el, text):
-        cs_el = etree.SubElement(parent_el,
-                                 '{%s}Date' % \
-                                 self.NS['gco'])
-        cs_el.text = unicode(text)
+        date_el = etree.SubElement(parent_el,
+                                   '{%s}Date' % self.NS['gco'])
+        date_el.text = unicode(text)
+
+    def _gco_integer(self, parent_el, text):
+        integer_el = etree.SubElement(parent_el,
+                                      '{%s}Integer' % self.NS['gco'])
+        integer_el.text = unicode(text)
 
 class CI_ResponsibleParty(object):
 
@@ -407,11 +420,11 @@ class CI_OnlineResource(MetadataRecord):
 
     def __init__(self, name='', description='', function='',
                  url='', protocol='HTTP'):
-    self.name = name
-    self.description = description
-    self.function = function
-    self.url = url
-    self.protocol = protocol
+        self.name = name
+        self.description = description
+        self.function = function
+        self.url = url
+        self.protocol = protocol
 
     def serialize_xml(self):
         ci_online_res_el = etree.Element('{%s}CI_OnlineResource' % \
@@ -484,6 +497,35 @@ class CI_Role(MetadataRecord):
                                         codeListValue=self.role_code)
         ci_role_code_el.text = unicode(self.role_code)
         return ci_role_code_el
+
+
+class MD_Georectified(MetadataRecord):
+
+    num_dimensions = 2
+
+    def serialize_xml(self):
+        md_georectifed_el = etree.Element('{%s}MD_Georectified' % \
+                                          self.NS['gmd'])
+        num_dimensions_el = etree.SubElement(md_georectifed_el,
+                                             '{%s}numberOfDimensions' % \
+                                             self.NS['gmd'])
+        self._gco_integer(num_dimensions_el, self.num_dimensions)
+
+
+class MD_Dimension(MetadataRecord):
+
+    name = ''
+
+    def __init__(self, name=''):
+        self.name = name
+
+    def serialize_xml(self):
+        md_dimension_el = etree.Element('{%s}MD_Dimension' % \
+                                        self.NS['gmd'])
+        dimension_name_el = etree.SubElement(md_dimension_el,
+                                             '{%s}dimensionName' % \
+                                             self.NS['gmd'])
+        codelist_uri = ''
 
 
 class CSWManager(object):
