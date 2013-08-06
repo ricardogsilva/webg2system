@@ -235,6 +235,8 @@ class MetadataRecord(object):
     metadata_standard_name = 'ISO19115'
     metadata_standard_version = '2003/Cor.1:2006'
     md_georectified = None
+    md_reference_system = None
+    md_data_identification = None
 
     def __init__(self):
         '''
@@ -273,6 +275,8 @@ class MetadataRecord(object):
         self._serialize_metadata_standard_name(root)
         self._serialize_metadata_standard_version(root)
         self._serialize_spatial_representation_info(root)
+        self._serialize_reference_system_info(root)
+        self._serialize_identification_info(root)
         tree = etree.ElementTree(root)
         record = etree.tostring(tree, xml_declaration=True,
                                 encoding=self.encoding, pretty_print=True)
@@ -291,7 +295,7 @@ class MetadataRecord(object):
         code_el = etree.SubElement(lang_el, 'LanguageCode',
                                    codelist=codelist_uri,
                                    codelistValue=self.language_code)
-        code_el.text = self.language_code
+        code_el.text = unicode(self.language_code)
         root_node.insert(1, lang_el)
 
     def _serialize_character_set(self, root_node):
@@ -302,7 +306,7 @@ class MetadataRecord(object):
         code_el = etree.SubElement(char_set_el, '{%s}MD_CharacterSetCode' % \
                                    self.NS['gmd'], codeList=codelist_uri,
                                    codeListValue=self.encoding)
-        code_el.text = self.encoding
+        code_el.text = unicode(self.encoding)
         root_node.insert(2, char_set_el)
 
     def _serialize_parent_identifier(self, root_node):
@@ -350,6 +354,18 @@ class MetadataRecord(object):
                                           self.NS['gmd'])
         spatial_rep_el.append(self.md_georectified.serialize_xml())
 
+    def _serialize_reference_system_info(self, root_node):
+        ref_system_el = etree.SubElement(root_node,
+                                         '{%s}referenceSystemInfo' % \
+                                         self.NS['gmd'])
+        ref_system_el.append(self.md_reference_system.serialize_xml())
+
+    def _serialize_identification_info(self, root_node):
+        identification_el = etree.SubElement(root_node,
+                                             '{%s}identificationInfo' % \
+                                             self.NS['gmd'])
+        identification_el.append(self.md_data_identification.serialize_xml())
+
     def _gco_character_string(self, parent_el, text):
         cs_el = etree.SubElement(parent_el,
                                  '{%s}CharacterString' % \
@@ -366,7 +382,18 @@ class MetadataRecord(object):
                                       '{%s}Integer' % self.NS['gco'])
         integer_el.text = unicode(text)
 
-class CI_ResponsibleParty(object):
+    def _gco_angle(self, parent_el, text, unit):
+        angle_el = etree.SubElement(parent_el,
+                                    '{%s}Angle' % self.NS['gco'],
+                                    uom=unit)
+        angle_el.text = unicode(text)
+
+    def _gco_boolean(self, parent_el, value):
+        angle_el = etree.SubElement(parent_el,
+                                    '{%s}Boolean' % self.NS['gco'])
+        angle_el.text = unicode(value)
+
+class CI_ResponsibleParty(MetadataRecord):
 
     def __init__(self, organization_name='', ci_contact=None, ci_role=None):
         self.organization_name = organization_name
@@ -387,6 +414,73 @@ class CI_ResponsibleParty(object):
                                    self.NS['gmd'])
         role_el.append(self.ci_role.serialize_xml())
         return ci_resp_party_el
+
+
+class CI_Citation(MetadataRecord):
+
+    title = ''
+    ci_date = None
+    md_identifier = None
+    other_citation_details = ''
+
+    def __init__(self, title='', ci_date=None, md_identifier=None, 
+                 other_citation_details=''):
+        self.title = title
+        self.ci_date = ci_date
+        self.md_identifier = md_identifier
+        self.other_citation_details = other_citation_details
+        self.edition = Edition('v1', '2013-06-20')
+
+    def serialize_xml(self):
+        ci_citation_el = etree.Element('{%s}CI_Citation' % self.NS['gmd'])
+        title_el = etree.SubElement(ci_citation_el, '{%s}title' % \
+                                    self.NS['gmd'])
+        self._gco_character_string(title_el, self.title)
+        date_el = etree.SubElement(ci_citation_el, '{%s}date' % \
+                                   self.NS['gmd'])
+        date_el.append(self.ci_date.serialize_xml())
+        self.edition.serialize_xml(ci_citation_el)
+        if self.md_identifier is not None:
+            identifier_el = etree.SubElement(ci_citation_el, '{%s}identifier' \
+                                             % self.NS['gmd'])
+            identifier_el.append(self.md_identifier.serialize_xml())
+        if self.other_citation_details != '':
+            other_citation_details_el = etree.SubElement(
+                ci_citation_el,
+                '{%s}otherCitationDetails' % self.NS['gmd']
+            )
+            self._gco_character_string(other_citation_details_el,
+                                       self.otherCitationDetails)
+        return ci_citation_el
+
+
+class CI_Date(MetadataRecord):
+
+    date = None
+    date_type_code = ''
+
+    def __init__(self, date=None, date_type_code=''):
+        self.date = date
+        self.date_type_code = date_type_code
+
+    def serialize_xml(self):
+        ci_date_el = etree.Element('{%s}CI_Date' % self.NS['gmd'])
+        date_el = etree.SubElement(ci_date_el, '{%s}date' % \
+                                   self.NS['gmd'])
+        self._gco_date(date_el, self.date)
+        date_type_el = etree.SubElement(ci_date_el, '{%s}dateType' % \
+                                        self.NS['gmd'])
+        codelist_uri = 'http://standards.iso.org/ittf/PubliclyAvailable' \
+                       'Standards/ISO_19139_Schemas/resources/Codelist/' \
+                       'ML_gmxCodelists.xml#CI_DateTypeCode'
+        ci_datetype_code_el = etree.SubElement(
+            date_type_el,
+            '{%s}CI_DateTypeCode' % self.NS['gmd'],
+            codeList=codelist_uri,
+            codeListValue=self.date_type_code
+        )
+        ci_datetype_code_el.text = unicode(self.date_type_code)
+        return ci_date_el
 
 
 class CI_Contact(MetadataRecord):
@@ -501,7 +595,24 @@ class CI_Role(MetadataRecord):
 
 class MD_Georectified(MetadataRecord):
 
-    num_dimensions = 2
+    dimensions = []
+    cell_geometry = 'area'
+    transformation_parameters = False
+    checkpoint = None
+    pixel_orientation = 'center'
+
+    def __init__(self, dimensions=[], cell_geometry='area',
+                 transformation_parameters=False,
+                 checkpoint=None, pixel_orientation='center'):
+        self.dimensions = dimensions
+        self.cell_geometry = cell_geometry
+        self.transformation_parameters = transformation_parameters
+        self.checkpoint = checkpoint
+        self.pixel_orientation = pixel_orientation
+
+    def add_dimension(self, name, size, resolution, resolution_unit):
+        dim = MD_Dimension(name, size, resolution, resolution_unit)
+        self.dimensions.append(dim)
 
     def serialize_xml(self):
         md_georectifed_el = etree.Element('{%s}MD_Georectified' % \
@@ -509,15 +620,227 @@ class MD_Georectified(MetadataRecord):
         num_dimensions_el = etree.SubElement(md_georectifed_el,
                                              '{%s}numberOfDimensions' % \
                                              self.NS['gmd'])
-        self._gco_integer(num_dimensions_el, self.num_dimensions)
+        self._gco_integer(num_dimensions_el, len(self.dimensions))
+        for dim in self.dimensions:
+            axis_dim_props_el = etree.SubElement(md_georectifed_el,
+                                                 '{%s}axisDimensionProperties'\
+                                                 % self.NS['gmd'])
+            axis_dim_props_el.append(dim.serialize_xml())
+        cell_geom_el = etree.SubElement(md_georectifed_el,
+                                        '{%s}cellGeometry' % self.NS['gmd'])
+        codelist_uri = 'http://www.isotc211.org/2005/resources/codelist/' \
+                       'gmxCodelists.xml#MD_CellGeometryCode'
+        md_cell_geom_code_el = etree.SubElement(cell_geom_el,
+                                                '{%s}MD_CellGeometryCode' % \
+                                                self.NS['gmd'],
+                                                codeList=codelist_uri,
+                                                codeListValue=self.cell_geometry)
+        md_cell_geom_code_el.text = self.cell_geometry
+        transf_params_el = etree.SubElement(md_georectifed_el,
+                                            '{%s}transformationParameter' \
+                                            'Availability' % self.NS['gmd'])
+        self._gco_boolean(transf_params_el, self.transformation_parameters)
+        self.checkpoint.serialize_xml(md_georectifed_el)
+        point_in_pixel_el = etree.SubElement(md_georectifed_el,
+                                             '{%s}pointInPixel' % \
+                                             self.NS['gmd'])
+        pixel_orientation_el = etree.SubElement(point_in_pixel_el,
+                                             '{%s}MD_PixelOrientationCode' % \
+                                             self.NS['gmd'])
+        pixel_orientation_el.text = unicode(self.pixel_orientation)
+        return md_georectifed_el
+
+
+class MD_ReferenceSystem(MetadataRecord):
+
+    epsg_code = '4326'
+
+    def __init__(self, epsg_code=4326):
+        self.epsg_code = epsg_code
+
+    def serialize_xml(self):
+        md_ref_system_el = etree.Element('{%s}MD_ReferenceSystem' % \
+                                         self.NS['gmd'])
+        ref_system_id_el = etree.SubElement(md_ref_system_el,
+                                            '{%s}referenceSystemIdentifier' % \
+                                            self.NS['gmd'])
+        rs_identifier_el = etree.SubElement(ref_system_id_el,
+                                            '{%s}RS_Identifier' % \
+                                            self.NS['gmd'])
+        code_el = etree.SubElement(rs_identifier_el, '{%s}code' % \
+                                   self.NS['gmd'])
+        self._gco_character_string(code_el, 'EPSG:%s' % self.epsg_code)
+        codespace_el = etree.SubElement(rs_identifier_el, '{%s}codeSpace' % \
+                                        self.NS['gmd'])
+        self._gco_character_string(codespace_el, 'EPSG Geodetic Parameter ' \
+                                   'Dataset')
+        return md_ref_system_el
+
+
+class MD_DataIdentification(MetadataRecord):
+
+    def __init__(self, ci_citation, abstract, purpose, credit, status):
+        self.ci_citation = ci_citation
+        self.abstract = abstract
+        self.purpose = purpose
+        self.credit = credit
+        self.status = status
+
+    def serialize_xml(self):
+        md_data_id_el = etree.Element('{%s}MD_DataIdentification' % \
+                                      self.NS['gmd'])
+        citation_el = etree.SubElement(md_data_id_el, '{%s}citation' % \
+                                       self.NS['gmd'])
+        citation_el.append(self.ci_citation.serialize_xml())
+        abstract_el = etree.SubElement(md_data_id_el, '{%s}abstract' % \
+                                       self.NS['gmd'])
+        self._gco_character_string(abstract_el, self.abstract)
+        purpose_el = etree.SubElement(md_data_id_el, '{%s}purpose' % \
+                                       self.NS['gmd'])
+        self._gco_character_string(purpose_el, self.purpose)
+        credit_el = etree.SubElement(md_data_id_el, '{%s}credit' % \
+                                     self.NS['gmd'])
+        self._gco_character_string(credit_el, self.credit)
+        status_el = etree.SubElement(md_data_id_el, '{%s}status' % \
+                                     self.NS['gmd'])
+        codelist_uri = 'http://standards.iso.org/ittf/PubliclyAvailable' \
+                       'Standards/ISO_19139_Schemas/resources/Codelist/' \
+                       'ML_gmxCodelists.xml#MD_ProgressCode'
+        md_progress_code_el = etree.SubElement(
+            status_el,
+            '{%s}MD_ProgressCode' % self.NS['gmd'],
+            codeList=codelist_uri,
+            codeListValue=self.status)
+        md_progress_code_el.text = unicode(self.status)
+        #for pt in self.points_of_contact:
+        #    point_of_contact el
+        #resource_maintenance_el
+        #graphic_overview_el
+        #resource_format_el
+        #for keyword in self.descriptive_keywords:
+        #    descriptive_keyword_el
+        #for constraint in self.resource_constraints:
+        #    resource_constraint_el
+        #for aggreg in self.aggregation_infos:
+        #    aggregation_info_el
+        #spatial_representation_type_el
+        #spatial_resolution_el
+        #language_el
+        #character_set_el
+        #for topic in self.topic_categories:
+        #    topic_category_el
+        #for extent in self.extents:
+        #    extent_el
+        #supplemental_information_el
+        return md_data_id_el
+
+
+class MD_Identifier(MetadataRecord):
+
+    def __init__(self, code, ci_citation):
+        self.code = code # UUID of the metadata record
+        self.ci_citation = ci_citation
+
+    def serialize_xml(self):
+        md_identifier_el = etree.Element('{%s}MD_Identifier' % \
+                                         self.NS['gmd'])
+        authority_el = etree.SubElement(md_identifier_el, '{%s}authority' % \
+                                       self.NS['gmd'])
+        authority_el.append(self.ci_citation.serialize_xml())
+        code_el = etree.SubElement(md_identifier_el, '{%s}code' % \
+                                       self.NS['gmd'])
+        self._gco_character_string(code_el, self.code)
+        return md_identifier_el
+
+
+class CheckPoint(MetadataRecord):
+
+    def __init__(self, description='', corner_point=None):
+        self.description = description
+        self.corner_point = corner_point
+
+    def serialize_xml(self, parent_el):
+        checkpoint_avail_el = etree.SubElement(parent_el,
+                                            '{%s}checkPointAvailability' \
+                                            % self.NS['gmd'])
+        self._gco_boolean(checkpoint_avail_el, True)
+        checkpoint_desc_el = etree.SubElement(md_georectifed_el,
+                                            '{%s}checkPointDescription' \
+                                            % self.NS['gmd'])
+        self._gco_character_string(checkpoint_desc_el,
+                                   self.checkpoint.description)
+        corner_points_el = etree.SubElement(parent_el,
+                                            '{%s]cornerPoints' % \
+                                            self.NS['gmd'])
+        corner_points_el.append(self.corner_point.serialize_xml())
+
+
+class Edition(MetadataRecord):
+
+    def __init__(self, name='v1', date='2013-06-20'):
+        self.name = name
+        self.date = date
+
+    def serialize_xml(self, parent):
+        edition_el = etree.SubElement(parent, '{%s}edition' % self.NS['gmd'])
+        self._gco_character_string(edition_el, self.name)
+        edition_date_el = etree.SubElement(parent, '{%s}editionDate' % \
+                                           self.NS['gmd'])
+        self._gco_date(edition_date_el, self.date)
+
+
+class CornerPoint(MetadataRecord):
+
+    id_ = ''
+    description = ''
+    identifier = ''
+    name = ''
+    xx = 0
+    yy = 0
+    srs_name = ''
+
+    def __init__(self, id_, description, identifier, name, xx, yy,
+                 srs_name='WGS_1984'):
+        self.id_ = id_
+        self.description = description
+        self.identifier = identifier
+        self.name = name
+        self.xx = xx
+        self.yy = yy
+        self.srs_name = srs_name
+
+    def serialize_xml(self):
+        point_el = etree.Element('{%s}Point' % self.NS['gml'])
+        point_el.set('{%s}id' % self.NS['gml'], self.id_)
+        description_el = etree.SubElement(point_el, '{%s}description' % \
+                                          self.NS['gml'])
+        description_el.text = unicode(self.description)
+        identifier_el = etree.SubElement(point_el, '{%s}identifier' % \
+                                         self.NS['gml'],
+                                         codeSpace='')
+        identifier_el.text = unicode(self.identifier)
+        name_el = etree.SubElement(point_el, '{%s}name' % \
+                                   self.NS['gml'])
+        name_el.text = unicode(self.name)
+        pos_el = etree.SubElement(point_el, '{%s}pos' % \
+                                  self.NS['gml'],
+                                  srsName=self.srs_name)
+        pos_el.text = ' '.join((str(self.xx), str(self.yy)))
+        return point_el
 
 
 class MD_Dimension(MetadataRecord):
 
     name = ''
+    size = 0
+    resolution = 0
+    resolution_unit = ''
 
-    def __init__(self, name=''):
+    def __init__(self, name='', size=0, resolution=0, resolution_unit='deg'):
         self.name = name
+        self.size = size
+        self.resolution = resolution
+        self.resolution_unit = resolution_unit
 
     def serialize_xml(self):
         md_dimension_el = etree.Element('{%s}MD_Dimension' % \
@@ -525,7 +848,22 @@ class MD_Dimension(MetadataRecord):
         dimension_name_el = etree.SubElement(md_dimension_el,
                                              '{%s}dimensionName' % \
                                              self.NS['gmd'])
-        codelist_uri = ''
+        codelist_uri = 'http://www.isotc211.org/2005/resources/codelist/' \
+                       'gmxCodelists.xml#MD_DimensionNameTypeCode'
+        type_code_el = etree.SubElement(dimension_name_el,
+                                        '{%s}MD_DimensionNameTypeCode' % \
+                                        self.NS['gmd'],
+                                        codeList=codelist_uri,
+                                        codeListValue=unicode(self.name))
+        type_code_el.text = unicode(self.name)
+        dimension_size_el = etree.SubElement(md_dimension_el,
+                                             '{%s}dimensionSize' % \
+                                             self.NS['gmd'])
+        self._gco_integer(dimension_size_el, self.size)
+        resolution_el = etree.SubElement(md_dimension_el,
+                                         '{%s}resolution' % \
+                                         self.NS['gmd'])
+        self._gco_angle(resolution_el, self.resolution, resolution_unit)
 
 
 class CSWManager(object):
