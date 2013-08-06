@@ -548,7 +548,7 @@ def _install_python_gdal():
     local('ln -s %s %s' % (gdal_config_path, 
                            os.path.join(virtualenv_dir, 'bin', 'gdal-config')))
     gdal_version = local('gdal-config --version', capture=True)
-    min_version = re.search(r'\A(\d\.\d)', gdal_version).group()
+    min_version = re.search(r'\A(\d\.\d+)', gdal_version).group()
     max_version = float(min_version) + 0.1
     lib_dir = local('gdal-config --libs', capture=True)
     re_match = re.search(r'-L(?P<dir>[\w\/]+) -l(?P<lib>[\w\.]+)', lib_dir)
