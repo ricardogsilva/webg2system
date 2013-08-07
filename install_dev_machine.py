@@ -567,7 +567,7 @@ def _install_pip_dependencies():
 #                  dir_name, lib_name, '/usr/include/gdal'))
 #        local('pip install --no-download GDAL')
 
-def install_python_gdal():
+def _install_python_gdal():
     '''
     download GDAL Python bindings from ubuntugis and install them in virtualenv
 
