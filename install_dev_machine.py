@@ -508,7 +508,7 @@ def _install_apt_dependencies():
           'libxml2-dev libxslt1.1 libxslt1-dev gfortran subversion ' \
           'ttf-freefont libfreetype6-dev libgdal-dev gdal-bin ' \
           'cgi-mapserver mapserver-bin fabric python-dev python-virtualenv ' \
-          'python-pip python-mapscript python-requests' % \
+          'python-pip python-mapscript' % \
           ' '.join(hdf5_package_names))
 
 def _install_catalogue_server_dependencies():
@@ -666,8 +666,11 @@ def _get_ubuntu_version():
     stdout, stderr = cmd.communicate()
     info = dict()
     for line in stdout.splitlines():
-        key, value = line.split(':', 1)
-        info[key.strip()] = value.strip()
+        try:
+            key, value = line.split(':', 1)
+            info[key.strip()] = value.strip()
+        except ValueError:
+            pass
     return info.get('Release'), info.get('Codename')
 
 def _is_64_bit():
