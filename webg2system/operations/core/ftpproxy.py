@@ -113,8 +113,8 @@ class FTPProxy(object):
         if self._connect():
             for path in pathList:
                 searchDir, searchPattern = os.path.split(path)
-                #self.logger.debug('searchDir: %s' % searchDir)
-                #self.logger.debug('searchPattern: %s' % searchPattern)
+                self.logger.debug('searchDir: %s' % searchDir)
+                self.logger.debug('searchPattern: %s' % searchPattern)
                 pattRE = re.compile(searchPattern)
                 try:
                     self.connection.cwd(searchDir)
@@ -177,7 +177,7 @@ class FTPProxy(object):
             self.localHost.change_dir(oldDir)
         return copiedPaths
 
-    def send(self, paths, destination):
+    def send(self, paths, destination, temporary_extension='.tmp'):
         '''
         Put the local paths to the remote server.
 
@@ -191,6 +191,10 @@ class FTPProxy(object):
                 paths will be put. It will be created in case it doesn't 
                 exist.
 
+            temporary_extension - The extension to use while copying the
+                files. After copying the files are renamed back to their
+                original name.
+
         Returns:
 
             The total return code of the transfer(s).
@@ -202,17 +206,24 @@ class FTPProxy(object):
             results = []
             for path in paths:
                 dirPath, fname = os.path.split(path)
+                temporary_name = ''.join((fname, temporary_extension))
                 self.logger.info('path: %s' % path)
+                self.logger.info('fname: %s' % fname)
+                self.logger.info('temporary_name: %s' % temporary_name)
                 if os.path.isdir(dirPath):
                     os.chdir(dirPath)
                     self._create_remote_dirs(destination)
                     self.connection.cwd(destination)
-                    result = self.connection.storbinary("STOR %s" % fname,
+                    result = self.connection.storbinary("STOR %s" % \
+                                                        temporary_name,
                                                         open(fname, "rb"))
-                    results.append(float(result.split()[0]))
+                    result_code = result.split()[0]
+                    if result_code == '226':
+                        self.rename(temporary_name, fname)
+                    results.append(result_code)
             os.chdir(oldDir)
             endResult = 1
-            if not False in [i == 226.0 for i in results]:
+            if not False in [i == '226' for i in results]:
                 # 226 is the FTP return code that indicates a successful transfer
                 endResult = 0
         return endResult
@@ -231,6 +242,20 @@ class FTPProxy(object):
                 self.connection.mkd(part)
                 self.connection.cwd(part)
         self.connection.cwd(oldDir)
+
+    def rename(self, old_path, new_path):
+        '''
+        Rename a path.
+
+        Inputs:
+
+            old_path - A string with the path to rename
+
+            new_path - A string with the new path
+        '''
+
+        self.connection.rename(old_path, new_path)
+
 
 #
 #class FTPPProxy(object):

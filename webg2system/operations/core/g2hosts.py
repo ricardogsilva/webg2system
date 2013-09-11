@@ -1215,3 +1215,9 @@ class G2RemoteHost(G2Host):
         cmd = 'rmdir --ignore-fail-on-non-empty --parents %s' % fullPath
         output = self.run_program(cmd, local_bin=False)[0]
         return output
+
+    def rename_file(self, oldPath, newPath, protocol='sftp'):
+        if protocol == 'sftp':
+            raise NotImplementedError
+        elif protocol == 'ftp':
+            self._localConnection['ftp'].rename(oldPath, newPath)

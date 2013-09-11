@@ -387,8 +387,11 @@ class G2File(GenericItem):
             if len(found['paths']) > 0:
                 fetched = self.host.fetch(found['paths'], targetDir, 
                                           found['host'])
-                decompressed = self.host.decompress(fetched)
-                result = decompressed
+                if decompress:
+                    decompressed = self.host.decompress(fetched)
+                    result = decompressed
+                else:
+                    result = fetched
             else:
                 self.logger.debug('Cannot fetch, no files have been found.')
         else:
@@ -679,6 +682,7 @@ class G2File(GenericItem):
         fetched = self.fetch(temp_dir, use_archive=use_archive, 
                              use_io_buffer=use_io_buffer, decompress=True,
                              restrict_pattern=None)
+        result = False
         if len(fetched) > 0:
             if compress:
                 fetched = self.host.compress(fetched)
@@ -688,7 +692,9 @@ class G2File(GenericItem):
                 dest_host,
                 remoteProtocol=remote_protocol
             )
+            if return_code == 0:
+                result = True
             for notification_type in notify:
                 # not implemented yet
                 pass
-            return return_code
+        return result

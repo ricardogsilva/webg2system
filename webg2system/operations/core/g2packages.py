@@ -415,12 +415,12 @@ class ProcessingPackage(GenericPackage):
         for g2f, foundDict in foundInputs.iteritems():
             foundDict['host'].delete_files(foundDict['paths'])
 
-    def fetch_inputs(self, useArchive=False):
+    def fetch_inputs(self, useArchive=False, decompress=True):
         '''
         '''
         
         result = self._fetch_files(self.inputs, self.workingDir, useArchive,
-                                   decompress=True)
+                                   decompress=decompress)
         return result
 
     def compress_outputs(self):
@@ -2927,12 +2927,9 @@ class Disseminator(ProcessingPackage):
         Disseminate the inputs to the defined hosts
         '''
 
+        result = False
         if bundle_files:
-            # fetch files to the working directory
-            # decompress them
-            # create a tar file and compress it with bz2
-            # send the tar.bz2 archive to the destination_hosts
-            fetched = self.fetch_inputs(useArchive=True)
+            fetched = self.fetch_inputs(useArchive=True, decompress=False)
             to_bundle = []
             for g2f, fetched_paths in fetched.iteritems():
                 to_bundle += fetched_paths
@@ -2940,17 +2937,25 @@ class Disseminator(ProcessingPackage):
                 zip_name = os.path.splitext(os.path.basename(to_bundle[0]))[0]
                 zip_path = self.host.build_zip(zip_name, to_bundle, 
                                                self.workingDir)
+                return_codes = []
                 for dest_host, protocol in self.target_hosts.iteritems():
                     dest_dir = dest_host.dataPath
-                    self.host.send([zip_path], dest_dir, dest_host, protocol)
+                    return_code, paths = self.host.send([zip_path], dest_dir,
+                                                        dest_host, protocol)
+                    return_codes.append(return_code)
+                self.logger.warning('disseminate_files return_codes: %s' % return_codes)
+                if sum(return_codes) == 0:
+                    result = True
         else:
             for inp in self.inputs:
                 for dest_host, protocol in self.target_hosts.iteritems():
-                    inp.disseminate(self.workingDir, dest_host, 
-                                    remote_protocol='sftp', compress=compress,
-                                    use_archive=use_archive)
+                    result = inp.disseminate(self.workingDir, dest_host, 
+                                             remote_protocol='ftp', 
+                                             compress=compress,
+                                             use_archive=use_archive)
+        self.logger.warning('disseminate_files result: %s' % result)
+        return result
 
     def run_main(self, callback=None, use_archive=True, bundle_files=True):
-        self.disseminate_files(compress=True, 
-                               use_archive=use_archive, 
-                               bundle_files=bundle_files)
+        return self.disseminate_files(compress=True, use_archive=use_archive,
+                                      bundle_files=bundle_files)
