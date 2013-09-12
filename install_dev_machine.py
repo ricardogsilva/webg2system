@@ -7,13 +7,11 @@ development machines.
 """
 
 import os
-import shutil
 import re
 import time
 import socket
 import datetime as dt
 import subprocess
-import requests
 # some tasks import the lxml module, that is available in the virtualenv
 # some tasks also import django settings, that are available in the virtualenv
 
@@ -508,8 +506,7 @@ def _install_apt_dependencies():
           'libxml2-dev libxslt1.1 libxslt1-dev gfortran subversion ' \
           'ttf-freefont libfreetype6-dev libgdal-dev gdal-bin ' \
           'cgi-mapserver mapserver-bin fabric python-dev python-virtualenv ' \
-          'python-pip python-mapscript' % \
-          ' '.join(hdf5_package_names))
+          'python-pip python-mapscript ' % ' '.join(hdf5_package_names))
 
 def _install_catalogue_server_dependencies():
     '''
@@ -534,154 +531,37 @@ def _install_pip_dependencies():
     local('pip install -r requirements_02.txt')
     local('pip install -r requirements_03.txt')
 
-#def _install_python_gdal():
-#    '''
-#    Install python GDAL package in the virtualenv.
-#
-#    The GDAL python package cannot be installed automatically by pip because
-#    it requires some additional configuration. The adopted strategy is to
-#    get the required python GDAL version from the system installed GDAL
-#    and then download it using pip. This downloaded egg is then setup with
-#    the paths to the system GDAL libs. Finally pip is used to install the egg.
-#    '''
-#
-#    gdal_config_path = local('which gdal-config', capture=True)
-#    virtualenv_dir = _get_virtualenv_dir()
-#    local('rm --force %s' % os.path.join(virtualenv_dir, 'bin', 'gdal-config'))
-#    local('ln -s %s %s' % (gdal_config_path, 
-#                           os.path.join(virtualenv_dir, 'bin', 'gdal-config')))
-#    gdal_version = local('gdal-config --version', capture=True)
-#    #min_version = re.search(r'\A(\d\.\d+)', gdal_version).group()
-#    #max_version = float(min_version) + 0.1
-#    gdal_version = re.search(r'\A(\d\.\d+)', gdal_version).group()
-#    lib_dir = local('gdal-config --libs', capture=True)
-#    re_match = re.search(r'-L(?P<dir>[\w\/]+) -l(?P<lib>[\w\.]+)', lib_dir)
-#    dir_name = re_match.group('dir')
-#    lib_name = re_match.group('lib')
-#    #local('pip install --no-install "GDAL>=%s, <%3.1f"' % (min_version, max_version))
-#    local('pip install --no-install "GDAL==%s"' % gdal_version)
-#    build_path = os.path.join(virtualenv_dir, 'build', 'GDAL')
-#    if os.path.isdir(build_path):
-#        with lcd(build_path):
-#            local('python setup.py build_ext --gdal-config=%s --library-dirs=%s ' \
-#                  '--libraries=%s --include-dirs=%s' % (gdal_config_path, 
-#                  dir_name, lib_name, '/usr/include/gdal'))
-#        local('pip install --no-download GDAL')
-
 def _install_python_gdal():
     '''
-    download GDAL Python bindings from ubuntugis and install them in virtualenv
+    Install python GDAL package in the virtualenv.
 
-    This method will download the .deb package with the python bindings from
-    the ubuntugis repository and then place them in the virtualenv.
-    Since the gdal package that is installed system-wide also comes from the
-    same repository, the versions of the two packages (gdal and python-gdal)
-    will match.
-    This prevents the possibility that the gdal package found in pypi may be
-    out of sync with the gdal package from ubuntugis, as is currently the
-    case (August 2013).
+    The GDAL python package cannot be installed automatically by pip because
+    it requires some additional configuration. The adopted strategy is to
+    get the required python GDAL version from the system installed GDAL
+    and then download it using pip. This downloaded egg is then setup with
+    the paths to the system GDAL libs. Finally pip is used to install the egg.
     '''
 
+    gdal_config_path = local('which gdal-config', capture=True)
     virtualenv_dir = _get_virtualenv_dir()
+    local('rm --force %s' % os.path.join(virtualenv_dir, 'bin', 'gdal-config'))
+    local('ln -s %s %s' % (gdal_config_path, 
+                           os.path.join(virtualenv_dir, 'bin', 'gdal-config')))
+    gdal_version = local('gdal-config --version', capture=True)
+    min_version = re.search(r'\A(\d\.\d)', gdal_version).group()
+    max_version = float(min_version) + 0.1
+    lib_dir = local('gdal-config --libs', capture=True)
+    re_match = re.search(r'-L(?P<dir>[\w\/]+) -l(?P<lib>[\w\.]+)', lib_dir)
+    dir_name = re_match.group('dir')
+    lib_name = re_match.group('lib')
+    local('pip install --no-install "GDAL>=%s, <%3.1f"' % (min_version, max_version))
     build_path = os.path.join(virtualenv_dir, 'build', 'GDAL')
-    if not os.path.isdir(build_path):
-        os.makedirs(build_path)
-    deb_file = _download_python_gdal(build_path)
-    cmd = subprocess.Popen(['dpkg-deb', '-x', deb_file, '.'], cwd=build_path,
-                           stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    stdout, stderr = cmd.communicate()
-    bindings_dir = os.path.join(build_path,
-                                'usr/lib/python2.7/dist-packages')
-    destination_dir = '/home/geo2/Desktop/lixo'
-    destination_dir = os.path.join(virtualenv_dir,
-                                   'lib/python2.7/site-packages')
-    for item in os.listdir(bindings_dir):
-        full_path = os.path.join(bindings_dir, item)
-        if os.path.isfile(full_path):
-            shutil.copy(full_path, destination_dir)
-        elif os.path.isdir(full_path):
-            shutil.copytree(full_path, os.path.join(destination_dir, item))
-    shutil.rmtree(os.path.join(virtualenv_dir, 'build'))
-
-def _download_python_gdal(download_dir):
-    url = _get_python_gdal_download_link()
-    print('url: %s' % url)
-    result = None
-    if url is not None:
-        file_name = url.split('/')[-1]
-        response = requests.get(url, stream=True)
-        with open(os.path.join(download_dir, file_name), 'wb') as fh:
-            for chunk in response.iter_content(1024):
-                fh.write(chunk)
-        result = os.path.join(download_dir, file_name)
-    return result
-
-def _get_python_gdal_download_link():
-    base_url = 'https://launchpad.net/~ubuntugis/+archive/ubuntugis-unstable'
-    url = '/'.join((base_url, '+packages'))
-    release, code_name = _get_ubuntu_version()
-    payload = {
-        'field.name_filter': 'gdal',
-        'field.status_filter': 'published',
-        'field.series_filter': code_name
-    }
-    response = requests.get(url, params=payload)
-    line_pattern = re.compile(r'href="(\+sourcepub/.*?)"')
-    pages = []
-    if response.status_code == 200:
-        for line in response.text.splitlines():
-            re_obj = line_pattern.search(line)
-            if re_obj is not None:
-                pages.append('/'.join((base_url, re_obj.groups()[0])))
-    links = []
-    for page in pages:
-        links = _get_possible_gdal_download_links(page)
-        if any(links):
-            break
-    is_64_bit = _is_64_bit()
-    the_link = None
-    for link in links:
-        if is_64_bit and 'amd64' in link:
-            the_link = link
-        if not is_64_bit and 'i386' in link:
-            the_link = link
-    return the_link
-
-def _get_possible_gdal_download_links(url):
-    gdal_re = re.compile(r'<a href="(.*?/python-gdal.*?)"')
-    response = requests.get(url)
-    links = []
-    if response.status_code == 200:
-        for line in response.text.splitlines():
-            re_obj = gdal_re.search(line)
-            if re_obj is not None:
-                links.append(re_obj.groups()[0])
-    return links
-
-def _get_ubuntu_version():
-    '''Returns a tuple with release code and name.'''
-
-    cmd = subprocess.Popen(['lsb_release', '-a'], stdout=subprocess.PIPE,
-                           stderr=subprocess.STDOUT)
-    stdout, stderr = cmd.communicate()
-    info = dict()
-    for line in stdout.splitlines():
-        try:
-            key, value = line.split(':', 1)
-            info[key.strip()] = value.strip()
-        except ValueError:
-            pass
-    return info.get('Release'), info.get('Codename')
-
-def _is_64_bit():
-    cmd = subprocess.Popen(['uname', '-a'], stdout=subprocess.PIPE,
-                           stderr=subprocess.STDOUT)
-    stdout, stderr = cmd.communicate()
-    if 'x86_64' in stdout:
-        result = True
-    else:
-        result = False
-    return result
+    if os.path.isdir(build_path):
+        with lcd(build_path):
+            local('python setup.py build_ext --gdal-config=%s --library-dirs=%s ' \
+                  '--libraries=%s --include-dirs=%s' % (gdal_config_path, 
+                  dir_name, lib_name, '/usr/include/gdal'))
+        local('pip install --no-download GDAL')
 
 def _install_web_server():
     local('sudo apt-get install apache2 libapache2-mod-wsgi')
