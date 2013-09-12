@@ -548,8 +548,7 @@ def _install_python_gdal():
     local('ln -s %s %s' % (gdal_config_path, 
                            os.path.join(virtualenv_dir, 'bin', 'gdal-config')))
     gdal_version = local('gdal-config --version', capture=True)
-    min_version = re.search(r'\A(\d\.\d)', gdal_version).group()
-    max_version = float(min_version) + 0.1
+    min_version, max_version = _get_gdal_versions()
     lib_dir = local('gdal-config --libs', capture=True)
     re_match = re.search(r'-L(?P<dir>[\w\/]+) -l(?P<lib>[\w\.]+)', lib_dir)
     dir_name = re_match.group('dir')
@@ -562,6 +561,13 @@ def _install_python_gdal():
                   '--libraries=%s --include-dirs=%s' % (gdal_config_path, 
                   dir_name, lib_name, '/usr/include/gdal'))
         local('pip install --no-download GDAL')
+
+def _get_gdal_versions():
+    gdal_version = local('gdal-config --version', capture=True)
+    version_parts = gdal_version.split('.')
+    minor_number = int(version_parts.pop())
+    max_version = '.'.join(version_parts) + '.%i' % (minor_number+1)
+    return gdal_version, max_version
 
 def _install_web_server():
     local('sudo apt-get install apache2 libapache2-mod-wsgi')
