@@ -553,7 +553,7 @@ def _install_python_gdal():
     re_match = re.search(r'-L(?P<dir>[\w\/]+) -l(?P<lib>[\w\.]+)', lib_dir)
     dir_name = re_match.group('dir')
     lib_name = re_match.group('lib')
-    local('pip install --no-install "GDAL>=%s, <%3.1f"' % (min_version, max_version))
+    local('pip install --no-install "GDAL>=%s, <%s"' % (min_version, max_version))
     build_path = os.path.join(virtualenv_dir, 'build', 'GDAL')
     if os.path.isdir(build_path):
         with lcd(build_path):
