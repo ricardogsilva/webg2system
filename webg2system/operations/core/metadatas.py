@@ -25,6 +25,7 @@ import pycountry
 
 import utilities
 import systemsettings.models as ss
+import inspiresettings.models as ii
 
 # TODO
 # Order the elements according to the element_order attribute
@@ -765,7 +766,8 @@ class MetadataGenerator(object):
             MDTopicCatCode.text = t
 
     def _apply_contact_info(self, parentElement, contactElName, role, contact, 
-                            positionName=None):
+            positionName=None, online_resource_name=None,
+            online_resource_description=None):
         '''
 
         Inputs:
@@ -782,6 +784,11 @@ class MetadataGenerator(object):
             positionName - A string specifying the value for the 'positionName'
                 xml element. If None (the default) this element is ommited
                 from the xml tree.
+
+            online_resource_name - A string with the text of the element
+
+            online_resource_description - A string with the text of the element
+
         '''
 
         contactEl = etree.SubElement(parentElement, '{%s}%s' % (self.ns['gmd'],
@@ -824,9 +831,18 @@ class MetadataGenerator(object):
         gcoPostalEl.text = contact.organization.postalCode
         countryEl = etree.SubElement(ciAddressEl, '{%s}country' \
                                        % self.ns['gmd'])
-        countryCharString = etree.SubElement(countryEl, '{%s}CharacterString' % self.ns['gco'])
+
         countryCode = contact.organization.country
-        countryCharString.text = pycountry.countries.get(alpha2=countryCode).name
+        cl_url = 'http://www.iso.org/iso/en/prods-services/iso3166ma/' \
+                 '02iso-3166-code-lists/index.html'
+        cl_value = countryCode
+        cl_code_space = 'ISO 3166-1'
+        country_codelist_el = etree.SubElement(countryEl, '{%s}Country' % \
+                                               self.ns['gmd'], codeList=cl_url,
+                                               codeListValue=cl_value,
+                                               codeSpace=cl_code_space)
+        country_codelist_el.text = pycountry.countries.get(
+            alpha2=countryCode).name
         emailEl = etree.SubElement(ciAddressEl, '{%s}electronicMailAddress' \
                                    % self.ns['gmd'])
         gcoEmailEl = etree.SubElement(emailEl, '{%s}CharacterString' \
@@ -847,11 +863,17 @@ class MetadataGenerator(object):
         nameEl = etree.SubElement(ciOnlineEl, '{%s}name' % self.ns['gmd'])
         gcoNameEl = etree.SubElement(nameEl, '{%s}CharacterString' % \
                                          self.ns['gco'])
-        gcoNameEl.text = '%s website' % contact.organization.short_name
+        if online_resource_name is None:
+            gcoNameEl.text = '%s website' % contact.organization.short_name
+        else:
+            gcoNameEl.text = online_resource_name
         descrEl = etree.SubElement(ciOnlineEl, '{%s}description' % self.ns['gmd'])
         gcoDescrEl = etree.SubElement(descrEl, '{%s}CharacterString' % \
                                          self.ns['gco'])
-        gcoDescrEl.text = 'Organization website'
+        if online_resource_description is None:
+            gcoDescrEl.text = 'Organization website'
+        else:
+            gcoDescrEl.text = online_resource_description
         functionEl = etree.SubElement(ciOnlineEl, '{%s}function' \
                                        % self.ns['gmd'])
         functionListEl = etree.SubElement(functionEl, '{%s}CI_OnLineFunctionCode' \
@@ -924,9 +946,18 @@ class MetadataGenerator(object):
                                 self.product.parent_id_continental)
         self.update_element('hierarchyLevel', 'dataset')
         self._remove_contact_info(self.tree.getroot(), 'contact')
-        self._apply_contact_info(self.tree.getroot(), 'contact', 
-                                 role='pointOfContact', 
-                                 contact=self.product.originator_collaborator)
+        vito_org = ii.Organization.objects.get(short_name='VITO')
+        vito_helpdesk = vito_org.collaborator_set.get(name='helpdesk')
+        ecdgei_org = ii.Organization.objects.get(short_name='EC-DGEI')
+        ecdgei_helpdesk = ecdgei_org.collaborator_set.get(name='helpdesk')
+        jrc_org = ii.Organization.objects.get(short_name='EC-DGJRC')
+        jrc_helpdesk = jrc_org.collaborator_set.get(name='helpdesk')
+        self._apply_contact_info(self.tree.getroot(), 'contact',
+            role='pointOfContact',
+            contact=vito_helpdesk,
+            online_resource_name='GIO Global Land service',
+            online_resource_description='GIO Global Land website'
+        )
         self.update_element('dateStamp', today)
         self.update_element('rowSize', str(rowSize))
         self.update_element('rowResolution', '%.2f' % self.product.pixelSize)
@@ -950,8 +981,20 @@ class MetadataGenerator(object):
                                  contact=self.product.principal_investigator)
         self._apply_contact_info(identInfoEl, 'pointOfContact', 
                                  role='originator', 
-                                 positionName='Geoland2 Help Desk',
+                                 positionName='IPMA GIO-Global Land Help Desk',
                                  contact=self.product.originator_collaborator)
+        self._apply_contact_info(identInfoEl, 'pointOfContact', 
+                                 role='pointOfContact', 
+                                 positionName='GIO-Global Land Help Desk',
+                                 contact=vito_helpdesk)
+        self._apply_contact_info(identInfoEl, 'pointOfContact', 
+                                 role='owner', 
+                                 positionName='owner',
+                                 contact=ecdgei_helpdesk)
+        self._apply_contact_info(identInfoEl, 'pointOfContact', 
+                                 role='custodian', 
+                                 positionName='Responsible',
+                                 contact=jrc_helpdesk)
         self._apply_graphic_overview(tileName, self.product)
         self._apply_aggregation_infos()
         self._apply_temporal_extent(self.product, fileTimeslot)
@@ -971,10 +1014,11 @@ class MetadataGenerator(object):
         self._remove_contact_info(distributorEl, 'distributorContact')
         self._apply_contact_info(distributorEl, 'distributorContact', 
                                  role='distributor',
-                                 positionName='IM Geoland-2 Helpdesk',
+                                 positionName='Distribution center',
                                  contact=self.product.distributor)
         self._apply_linkage(tileName, self.product)
-        self.update_element('thematicAccuracyTitle', 'Internal validation report')
+        self.update_element('thematicAccuracyTitle', 'Validation results '
+                            'conform CEOS LPV guidelines')
         self.update_element('valReport', self.product.validation_report)
         self.update_element('lineage', self.product.lineage)
 
@@ -1349,10 +1393,7 @@ class MetadataGenerator(object):
         otherDetailsEl = citationEl.xpath('gmd:otherCitationDetails/'\
                                           'gco:CharacterString', 
                                           namespaces=self.ns)[0]
-        baseURL = ss.WebServer.objects.get().public_URL
-        userManualURL = '%s/operations/products/%s/docs/pum' % \
-                (baseURL, productSettings.short_name)
-        otherDetailsEl.text = userManualURL
+        otherDetailsEl.text = productSettings.user_manual
 
     def _apply_abstract(self, abstract_text):
         identInfoEl = self.tree.xpath('gmd:identificationInfo/gmd:MD_DataIdentification', namespaces=self.ns)[0]
