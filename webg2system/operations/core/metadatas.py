@@ -401,6 +401,31 @@ class SWIMetadataModifier(MetadataHandler):
         description.text = 'Receive products via EUMETCAST'
         base.append(xfer_ops_eumet)
 
+    def modify_data_quality_info(self):
+        base_el = self.tree.xpath('gmd:dataQualityInfo/gmd:DQ_DataQuality',
+                                  namespaces=self.ns)[0]
+        scope = base_el.xpath('gmd:scope/*/gmd:level/gmd:MD_ScopeCode',
+                              namespaces=self.ns)[0]
+        code_list_url = 'http://standards.iso.org/ittf/PubliclyAvailable' \
+                        'Standards/ISO_19139_Schemas/resources/Codelist/' \
+                        'ML_gmxCodelists.xml#MD_ScopeCode'
+        code_list_value = 'dataset'
+        scope.set('codeList', code_list_url)
+        scope.set('codeListValue', code_list_value)
+        scope.text = code_list_value
+        dq_conformance = base_el.xpath('gmd:report/gmd:DQ_ThematicAccuracy/'
+                                       'gmd:result/gmd:DQ_ConformanceResult',
+                                       namespaces=self.ns)[0]
+        explanation_el = etree.SubElement(dq_conformance, '{%s}explanation' % \
+                                          self.ns['gmd'])
+        cs_el = etree.SubElement(explanation_el, '{%s}CharacterString' % \
+                                 self.ns['gco'])
+        cs_el.text = self.product.validation_report
+        lineage_el = base_el.xpath('gmd:lineage/gmd:LI_Lineage/gmd:statement/'
+                                   'gco:CharacterString',
+                                   namespaces=self.ns)[0]
+        lineage_el.text = self.product.lineage
+
         #SANDRA
     def modify_temporal_extent(self, timeslot):
 

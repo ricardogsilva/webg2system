@@ -1336,7 +1336,7 @@ class SWIMetadataHandler(ProcessingPackage):
             self.md_modifier.modify_download_url(self.timeslot)
             self.md_modifier.modify_resource_constraints()
             self.md_modifier.modify_distribution_info()
-# falta o gmd:dataQualityInfo
+            self.md_modifier.modify_data_quality_info()
 
             xml_name = os.path.split(xml_path)[-1]
             out_path = os.path.join(self.outputDir, xml_name)
