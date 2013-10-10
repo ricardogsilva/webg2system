@@ -2934,12 +2934,17 @@ class Disseminator(ProcessingPackage):
             for g2f, fetched_paths in fetched.iteritems():
                 to_bundle += fetched_paths
             if any(to_bundle):
-                zip_name = os.path.splitext(os.path.basename(to_bundle[0]))[0]
+                self.logger.info('Building zip file with: %s' % to_bundle)
+                file_name = os.path.basename(to_bundle[0])
+                zip_name = os.path.splitext(file_name)[0].replace('.h5', '')
                 zip_path = self.host.build_zip(zip_name, to_bundle, 
                                                self.workingDir)
+                self.logger.info('zip file built: %s' % zip_path)
                 return_codes = []
                 for dest_host, protocol in self.target_hosts.iteritems():
                     dest_dir = dest_host.dataPath
+                    self.logger.info('Sending the zip to %s host' % dest_host)
+                    self.logger.info('Sending the zip to %s path' % dest_dir)
                     return_code, paths = self.host.send([zip_path], dest_dir,
                                                         dest_host, protocol)
                     return_codes.append(return_code)

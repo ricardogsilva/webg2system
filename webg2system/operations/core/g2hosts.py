@@ -595,7 +595,6 @@ class G2LocalHost(G2Host):
         return (0, result)
 
     def _send_to_remote(self, paths, destDir, destHost, protocol='sftp'):
-        print('locals(): %s ' % locals())
         connection = self._get_connection(destHost, protocol)
         returnCode = connection.send(paths, destDir)
         if returnCode == 0: # sending went OK
