@@ -19,12 +19,14 @@ from uuid import uuid1
 from operator import itemgetter
 import datetime as dt
 import socket
+import copy
 socket.setdefaulttimeout(None) # don't timeout
 
 import pycountry
 
 import utilities
 import systemsettings.models as ss
+import inspiresettings.models as ii
 
 # TODO
 # Order the elements according to the element_order attribute
@@ -41,6 +43,28 @@ class MetadataHandler(object):
 
 
 class SWIMetadataModifier(MetadataHandler):
+
+    MD_Identification_order = {
+        0 : 'citation',
+        1 : 'abstract',
+        2 : 'purpose',
+        3 : 'credit',
+        4 : 'status',
+        5 : 'pointOfContact',
+        6 : 'resourceMaintenance',
+        7 : 'graphicOverview',
+        8 : 'resourceFormat',
+        9 : 'descriptiveKeywords',
+        10 : 'resourceConstraints',
+        11 : 'aggregationInfo',
+        12 : 'spatialRepresentationType',
+        13 : 'spatialResolution',
+        14 : 'language',
+        15 : 'characterSet',
+        16 : 'topicCategory',
+        17 : 'extent',
+        18 : 'supplementalInformation',
+    }
 
     def __init__(self, swi_settings, logger=None):
         super(SWIMetadataModifier, self).__init__(logger)
@@ -77,20 +101,21 @@ class SWIMetadataModifier(MetadataHandler):
         file_id_el.text = uuid
 
     def modify_id_info_modifier(self, uuid):
-        el = self.tree.xpath('gmd:identificationInfo/' \
-                             'gmd:MD_DataIdentification/gmd:citation/' \
-                             'gmd:CI_Citation/gmd:identifier/' \
-                             'gmd:MD_Identifier/gmd:code', 
+        el = self.tree.xpath('gmd:identificationInfo/'
+                             'gmd:MD_DataIdentification/gmd:citation/'
+                             'gmd:CI_Citation/gmd:identifier/'
+                             'gmd:MD_Identifier/gmd:code/gco:CharacterString',
                              namespaces=self.ns)[0]
         el.text = uuid
 
     def modify_metadata_contact(self):
-        contact = self.product.distributor
+        vito_org = ii.Organization.objects.get(short_name='VITO')
+        vito_helpdesk = vito_org.collaborator_set.get(name='helpdesk')
         role = 'pointOfContact'
         position = None
-        xpath = self.tree.xpath('gmd:contact/gmd:CI_ResponsibleParty', 
+        xpath = self.tree.xpath('gmd:contact/gmd:CI_ResponsibleParty',
                                 namespaces=self.ns)[0]
-        self._modify_ci_responsible_party(xpath, contact, role, position)
+        self._modify_ci_responsible_party(xpath, vito_helpdesk, role, position)
 
     def modify_principalIvestigator_contact(self):
         contact = self.product.principal_investigator
@@ -111,6 +136,108 @@ class SWIMetadataModifier(MetadataHandler):
                                 'pointOfContact/gmd:CI_ResponsibleParty', 
                                 namespaces=self.ns)[1]
         self._modify_ci_responsible_party(xpath, contact, role, position)
+
+    def modify_citation(self, timeslot):
+        ipma_org = ii.Organization.objects.get(short_name='IPMA')
+        citation_el = self.tree.xpath('gmd:identificationInfo/*/gmd:citation/*',
+                                     namespaces=self.ns)[0]
+        ci_citation_el = citation_el.xpath('gmd:identifier/*/gmd:authority/'
+                                           'gmd:CI_Citation',
+                                           namespaces=self.ns)[0]
+        authority_title_el = ci_citation_el.xpath('gmd:title/gco:Character'
+                                                  'String',
+                                                  namespaces=self.ns)[0]
+        authority_title_el.text = ipma_org.short_name
+        authority_date_el = ci_citation_el.xpath('gmd:date/*/gmd:date/gco:'
+                                                 'Date', namespaces=self.ns)[0]
+        authority_date_el.text = timeslot.strftime('%Y-%m-%d')
+        code_list_value = 'publication'
+        authority_date_type_el = ci_citation_el.xpath('gmd:date/*/gmd:dateType'
+                                                      '/gmd:CI_DateTypeCode',
+                                                      namespaces=self.ns)[0]
+        authority_date_type_el.set('codeListValue', code_list_value)
+        authority_date_type_el.text = code_list_value
+        otherDetailsEl = citation_el.xpath('gmd:otherCitationDetails/'\
+                                          'gco:CharacterString', 
+                                          namespaces=self.ns)[0]
+        otherDetailsEl.text = self.product.user_manual
+
+    def modify_abstract(self):
+        abstract_el = self.tree.xpath('gmd:identificationInfo/*/gmd:abstract/'
+                                      'gco:CharacterString',
+                                      namespaces=self.ns)[0]
+        abstract_el.text = self.product.iResourceAbstract
+
+    def modify_purpose(self):
+        purpose_text = 'This product is first designed to fit the ' \
+                       'requirements of the Global Land component of Land ' \
+                       'Service of GMES-Copernicus. It can be also useful ' \
+                       'for all applications related to environment ' \
+                       'monitoring.'
+        purpose_el = self.tree.xpath('gmd:identificationInfo/*/gmd:purpose/'
+                                     'gco:CharacterString',
+                                     namespaces=self.ns)[0]
+        purpose_el.text = purpose_text
+
+    def modify_credit(self):
+        credit_text = 'The research leading to these results has ' \
+                      'received funding from the European Community\'s ' \
+                      'Seventh Framework Program (FP7/2007-2013) and is ' \
+                      'maintained through the Copernicus European Earth ' \
+                      'monitoring program, more particularly through the ' \
+                      'Global Land Component of the GMES Initial ' \
+                      'Operations. This product is the joint property of the ' \
+                      'Technical University of Wien and IPMA under ' \
+                      'copyright Copernicus. It has been generated from ' \
+                      'Metop/ASCAT surface soil moisture data distributed ' \
+                      'by Eumetsat.'
+        credit_el = self.tree.xpath('gmd:identificationInfo/*/gmd:credit/'
+                                    'gco:CharacterString',
+                                    namespaces=self.ns)[0]
+        credit_el.text = credit_text
+
+    def modify_points_of_contact(self):
+        originator_el = self.tree.xpath('gmd:identificationInfo/*/gmd:point'
+                                        'OfContact/gmd:CI_ResponsibleParty',
+                                        namespaces=self.ns)[1]
+        ipma_org = ii.Organization.objects.get(short_name='IPMA')
+        originator_contact = ipma_org.collaborator_set.get(name='Sandra Coelho')
+        self._modify_ci_responsible_party(originator_el, originator_contact,
+                                          'originator', position='producer')
+        # adding three new pointOfcontact elements
+        vito_org = ii.Organization.objects.get(short_name='VITO')
+        vito_collab = vito_org.collaborator_set.get(name='helpdesk')
+        ec_dgei_org = ii.Organization.objects.get(short_name='EC-DGEI')
+        ec_dgei_collab = ec_dgei_org.collaborator_set.get(name='helpdesk')
+        jrc_org = ii.Organization.objects.get(short_name='EC-DGJRC')
+        jrc_collab = jrc_org.collaborator_set.get(name='helpdesk')
+        self._add_point_of_contact(vito_collab, 'pointOfContact',
+                                   'GIO-Global Land Help Desk')
+        self._add_point_of_contact(ec_dgei_collab, 'owner', 'owner')
+        self._add_point_of_contact(jrc_collab, 'custodian', 'responsible')
+        parent_el = self.tree.xpath('gmd:identificationInfo/gmd:MD_Data'
+                                    'Identification', namespaces=self.ns)[0]
+        self._re_order(parent_el, self.MD_Identification_order)
+
+    def _add_point_of_contact(self, contact, role, position):
+        ident_info_els = self.tree.xpath('gmd:identificationInfo/*/*',
+                                         namespaces=self.ns)
+        last_index = 0
+        for index, element in enumerate(ident_info_els):
+            if element.tag == '{%s}pointOfContact' % self.ns['gmd']:
+                last_index = index
+
+        one_point_of_contact = self.tree.xpath('gmd:identificationInfo/*/'
+                                               'gmd:pointOfContact',
+                                               namespaces=self.ns)[0]
+        pt_ct_el = copy.deepcopy(one_point_of_contact)
+        ci_resp_el = pt_ct_el.xpath('gmd:CI_ResponsibleParty',
+                                    namespaces=self.ns)[0]
+        self._modify_ci_responsible_party(ci_resp_el, contact, role, position)
+        ident_info_el_md = self.tree.xpath('gmd:identificationInfo/gmd:'
+                                           'MD_DataIdentification',
+                                           namespaces=self.ns)[0]
+        ident_info_el_md.append(pt_ct_el)
 
     def modify_quicklook_url(self, timeslot):
 
@@ -147,6 +274,157 @@ class SWIMetadataModifier(MetadataHandler):
                                      'gmd:linkage/gmd:URL', 
                                      namespaces=self.ns)[0]
         linkage_el.text = vito_url
+
+    def modify_resource_constraints(self):
+        use_limitations = self.tree.xpath('gmd:identificationInfo/*/gmd:'
+                                          'resourceConstraints[1]/*/gmd:'
+                                          'useLimitation/gco:CharacterString',
+                                          namespaces=self.ns)[0]
+        use_limitations.text = 'No limitations'
+        use_constraints = self.tree.xpath('gmd:identificationInfo/*/gmd:'
+                                          'resourceConstraints[2]/*/gmd:'
+                                          'useConstraints/gmd:MD_Restriction'
+                                          'Code', namespaces=self.ns)[0]
+        use_constraints_url = 'http://standards.iso.org/ittf/Publicly' \
+                              'AvailableStandards/ISO_19139_Schemas/' \
+                              'resources/Codelist/ML_gmxCodelists.xml#' \
+                              'MD_RestrictionCode'
+        use_constraints_value = 'copyright'
+        use_constraints.set('codeList', use_constraints_url)
+        use_constraints.set('codeListValue', use_constraints_value)
+        use_constraints.text = '@copernicus.eu'
+        access_constraints = self.tree.xpath('gmd:identificationInfo/*/gmd:'
+                                             'resourceConstraints[3]/*/gmd:'
+                                             'accessConstraints/gmd:MD_'
+                                             'RestrictionCode',
+                                             namespaces=self.ns)[0]
+        access_constraints_url = 'http://standards.iso.org/ittf/Publicly' \
+                                 'AvailableStandards/ISO_19139_Schemas/' \
+                                 'resources/Codelist/ML_gmxCodelists.xml#' \
+                                 'MD_RestrictionCode'
+        access_constraints_value = 'otherRestrictions'
+        access_constraints.text = 'data policy @copernicus.eu'
+        other_constraints = self.tree.xpath('gmd:identificationInfo/*/gmd:'
+                                            'resourceConstraints[3]/*/gmd:'
+                                            'otherConstraints/gco:'
+                                            'CharacterString',
+                                            namespaces=self.ns)[0]
+        other_constraints.text = '(d) the confidentiality of commercial or ' \
+                                 'industrial information, where such ' \
+                                 'confidentiality is provided for by ' \
+                                 'national or Community law to protect a ' \
+                                 'legitimate economic interest, including ' \
+                                 'the public interest in maintaining ' \
+                                 'statistical confidentiality and tax secrecy.'
+
+    def modify_distribution_info(self):
+        base = self.tree.xpath('gmd:distributionInfo/gmd:MD_Distribution',
+                               namespaces=self.ns)[0]
+        dist_fmt_base = base.xpath('gmd:distributionFormat/gmd:MD_Format',
+                                   namespaces=self.ns)[0]
+        fmt_name = dist_fmt_base.xpath('gmd:name/gco:CharacterString',
+                                       namespaces=self.ns)[0]
+        fmt_name.text = 'ZIP archive'
+        fmt_version = dist_fmt_base.xpath('gmd:version/gco:CharacterString',
+                                       namespaces=self.ns)[0]
+        fmt_version.text = 'v3.2'
+        fmt_spec = dist_fmt_base.xpath('gmd:specification/gco:CharacterString',
+                                       namespaces=self.ns)[0]
+        fmt_spec.text = 'Standard PKZIP compatible Unix/Linux ZIP format'
+        fmt_decompression = dist_fmt_base.xpath('gmd:fileDecompressionTechnique'
+                                                '/gco:CharacterString',
+                                                namespaces=self.ns)[0]
+        fmt_decompression.text = 'unzip or pkunzip'
+        distributor_base = base.xpath('gmd:distributor/gmd:MD_Distributor',
+                                      namespaces=self.ns)[0]
+        distributor_contact_ci = distributor_base.xpath(
+            'gmd:distributorContact/gmd:CI_ResponsibleParty',
+            namespaces=self.ns
+        )[0]
+        ipma_org = ii.Organization.objects.get(short_name='IPMA')
+        ipma_contact = ipma_org.collaborator_set.get(name='Sandra Coelho')
+        role = 'distributor'
+        position = 'Distribution center'
+        self._modify_ci_responsible_party(distributor_contact_ci, ipma_contact,
+                                          role, position)
+        instructions_el = distributor_base.xpath('gmd:distributionOrderProcess'
+                                                 '/*/gmd:orderingInstructions/'
+                                                 'gco:CharacterString',
+                                                 namespaces=self.ns)[0]
+        instructions_el.text = 'Products can be downloaded on-line via HTTP.' \
+                               ' They are also available through EUMETCAST. ' \
+                               'Bulk downloads and near-real time ' \
+                               'dissemination can be requested at our ' \
+                               'helpdesk.'
+
+        xfer_ops_http_base = base.xpath('gmd:transferOptions',
+                                        namespaces=self.ns)[0]
+        units = xfer_ops_http_base.xpath('*/gmd:unitsOfDistribution/gco:'
+                                         'CharacterString',
+                                         namespaces=self.ns)[0]
+        units.text = 'Per product'
+        size_el = xfer_ops_http_base.xpath('*/gmd:transferSize',
+                                           namespaces=self.ns)[0]
+        name = xfer_ops_http_base.xpath('*/gmd:onLine/*/gmd:name/gco:'
+                                     'CharacterString', namespaces=self.ns)[0]
+        name.text = 'Copernicus Global Land Service'
+        md_base = xfer_ops_http_base.xpath('gmd:MD_DigitalTransferOptions',
+                                           namespaces=self.ns)[0]
+        md_base.remove(size_el)
+        xfer_ops_bundle = copy.deepcopy(xfer_ops_http_base)
+
+        bundle_CI = xfer_ops_bundle.xpath('gmd:MD_DigitalTransferOptions/'
+                                          'gmd:onLine/gmd:CI_OnlineResource',
+                                          namespaces=self.ns)[0]
+        protocol_el = bundle_CI.xpath('gmd:protocol', namespaces=self.ns)[0]
+        function_el = bundle_CI.xpath('gmd:function', namespaces=self.ns)[0]
+        bundle_CI.remove(protocol_el)
+        bundle_CI.remove(function_el)
+        units = xfer_ops_bundle.xpath('*/gmd:unitsOfDistribution/gco:'
+                                      'CharacterString',
+                                      namespaces=self.ns)[0]
+        units.text = 'Product bundles'
+        linkage = xfer_ops_bundle.xpath('*/gmd:onLine/*/gmd:linkage/gmd:URL',
+                                        namespaces=self.ns)[0]
+        linkage.text = 'mailto:helpdesk@vgt.vito.be'
+        description = xfer_ops_bundle.xpath('*/gmd:onLine/*/gmd:description/gco:'
+                                     'CharacterString', namespaces=self.ns)[0]
+        description.text = 'Request to receive products via FTP'
+        base.append(xfer_ops_bundle)
+        xfer_ops_eumet = copy.deepcopy(xfer_ops_bundle)
+        units = xfer_ops_eumet.xpath('*/gmd:unitsOfDistribution/gco:'
+                                      'CharacterString',
+                                      namespaces=self.ns)[0]
+        units.text = 'Per product'
+        description = xfer_ops_eumet.xpath('*/gmd:onLine/*/gmd:description/gco:'
+                                     'CharacterString', namespaces=self.ns)[0]
+        description.text = 'Receive products via EUMETCAST'
+        base.append(xfer_ops_eumet)
+
+    def modify_data_quality_info(self):
+        base_el = self.tree.xpath('gmd:dataQualityInfo/gmd:DQ_DataQuality',
+                                  namespaces=self.ns)[0]
+        scope = base_el.xpath('gmd:scope/*/gmd:level/gmd:MD_ScopeCode',
+                              namespaces=self.ns)[0]
+        code_list_url = 'http://standards.iso.org/ittf/PubliclyAvailable' \
+                        'Standards/ISO_19139_Schemas/resources/Codelist/' \
+                        'ML_gmxCodelists.xml#MD_ScopeCode'
+        code_list_value = 'dataset'
+        scope.set('codeList', code_list_url)
+        scope.set('codeListValue', code_list_value)
+        scope.text = code_list_value
+        dq_conformance = base_el.xpath('gmd:report/gmd:DQ_ThematicAccuracy/'
+                                       'gmd:result/gmd:DQ_ConformanceResult',
+                                       namespaces=self.ns)[0]
+        explanation_el = etree.SubElement(dq_conformance, '{%s}explanation' % \
+                                          self.ns['gmd'])
+        cs_el = etree.SubElement(explanation_el, '{%s}CharacterString' % \
+                                 self.ns['gco'])
+        cs_el.text = self.product.validation_report
+        lineage_el = base_el.xpath('gmd:lineage/gmd:LI_Lineage/gmd:statement/'
+                                   'gco:CharacterString',
+                                   namespaces=self.ns)[0]
+        lineage_el.text = self.product.lineage
 
         #SANDRA
     def modify_temporal_extent(self, timeslot):
@@ -286,20 +564,18 @@ class SWIMetadataModifier(MetadataHandler):
         function_el.attrib['codeListValue'] = function
         function_el.text = function
 
-
-    #SANDRA
-    def _modify_citation(self):
-        citationEl = self.tree.xpath('gmd:identificationInfo/*/gmd:citation/*',
-                                     namespaces=self.ns)[0]
-        otherDetailsEl = citationEl.xpath('gmd:otherCitationDetails/'\
-                                          'gco:CharacterString', 
-                                          namespaces=self.ns)[0]
-        baseURL = ss.WebServer.objects.get().public_URL
-        userManualURL = '%s/operations/products/%s/docs/pum' % \
-                (baseURL, "SWI")
-        otherDetailsEl.text = userManualURL
-    #SANDRA
-
+    def _re_order(self, parent_element, order_dict):
+        re_order = []
+        for el in parent_element:
+            the_index = None
+            for k, v in order_dict.iteritems():
+                full_tag = '{%s}%s' % (self.ns.get('gmd'), v)
+                if full_tag == el.tag:
+                    the_index = k
+            re_order.append((el, the_index))
+        a = sorted(re_order, key=itemgetter(1))
+        for tup in a:
+            parent_element.append(tup[0])
 
 
 class MetadataGenerator(object):
@@ -765,7 +1041,8 @@ class MetadataGenerator(object):
             MDTopicCatCode.text = t
 
     def _apply_contact_info(self, parentElement, contactElName, role, contact, 
-                            positionName=None):
+            positionName=None, online_resource_name=None,
+            online_resource_description=None):
         '''
 
         Inputs:
@@ -782,6 +1059,11 @@ class MetadataGenerator(object):
             positionName - A string specifying the value for the 'positionName'
                 xml element. If None (the default) this element is ommited
                 from the xml tree.
+
+            online_resource_name - A string with the text of the element
+
+            online_resource_description - A string with the text of the element
+
         '''
 
         contactEl = etree.SubElement(parentElement, '{%s}%s' % (self.ns['gmd'],
@@ -824,9 +1106,18 @@ class MetadataGenerator(object):
         gcoPostalEl.text = contact.organization.postalCode
         countryEl = etree.SubElement(ciAddressEl, '{%s}country' \
                                        % self.ns['gmd'])
-        countryCharString = etree.SubElement(countryEl, '{%s}CharacterString' % self.ns['gco'])
+
         countryCode = contact.organization.country
-        countryCharString.text = pycountry.countries.get(alpha2=countryCode).name
+        cl_url = 'http://www.iso.org/iso/en/prods-services/iso3166ma/' \
+                 '02iso-3166-code-lists/index.html'
+        cl_value = countryCode
+        cl_code_space = 'ISO 3166-1'
+        country_codelist_el = etree.SubElement(countryEl, '{%s}Country' % \
+                                               self.ns['gmd'], codeList=cl_url,
+                                               codeListValue=cl_value,
+                                               codeSpace=cl_code_space)
+        country_codelist_el.text = pycountry.countries.get(
+            alpha2=countryCode).name
         emailEl = etree.SubElement(ciAddressEl, '{%s}electronicMailAddress' \
                                    % self.ns['gmd'])
         gcoEmailEl = etree.SubElement(emailEl, '{%s}CharacterString' \
@@ -847,11 +1138,17 @@ class MetadataGenerator(object):
         nameEl = etree.SubElement(ciOnlineEl, '{%s}name' % self.ns['gmd'])
         gcoNameEl = etree.SubElement(nameEl, '{%s}CharacterString' % \
                                          self.ns['gco'])
-        gcoNameEl.text = '%s website' % contact.organization.short_name
+        if online_resource_name is None:
+            gcoNameEl.text = '%s website' % contact.organization.short_name
+        else:
+            gcoNameEl.text = online_resource_name
         descrEl = etree.SubElement(ciOnlineEl, '{%s}description' % self.ns['gmd'])
         gcoDescrEl = etree.SubElement(descrEl, '{%s}CharacterString' % \
                                          self.ns['gco'])
-        gcoDescrEl.text = 'Organization website'
+        if online_resource_description is None:
+            gcoDescrEl.text = 'Organization website'
+        else:
+            gcoDescrEl.text = online_resource_description
         functionEl = etree.SubElement(ciOnlineEl, '{%s}function' \
                                        % self.ns['gmd'])
         functionListEl = etree.SubElement(functionEl, '{%s}CI_OnLineFunctionCode' \
@@ -904,6 +1201,7 @@ class MetadataGenerator(object):
         '''
 
         productVersion = re.search(r'GEO_(v\d)', filePath).groups()[0]
+        productVersion = productVersion.replace('v', 'V')
         today = dt.date.today().strftime('%Y-%m-%d')
         fileName = os.path.splitext(os.path.basename(filePath))[0]
         fileTimeslot = utilities.extract_timeslot(filePath)
@@ -924,9 +1222,18 @@ class MetadataGenerator(object):
                                 self.product.parent_id_continental)
         self.update_element('hierarchyLevel', 'dataset')
         self._remove_contact_info(self.tree.getroot(), 'contact')
-        self._apply_contact_info(self.tree.getroot(), 'contact', 
-                                 role='pointOfContact', 
-                                 contact=self.product.originator_collaborator)
+        vito_org = ii.Organization.objects.get(short_name='VITO')
+        vito_helpdesk = vito_org.collaborator_set.get(name='helpdesk')
+        ecdgei_org = ii.Organization.objects.get(short_name='EC-DGEI')
+        ecdgei_helpdesk = ecdgei_org.collaborator_set.get(name='helpdesk')
+        jrc_org = ii.Organization.objects.get(short_name='EC-DGJRC')
+        jrc_helpdesk = jrc_org.collaborator_set.get(name='helpdesk')
+        self._apply_contact_info(self.tree.getroot(), 'contact',
+            role='pointOfContact',
+            contact=vito_helpdesk,
+            online_resource_name='GIO Global Land service',
+            online_resource_description='GIO Global Land website'
+        )
         self.update_element('dateStamp', today)
         self.update_element('rowSize', str(rowSize))
         self.update_element('rowResolution', '%.2f' % self.product.pixelSize)
@@ -950,8 +1257,20 @@ class MetadataGenerator(object):
                                  contact=self.product.principal_investigator)
         self._apply_contact_info(identInfoEl, 'pointOfContact', 
                                  role='originator', 
-                                 positionName='Geoland2 Help Desk',
+                                 positionName='IPMA GIO-Global Land Help Desk',
                                  contact=self.product.originator_collaborator)
+        self._apply_contact_info(identInfoEl, 'pointOfContact', 
+                                 role='pointOfContact', 
+                                 positionName='GIO-Global Land Help Desk',
+                                 contact=vito_helpdesk)
+        self._apply_contact_info(identInfoEl, 'pointOfContact', 
+                                 role='owner', 
+                                 positionName='owner',
+                                 contact=ecdgei_helpdesk)
+        self._apply_contact_info(identInfoEl, 'pointOfContact', 
+                                 role='custodian', 
+                                 positionName='Responsible',
+                                 contact=jrc_helpdesk)
         self._apply_graphic_overview(tileName, self.product)
         self._apply_aggregation_infos()
         self._apply_temporal_extent(self.product, fileTimeslot)
@@ -971,10 +1290,11 @@ class MetadataGenerator(object):
         self._remove_contact_info(distributorEl, 'distributorContact')
         self._apply_contact_info(distributorEl, 'distributorContact', 
                                  role='distributor',
-                                 positionName='IM Geoland-2 Helpdesk',
+                                 positionName='Distribution center',
                                  contact=self.product.distributor)
         self._apply_linkage(tileName, self.product)
-        self.update_element('thematicAccuracyTitle', 'Internal validation report')
+        self.update_element('thematicAccuracyTitle', 'Validation results '
+                            'conform CEOS LPV guidelines')
         self.update_element('valReport', self.product.validation_report)
         self.update_element('lineage', self.product.lineage)
 
@@ -1349,10 +1669,7 @@ class MetadataGenerator(object):
         otherDetailsEl = citationEl.xpath('gmd:otherCitationDetails/'\
                                           'gco:CharacterString', 
                                           namespaces=self.ns)[0]
-        baseURL = ss.WebServer.objects.get().public_URL
-        userManualURL = '%s/operations/products/%s/docs/pum' % \
-                (baseURL, productSettings.short_name)
-        otherDetailsEl.text = userManualURL
+        otherDetailsEl.text = productSettings.user_manual
 
     def _apply_abstract(self, abstract_text):
         identInfoEl = self.tree.xpath('gmd:identificationInfo/gmd:MD_DataIdentification', namespaces=self.ns)[0]

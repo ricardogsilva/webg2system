@@ -42,7 +42,8 @@ class GenericItem(object):
         self.logger = logger
         self.timeslot = timeslot
         self.source = G2Source(area, timeslot)
-        hf = HostFactory()
+        #hf = HostFactory()
+        hf = HostFactory(logger=self.logger)
         self.host = hf.create_host(host)
         # a random number for generating unique working dirs
         self.random = randint(0, 100)

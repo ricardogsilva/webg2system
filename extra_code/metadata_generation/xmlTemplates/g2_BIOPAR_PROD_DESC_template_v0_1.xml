@@ -210,7 +210,7 @@
         <gco:CharacterString xmlns="http://www.isotc211.org/2005/gco">Fraction of vegetation Cover (FCOVER) corresponds to the gap fraction for nadir direction. It is used to separate vegetation and soil in energy balance processes, including temperature and evapotranspiration. It is computed from the leaf area index and other canopy structural variables and does not depend on variables such as the geometry of illumination as compared to FAPAR. For this reason, it is a very good candidate for the replacement of classical vegetation indices for the monitoring of green vegetation. Because of the linear relationship with radiometric signal, FCOVER will be only marginally scale dependent. Note that similarly to LAI and FAPAR, only the green elements will be considered, either belonging both to the overstorey and understorey.</gco:CharacterString>
       </abstract>
       <purpose>
-        <gco:CharacterString>This product is first designed to fit the requirements of the Core Information Services of the geoland2 project. It can be also useful for all applications related to the environment monitoring. </gco:CharacterString>
+        <gco:CharacterString>This product is first designed to fit the requirements of the Global Land component of Land Service of GMES-Copernicus. It can be also useful for all applications related to the environment monitoring.</gco:CharacterString>
       </purpose>
       <credit>
         <gco:CharacterString xmlns="http://www.isotc211.org/2005/gco">“The research leading to these results has received funding from the European Community’s Seventh Framework Program (FP7/2007-2013) under grant agreement n 218795. The BioPar FCOVER product is a joint property of INRA, CNES, and VITO under copyright geoland2. The historic data from 1999 up to 2010 is prepared by CNES for further operation by VITO. It is generated from the SPOT VEGETATION data under copyright Cnes and distribution by VITO. The BioPar FCOVER is available at the address http://www.geoland2.eu. ”</gco:CharacterString>
@@ -466,21 +466,21 @@
       <resourceConstraints>
         <MD_Constraints>
           <useLimitation>
-            <gco:CharacterString>No limitation of use</gco:CharacterString>
+            <gco:CharacterString>No limitations</gco:CharacterString>
           </useLimitation>
         </MD_Constraints>
       </resourceConstraints>
       <resourceConstraints>
         <MD_LegalConstraints>
           <useConstraints>
-            <MD_RestrictionCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/Codelist/ML_gmxCodelists.xml#MD_RestrictionCode" codeListValue="copyright">@geoland2 consortium</MD_RestrictionCode>
+            <MD_RestrictionCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/Codelist/ML_gmxCodelists.xml#MD_RestrictionCode" codeListValue="copyright">@copernicus.eu</MD_RestrictionCode>
           </useConstraints>
         </MD_LegalConstraints>
       </resourceConstraints>
       <resourceConstraints>
         <MD_LegalConstraints>
           <accessConstraints>
-            <MD_RestrictionCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/Codelist/ML_gmxCodelists.xml#MD_RestrictionCode" codeListValue="otherRestrictions">otherRestrictions</MD_RestrictionCode>
+            <MD_RestrictionCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/Codelist/ML_gmxCodelists.xml#MD_RestrictionCode" codeListValue="otherRestrictions">data policy @copernicus.eu</MD_RestrictionCode>
           </accessConstraints>
           <otherConstraints>
             <gco:CharacterString>(d) the confidentiality of commercial or industrial information, where such confidentiality is provided for by national or Community law to protect a legitimate economic interest, including the public interest in maintaining statistical confidentiality and tax secrecy.</gco:CharacterString>
@@ -1198,7 +1198,7 @@
           <distributionOrderProcess>
             <MD_StandardOrderProcess>
               <fees>
-                <gco:CharacterString>Free by HTTP; cost of medium by DvD or tape</gco:CharacterString>
+                <gco:CharacterString>Free</gco:CharacterString>
               </fees>
               <orderingInstructions>
                 <gco:CharacterString>Products can be downloaded on-line via HTTP. Bulk downloads and near-real time dissemination can be requested at our helpdesk.</gco:CharacterString>
@@ -1221,7 +1221,7 @@
                 <gco:CharacterString>HTTP</gco:CharacterString>
               </protocol>
               <name>
-                <gco:CharacterString>Geoland2 BioPar IPMA catalog</gco:CharacterString>
+                <gco:CharacterString>Copernicus Global Land Service</gco:CharacterString>
               </name>
               <description>
                 <gco:CharacterString>Download product</gco:CharacterString>
@@ -1229,6 +1229,26 @@
               <function>
                 <CI_OnLineFunctionCode codeList="http://standards.iso.org/ittf/PubliclyAvailableStandards/ISO_19139_Schemas/resources/Codelist/ML_gmxCodelists.xml#CI_OnLineFunctionCode" codeListValue="download">download</CI_OnLineFunctionCode>
               </function>
+            </CI_OnlineResource>
+          </onLine>
+        </MD_DigitalTransferOptions>
+      </transferOptions>
+      <transferOptions>
+        <MD_DigitalTransferOptions>
+          <unitsOfDistribution>
+            <gco:CharacterString>Product bundles</gco:CharacterString>
+          </unitsOfDistribution>
+          <onLine>
+            <CI_OnlineResource>
+              <linkage>
+                <URL>mailto:helpdesk@vgt.vito.be</URL>
+              </linkage>
+              <name>
+                <gco:CharacterString>Copernicus Global Land Service</gco:CharacterString>
+              </name>
+              <description>
+                <gco:CharacterString>Request to receive products via FTP</gco:CharacterString>
+              </description>
             </CI_OnlineResource>
           </onLine>
         </MD_DigitalTransferOptions>

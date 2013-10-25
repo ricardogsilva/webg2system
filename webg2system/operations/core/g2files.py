@@ -69,7 +69,7 @@ class G2File(GenericItem):
         specific_archives = fileSettings.specificArchives.all()
         if len(specific_archives) == 0:
             specific_archives = [hs for hs in ss.Host.objects.filter(role__name='archive')]
-        hf = HostFactory()
+        #hf = HostFactory()
         #self.archives = [hf.create_host(hs) for hs in specific_archives]
         self.io_buffers = self._get_io_buffers(fileSettings)
         self.archives = self._get_archives(fileSettings)
@@ -95,7 +95,7 @@ class G2File(GenericItem):
         if len(specific_archives) == 0:
             specific_archives = [hs for hs in \
                 ss.Host.objects.filter(role__name='archive', active=True)]
-        hf = HostFactory()
+        hf = HostFactory(logger=self.logger)
         return [hf.create_host(hs) for hs in specific_archives]
 
     #def find(self, restrict_pattern=None, use_archive=False, 

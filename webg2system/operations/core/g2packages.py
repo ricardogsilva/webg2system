@@ -1288,7 +1288,8 @@ class SWIMetadataHandler(ProcessingPackage):
                 'output', 
                 settings.packageOutput_systemsettings_packageoutput_related.all()
             )
-            self.md_modifier = metadatas.SWIMetadataModifier(self.product)
+            self.md_modifier = metadatas.SWIMetadataModifier(self.product,
+                                                             logger=self.logger)
 
     def run_main(self, callback=None, send_to_csw=True):
         result = False
@@ -1326,13 +1327,21 @@ class SWIMetadataHandler(ProcessingPackage):
             self.md_modifier.modify_uuids()
             self.md_modifier.modify_metadata_contact()
             self.md_modifier.modify_principalIvestigator_contact()
+            self.md_modifier.modify_citation(self.timeslot)
+            self.md_modifier.modify_abstract()
+            self.md_modifier.modify_purpose()
+            self.md_modifier.modify_credit()
+            self.md_modifier.modify_points_of_contact()
             self.md_modifier.modify_quicklook_url(self.timeslot)
             self.md_modifier.modify_download_url(self.timeslot)
+            self.md_modifier.modify_resource_constraints()
+            self.md_modifier.modify_distribution_info()
+            self.md_modifier.modify_data_quality_info()
+
             xml_name = os.path.split(xml_path)[-1]
             out_path = os.path.join(self.outputDir, xml_name)
             #SANDRA
             self.md_modifier.modify_temporal_extent(self.timeslot)
-            self.md_modifier._modify_citation()
             #SANDRA
             self.md_modifier.save_xml(out_path)
             result = out_path
