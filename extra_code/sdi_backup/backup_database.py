@@ -25,7 +25,8 @@ def execute_backup(db_name, db_user):
     if not os.path.isdir(local_backup_dir):
         os.makedirs(local_backup_dir)
     with lcd(local_backup_dir):
-        local('pg_dump -U %s %s > %s' % (db_user, db_name, backup_name))
+        local('pg_dump -h localhost -U %s %s > %s' % (db_user, db_name,
+              backup_name))
         local('rsync %s %s@%s:%s' % (backup_name, destination_user,
               destination_host, destination_path))
     local('rm -rf %s' % local_backup_dir)
