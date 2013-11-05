@@ -21,7 +21,10 @@ import logging
 import argparse
 
 from django.core.management import setup_environ
-sys.path.append('/home/geo2/dev/webg2system/webg2system')
+file_path = os.path.realpath(__file__)
+root_dir = os.path.join(os.path.dirname(os.path.dirname(file_path)),
+			            'webg2system')
+sys.path.append(root_dir)
 import settings as s
 setup_environ(s)
 
@@ -29,7 +32,10 @@ import operations.models as om
 
 def get_kwarg(item):
     key,value = item.split(':')
-    value = eval(value)
+    try:
+        value = eval(value)
+    except NameError:
+        pass
     return {key: value}
 
 if __name__ == '__main__':
@@ -44,6 +50,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     package_kwargs = dict()
     [package_kwargs.update(dd) for dd in args.package_kwargs]
+    print('package_kwargs: %s' % package_kwargs)
     timeslots = []
     start_ts = dt.datetime.strptime(args.start_timeslot, '%Y%m%d%H%M')
     end_ts = dt.datetime.strptime(args.end_timeslot, '%Y%m%d%H%M')
@@ -58,3 +65,4 @@ if __name__ == '__main__':
         rp = om.RunningPackage(settings=args.package, area='.*',
                                timeslot=ts)
         result = rp.run(log_level=logging.INFO, **package_kwargs)
+        del rp
