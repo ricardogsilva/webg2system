@@ -1,7 +1,7 @@
 #gdal is managed in its own script for now
 #ipython==0.12
 #wsgiref==0.1.2
-paramiko==1.10.1
+paramiko==2.10.1
 Fabric==1.6.0
 Cython==0.18
 Django==1.4
