@@ -2,4 +2,4 @@
 # the installation is split over multiple requirements files
 # the lxml package seems to also prefer to have Cython already installed
 numexpr==1.4.1
-lxml==3.1.1
+lxml==4.9.1
